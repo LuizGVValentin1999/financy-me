@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable([
     'user_id',
     'product_id',
+    'purchase_invoice_id',
     'quantity',
     'unit_price',
     'total_amount',
@@ -40,5 +41,10 @@ class PurchaseEntry extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function purchaseInvoice(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseInvoice::class);
     }
 }

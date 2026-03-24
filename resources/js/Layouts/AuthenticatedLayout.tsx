@@ -7,6 +7,7 @@ import {
     LogOut,
     Menu,
     ReceiptText,
+    ScrollText,
     Tags,
     UserCircle2,
     X,
@@ -46,6 +47,12 @@ export default function AuthenticatedLayout({
             href: route('purchases.index'),
             active: route().current('purchases.*'),
             icon: ReceiptText,
+        },
+        {
+            label: 'Notas fiscais',
+            href: route('invoices.index'),
+            active: route().current('invoices.*'),
+            icon: ScrollText,
         },
         {
             label: 'Perfil',

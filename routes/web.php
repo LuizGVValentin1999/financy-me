@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseEntryController;
+use App\Http\Controllers\PurchaseInvoiceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -28,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/compras/importar-confirmar', [PurchaseEntryController::class, 'confirmImported'])->name('purchases.import-confirm');
     Route::delete('/compras/importacao', [PurchaseEntryController::class, 'clearImported'])->name('purchases.import-clear');
     Route::delete('/compras/{purchaseEntry}', [PurchaseEntryController::class, 'destroy'])->name('purchases.destroy');
+    Route::get('/notas-fiscais', [PurchaseInvoiceController::class, 'index'])->name('invoices.index');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

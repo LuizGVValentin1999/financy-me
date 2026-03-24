@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePurchaseEntryRequest;
 use App\Models\Product;
 use App\Models\PurchaseEntry;
+use App\Models\PurchaseInvoice;
 use App\Services\ParanaNfceImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -205,6 +206,8 @@ class PurchaseEntryController extends Controller
         $validated = $validator->validate();
 
         DB::transaction(function () use ($user, $preview, $validated, $importer) {
+            $invoice = $this->createImportedInvoice($user, $preview);
+
             foreach (array_values($preview['items']) as $index => $previewItem) {
                 $payload = $validated['items'][$index];
 
@@ -250,6 +253,7 @@ class PurchaseEntryController extends Controller
 
                 $user->purchaseEntries()->create([
                     'product_id' => $product->id,
+                    'purchase_invoice_id' => $invoice->id,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total_amount' => $totalAmount,
@@ -423,6 +427,29 @@ class PurchaseEntryController extends Controller
         ];
 
         return $items;
+    }
+
+    /**
+     * @param  array<string, mixed>  $preview
+     */
+    private function createImportedInvoice($user, array $preview): PurchaseInvoice
+    {
+        return $user->purchaseInvoices()->create([
+            'store_name' => $preview['store_name'] ?? 'Nota fiscal importada',
+            'cnpj' => $preview['cnpj'] ?? null,
+            'address' => $preview['address'] ?? null,
+            'invoice_number' => $preview['invoice_number'] ?? null,
+            'series' => $preview['series'] ?? null,
+            'access_key' => $preview['access_key'] ?? null,
+            'receipt_url' => $preview['receipt_url'] ?? null,
+            'issued_at' => $preview['issued_at'] ?? now()->toDateString(),
+            'items_count' => collect($preview['items'] ?? [])
+                ->reject(fn (array $item) => (bool) ($item['is_discount'] ?? false))
+                ->count(),
+            'gross_amount' => round((float) ($preview['total_amount'] ?? 0), 2),
+            'discount_amount' => round((float) ($preview['discount_amount'] ?? 0), 2),
+            'paid_amount' => round((float) ($preview['amount_paid'] ?? 0), 2),
+        ]);
     }
 
     /**
