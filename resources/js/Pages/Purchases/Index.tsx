@@ -1,8 +1,10 @@
+import Checkbox from '@/Components/Checkbox';
 import DangerButton from '@/Components/DangerButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
+import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
@@ -56,6 +58,7 @@ interface PurchasesPageProps {
             suggested_product_id: number | null;
             suggested_product_name: string;
             suggested_category_id: number | null;
+            suggestion_score: number | null;
         }>;
     } | null;
     entries: Array<{
@@ -91,10 +94,12 @@ function ImportPreviewSection({
     } = useForm({
         token: preview.token,
         items: preview.items.map((item) => ({
+            include: true,
             product_id: item.suggested_product_id
                 ? String(item.suggested_product_id)
                 : '',
             product_name: item.suggested_product_name,
+            quantity: String(item.quantity),
             category_id: item.suggested_category_id
                 ? String(item.suggested_category_id)
                 : '',
@@ -103,8 +108,8 @@ function ImportPreviewSection({
 
     const updateItem = (
         index: number,
-        key: 'product_id' | 'product_name' | 'category_id',
-        value: string,
+        key: 'include' | 'product_id' | 'product_name' | 'quantity' | 'category_id',
+        value: boolean | string,
     ) => {
         setData(
             'items',
@@ -113,6 +118,12 @@ function ImportPreviewSection({
             ),
         );
     };
+
+    const includedItems = preview.items.filter((_, index) => data.items[index]?.include);
+    const includedTotal = includedItems.reduce(
+        (total, item) => total + item.total_amount,
+        0,
+    );
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -229,18 +240,42 @@ function ImportPreviewSection({
                     {preview.items.map((item, index) => (
                         <div
                             key={`${item.index}-${item.name}`}
-                            className="rounded-[28px] border border-slate-200 bg-white p-5"
+                            className={`rounded-[28px] border p-5 transition ${
+                                data.items[index].include
+                                    ? 'border-slate-200 bg-white'
+                                    : 'border-dashed border-slate-200 bg-slate-50/90'
+                            }`}
                         >
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div>
-                                    <p className="text-xl font-semibold text-slate-900">
-                                        {item.name}
-                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-xl font-semibold text-slate-900">
+                                            {item.name}
+                                        </p>
+                                        {item.suggested_product_id && (
+                                            <span className="rounded-full bg-[#eef7f7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+                                                Sugestao {Math.round(item.suggestion_score ?? 0)}%
+                                            </span>
+                                        )}
+                                        {!data.items[index].include && (
+                                            <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+                                                Excluido do lancamento
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="mt-1 text-sm text-slate-500">
-                                        {formatQuantity(item.quantity)} {item.unit}{' '}
+                                        Nota: {formatQuantity(item.quantity)} {item.unit}{' '}
                                         • {formatCurrency(item.unit_price)} cada
                                         {item.code ? ` • codigo ${item.code}` : ''}
                                     </p>
+                                    {item.suggested_product_id && (
+                                        <p className="mt-2 text-sm text-slate-600">
+                                            Produto mais proximo encontrado:{' '}
+                                            <span className="font-semibold text-slate-900">
+                                                {item.suggested_product_name}
+                                            </span>
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="rounded-full bg-[#eef7f7] px-4 py-2 text-sm font-semibold text-slate-700">
@@ -248,7 +283,71 @@ function ImportPreviewSection({
                                 </div>
                             </div>
 
-                            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr,1fr]">
+                            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[22px] bg-[#f8f4ec] px-4 py-3">
+                                <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                                    <Checkbox
+                                        checked={data.items[index].include}
+                                        onChange={(event) =>
+                                            updateItem(
+                                                index,
+                                                'include',
+                                                event.target.checked,
+                                            )
+                                        }
+                                    />
+                                    Incluir este item no estoque
+                                </label>
+
+                                <SecondaryButton
+                                    type="button"
+                                    className="px-4 py-2 text-xs"
+                                    onClick={() =>
+                                        updateItem(
+                                            index,
+                                            'include',
+                                            !data.items[index].include,
+                                        )
+                                    }
+                                >
+                                    {data.items[index].include
+                                        ? 'Excluir desta importacao'
+                                        : 'Restaurar item'}
+                                </SecondaryButton>
+                            </div>
+
+                            <div className="mt-5 grid gap-4 lg:grid-cols-[0.65fr,1fr,1fr]">
+                                <div>
+                                    <InputLabel
+                                        htmlFor={`items.${index}.quantity`}
+                                        value="Quantidade para estoque"
+                                    />
+                                    <input
+                                        id={`items.${index}.quantity`}
+                                        type="number"
+                                        min="0.001"
+                                        step="0.001"
+                                        value={data.items[index].quantity}
+                                        disabled={!data.items[index].include}
+                                        onChange={(event) =>
+                                            updateItem(
+                                                index,
+                                                'quantity',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    />
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        O valor total da nota sera mantido e o custo unitario sera recalculado.
+                                    </p>
+                                    <InputError
+                                        message={
+                                            errors[`items.${index}.quantity`]
+                                        }
+                                        className="mt-2"
+                                    />
+                                </div>
+
                                 <div>
                                     <InputLabel
                                         htmlFor={`items.${index}.product_id`}
@@ -257,6 +356,7 @@ function ImportPreviewSection({
                                     <select
                                         id={`items.${index}.product_id`}
                                         value={data.items[index].product_id}
+                                        disabled={!data.items[index].include}
                                         onChange={(event) =>
                                             updateItem(
                                                 index,
@@ -264,7 +364,7 @@ function ImportPreviewSection({
                                                 event.target.value,
                                             )
                                         }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
                                     >
                                         <option value="">Criar pelo nome abaixo</option>
                                         {products.map((product) => (
@@ -294,6 +394,7 @@ function ImportPreviewSection({
                                     <select
                                         id={`items.${index}.category_id`}
                                         value={data.items[index].category_id}
+                                        disabled={!data.items[index].include}
                                         onChange={(event) =>
                                             updateItem(
                                                 index,
@@ -301,7 +402,7 @@ function ImportPreviewSection({
                                                 event.target.value,
                                             )
                                         }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
                                     >
                                         <option value="">Sem categoria</option>
                                         {categories.map((category) => (
@@ -333,6 +434,7 @@ function ImportPreviewSection({
                                     id={`items.${index}.product_name`}
                                     type="text"
                                     value={data.items[index].product_name}
+                                    disabled={!data.items[index].include}
                                     onChange={(event) =>
                                         updateItem(
                                             index,
@@ -340,7 +442,7 @@ function ImportPreviewSection({
                                             event.target.value,
                                         )
                                     }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
                                 />
                                 <InputError
                                     message={
@@ -361,7 +463,10 @@ function ImportPreviewSection({
                                 Total da importacao
                             </p>
                             <p className="mt-2 text-3xl font-semibold text-slate-900">
-                                {formatCurrency(preview.total_amount)}
+                                {formatCurrency(includedTotal)}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                                {includedItems.length} de {preview.items.length} itens selecionados
                             </p>
                         </div>
 
@@ -444,7 +549,7 @@ export default function PurchasesIndex({
                             />
                             <input
                                 id="receipt_url"
-                                type="url"
+                                type="text"
                                 value={importForm.data.receipt_url}
                                 onChange={(event) =>
                                     importForm.setData(

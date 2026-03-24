@@ -147,12 +147,14 @@ class PurchaseEntryController extends Controller
         $validator = Validator::make($request->all(), [
             'token' => ['required', 'string'],
             'items' => ['required', 'array', 'size:'.$itemsCount],
+            'items.*.include' => ['required', 'boolean'],
             'items.*.product_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('products', 'id')->where('user_id', $user->id),
             ],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
+            'items.*.quantity' => ['nullable'],
             'items.*.category_id' => [
                 'nullable',
                 'integer',
@@ -163,13 +165,36 @@ class PurchaseEntryController extends Controller
                 $validator->errors()->add('token', 'A revisao dessa importacao ficou desatualizada.');
             }
 
+            $includedItems = 0;
+
             foreach ((array) $request->input('items', []) as $index => $item) {
+                if (! ($item['include'] ?? true)) {
+                    continue;
+                }
+
+                $includedItems++;
+
+                if (
+                    blank($item['quantity'] ?? null)
+                    || ! is_numeric($item['quantity'])
+                    || (float) $item['quantity'] <= 0
+                ) {
+                    $validator->errors()->add(
+                        "items.$index.quantity",
+                        'Informe uma quantidade maior que zero.',
+                    );
+                }
+
                 if (blank($item['product_id'] ?? null) && blank($item['product_name'] ?? null)) {
                     $validator->errors()->add(
                         "items.$index.product_name",
                         'Escolha um produto existente ou informe um nome.',
                     );
                 }
+            }
+
+            if ($includedItems === 0) {
+                $validator->errors()->add('items', 'Selecione ao menos um item para confirmar a NFC-e.');
             }
         });
 
@@ -178,6 +203,10 @@ class PurchaseEntryController extends Controller
         DB::transaction(function () use ($user, $preview, $validated, $importer) {
             foreach (array_values($preview['items']) as $index => $previewItem) {
                 $payload = $validated['items'][$index];
+
+                if (! $payload['include']) {
+                    continue;
+                }
 
                 $product = ! empty($payload['product_id'])
                     ? $user->products()->findOrFail($payload['product_id'])
@@ -195,9 +224,15 @@ class PurchaseEntryController extends Controller
                     ]);
                 }
 
-                $quantity = (float) $previewItem['quantity'];
-                $unitPrice = (float) $previewItem['unit_price'];
-                $totalAmount = (float) $previewItem['total_amount'];
+                $quantity = round((float) $payload['quantity'], 3);
+                $totalAmount = round(
+                    (float) ($previewItem['total_amount']
+                        ?? ((float) $previewItem['quantity'] * (float) $previewItem['unit_price'])),
+                    2,
+                );
+                $unitPrice = $quantity > 0
+                    ? round($totalAmount / $quantity, 2)
+                    : 0.0;
 
                 $user->purchaseEntries()->create([
                     'product_id' => $product->id,
@@ -271,9 +306,6 @@ class PurchaseEntryController extends Controller
             return null;
         }
 
-        $productsByName = $products
-            ->keyBy(fn (Product $product) => $this->normalizeName($product->name));
-
         return [
             'token' => $preview['token'],
             'receipt_url' => $preview['receipt_url'] ?? null,
@@ -292,11 +324,9 @@ class PurchaseEntryController extends Controller
             'payment_methods' => $preview['payment_methods'] ?? [],
             'items' => collect($preview['items'])
                 ->values()
-                ->map(function (array $item, int $index) use ($productsByName) {
-                    /** @var Product|null $matchedProduct */
-                    $matchedProduct = $productsByName->get(
-                        $this->normalizeName($item['name']),
-                    );
+                ->map(function (array $item, int $index) use ($products) {
+                    $suggestion = $this->suggestProduct($products, $item['name']);
+                    $matchedProduct = $suggestion['product'] ?? null;
 
                     return [
                         'index' => $index,
@@ -309,6 +339,7 @@ class PurchaseEntryController extends Controller
                         'suggested_product_id' => $matchedProduct?->id,
                         'suggested_product_name' => $matchedProduct?->name ?? $item['name'],
                         'suggested_category_id' => $matchedProduct?->category_id,
+                        'suggestion_score' => $suggestion['score'] ?? null,
                     ];
                 }),
         ];
@@ -344,6 +375,84 @@ class PurchaseEntryController extends Controller
 
     private function normalizeName(string $value): string
     {
-        return Str::of($value)->squish()->lower()->toString();
+        return Str::of(Str::ascii($value))
+            ->replaceMatches('/[^A-Za-z0-9]+/', ' ')
+            ->lower()
+            ->squish()
+            ->toString();
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
+     * @return array{product: Product, score: float}|null
+     */
+    private function suggestProduct($products, string $itemName): ?array
+    {
+        $normalizedItemName = $this->normalizeName($itemName);
+
+        if ($normalizedItemName === '') {
+            return null;
+        }
+
+        $bestProduct = null;
+        $bestScore = 0.0;
+
+        foreach ($products as $product) {
+            $score = $this->nameSimilarityScore(
+                $normalizedItemName,
+                $this->normalizeName($product->name),
+            );
+
+            if ($score <= $bestScore) {
+                continue;
+            }
+
+            $bestProduct = $product;
+            $bestScore = $score;
+        }
+
+        if (! $bestProduct || $bestScore < 58.0) {
+            return null;
+        }
+
+        return [
+            'product' => $bestProduct,
+            'score' => round($bestScore, 1),
+        ];
+    }
+
+    private function nameSimilarityScore(string $left, string $right): float
+    {
+        if ($left === '' || $right === '') {
+            return 0.0;
+        }
+
+        if ($left === $right) {
+            return 100.0;
+        }
+
+        similar_text($left, $right, $characterScore);
+
+        $leftTokens = array_values(array_filter(explode(' ', $left)));
+        $rightTokens = array_values(array_filter(explode(' ', $right)));
+        $sharedTokens = array_intersect($leftTokens, $rightTokens);
+        $tokenScore = 0.0;
+
+        if ($leftTokens !== [] || $rightTokens !== []) {
+            $tokenScore = (count($sharedTokens) / max(count(array_unique([
+                ...$leftTokens,
+                ...$rightTokens,
+            ])), 1)) * 100;
+        }
+
+        if (str_contains($left, $right) || str_contains($right, $left)) {
+            $tokenScore = max($tokenScore, 85.0);
+        }
+
+        return max(
+            $characterScore,
+            $tokenScore,
+            (($characterScore * 0.65) + ($tokenScore * 0.35)),
+        );
     }
 }
