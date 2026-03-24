@@ -55,6 +55,7 @@ interface PurchasesPageProps {
             unit: string;
             unit_price: number;
             total_amount: number;
+            is_discount: boolean;
             suggested_product_id: number | null;
             suggested_product_name: string;
             suggested_category_id: number | null;
@@ -257,6 +258,11 @@ function ImportPreviewSection({
                                                 Sugestao {Math.round(item.suggestion_score ?? 0)}%
                                             </span>
                                         )}
+                                        {item.is_discount && (
+                                            <span className="rounded-full bg-[#fff1ec] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#be3d2a]">
+                                                Desconto global
+                                            </span>
+                                        )}
                                         {!data.items[index].include && (
                                             <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
                                                 Excluido do lancamento
@@ -319,7 +325,11 @@ function ImportPreviewSection({
                                 <div>
                                     <InputLabel
                                         htmlFor={`items.${index}.quantity`}
-                                        value="Quantidade para estoque"
+                                        value={
+                                            item.is_discount
+                                                ? 'Quantidade'
+                                                : 'Quantidade para estoque'
+                                        }
                                     />
                                     <input
                                         id={`items.${index}.quantity`}
@@ -327,7 +337,10 @@ function ImportPreviewSection({
                                         min="0.001"
                                         step="0.001"
                                         value={data.items[index].quantity}
-                                        disabled={!data.items[index].include}
+                                        disabled={
+                                            !data.items[index].include ||
+                                            item.is_discount
+                                        }
                                         onChange={(event) =>
                                             updateItem(
                                                 index,
@@ -338,7 +351,9 @@ function ImportPreviewSection({
                                         className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
                                     />
                                     <p className="mt-2 text-xs text-slate-500">
-                                        O valor total da nota sera mantido e o custo unitario sera recalculado.
+                                        {item.is_discount
+                                            ? 'Esse item so ajusta o valor gasto e nao altera o estoque.'
+                                            : 'O valor total da nota sera mantido e o custo unitario sera recalculado.'}
                                     </p>
                                     <InputError
                                         message={
@@ -394,7 +409,10 @@ function ImportPreviewSection({
                                     <select
                                         id={`items.${index}.category_id`}
                                         value={data.items[index].category_id}
-                                        disabled={!data.items[index].include}
+                                        disabled={
+                                            !data.items[index].include ||
+                                            item.is_discount
+                                        }
                                         onChange={(event) =>
                                             updateItem(
                                                 index,

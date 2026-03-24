@@ -25,7 +25,8 @@ test('user can import nfce from parana public link and review items', function (
         ->assertOk()
         ->assertSee('MERCADO TESTE LTDA')
         ->assertSee('ARROZ TIPO 1')
-        ->assertSee('FEIJAO PRETO');
+        ->assertSee('FEIJAO PRETO')
+        ->assertSee('Desconto da nota');
 });
 
 test('user sees closest existing product suggestion when reviewing imported nfce', function () {
@@ -63,6 +64,8 @@ test('user sees closest existing product suggestion when reviewing imported nfce
         ->not->toBeNull();
     expect($response->inertiaProps('importPreview.items.0.suggestion_score'))
         ->toBeGreaterThanOrEqual(58);
+    expect($response->inertiaProps('importPreview.items.2.is_discount'))
+        ->toBeTrue();
 });
 
 test('user can confirm imported nfce and create products and purchase entries', function () {
@@ -107,16 +110,27 @@ test('user can confirm imported nfce and create products and purchase entries', 
                     'quantity' => '2',
                     'category_id' => (string) $category->id,
                 ],
+                [
+                    'include' => true,
+                    'product_id' => '',
+                    'product_name' => 'Desconto da nota',
+                    'quantity' => '0',
+                    'category_id' => '',
+                ],
             ],
         ])
         ->assertRedirect(route('purchases.index'));
 
-    expect($user->products()->count())->toBe(2);
-    expect($user->purchaseEntries()->count())->toBe(2);
+    expect($user->products()->count())->toBe(3);
+    expect($user->purchaseEntries()->count())->toBe(3);
     expect((float) $user->products()->where('name', 'Arroz Tipo 1')->firstOrFail()->current_stock)
         ->toBe(1.0);
     expect((float) $user->products()->where('name', 'Feijao Preto')->firstOrFail()->current_stock)
         ->toBe(2.0);
+    expect((float) $user->products()->where('name', 'Desconto da nota')->firstOrFail()->current_stock)
+        ->toBe(0.0);
+    expect((float) $user->purchaseEntries()->whereHas('product', fn ($query) => $query->where('name', 'Desconto da nota'))->firstOrFail()->total_amount)
+        ->toBe(-1.0);
 });
 
 test('user can edit imported quantity and exclude items before confirming nfce', function () {
@@ -173,6 +187,13 @@ test('user can edit imported quantity and exclude items before confirming nfce',
                     'quantity' => '',
                     'category_id' => '',
                 ],
+                [
+                    'include' => true,
+                    'product_id' => '',
+                    'product_name' => 'Desconto da nota',
+                    'quantity' => '0',
+                    'category_id' => '',
+                ],
             ],
         ])
         ->assertRedirect(route('purchases.index'));
@@ -180,12 +201,19 @@ test('user can edit imported quantity and exclude items before confirming nfce',
     $product->refresh();
 
     expect((float) $product->current_stock)->toBe(6.0);
-    expect($user->purchaseEntries()->count())->toBe(1);
+    expect($user->purchaseEntries()->count())->toBe(2);
 
-    $entry = $user->purchaseEntries()->firstOrFail();
+    $entry = $user->purchaseEntries()
+        ->where('product_id', $product->id)
+        ->firstOrFail();
+    $discountEntry = $user->purchaseEntries()
+        ->whereHas('product', fn ($query) => $query->where('name', 'Desconto da nota'))
+        ->firstOrFail();
 
     expect((float) $entry->quantity)->toBe(6.0);
     expect((float) $entry->total_amount)->toBe(5.99);
     expect((float) $entry->unit_price)->toBe(1.0);
-    expect($user->products()->count())->toBe(1);
+    expect((float) $discountEntry->quantity)->toBe(0.0);
+    expect((float) $discountEntry->total_amount)->toBe(-1.0);
+    expect($user->products()->count())->toBe(2);
 });

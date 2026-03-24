@@ -19,6 +19,7 @@ use Throwable;
 class PurchaseEntryController extends Controller
 {
     private const IMPORT_SESSION_KEY = 'purchase_import_preview';
+    private const IMPORT_DISCOUNT_PRODUCT_NAME = 'Desconto da nota';
 
     public function index(Request $request): Response
     {
@@ -120,6 +121,8 @@ class PurchaseEntryController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
+        $preview['items'] = $this->appendDiscountItem($preview);
+
         $request->session()->put(self::IMPORT_SESSION_KEY, [
             'token' => (string) Str::uuid(),
             'receipt_url' => $validated['receipt_url'],
@@ -173,12 +176,13 @@ class PurchaseEntryController extends Controller
                 }
 
                 $includedItems++;
+                $isDiscountItem = (bool) ($preview['items'][$index]['is_discount'] ?? false);
 
-                if (
+                if (! $isDiscountItem && (
                     blank($item['quantity'] ?? null)
                     || ! is_numeric($item['quantity'])
                     || (float) $item['quantity'] <= 0
-                ) {
+                )) {
                     $validator->errors()->add(
                         "items.$index.quantity",
                         'Informe uma quantidade maior que zero.',
@@ -208,31 +212,41 @@ class PurchaseEntryController extends Controller
                     continue;
                 }
 
+                $isDiscountItem = (bool) ($previewItem['is_discount'] ?? false);
+
                 $product = ! empty($payload['product_id'])
                     ? $user->products()->findOrFail($payload['product_id'])
                     : $this->firstOrCreateImportedProduct(
                         $user,
                         trim($payload['product_name']),
-                        $payload['category_id'] ?? null,
+                        $isDiscountItem ? null : ($payload['category_id'] ?? null),
                         $previewItem['code'] ?? null,
-                        $importer->normalizeUnit($previewItem['unit'] ?? null),
+                        $isDiscountItem
+                            ? 'un'
+                            : $importer->normalizeUnit($previewItem['unit'] ?? null),
                     );
 
-                if (! empty($payload['category_id']) && $product->category_id !== (int) $payload['category_id']) {
+                if (
+                    ! $isDiscountItem
+                    && ! empty($payload['category_id'])
+                    && $product->category_id !== (int) $payload['category_id']
+                ) {
                     $product->update([
                         'category_id' => $payload['category_id'],
                     ]);
                 }
 
-                $quantity = round((float) $payload['quantity'], 3);
                 $totalAmount = round(
                     (float) ($previewItem['total_amount']
                         ?? ((float) $previewItem['quantity'] * (float) $previewItem['unit_price'])),
                     2,
                 );
-                $unitPrice = $quantity > 0
-                    ? round($totalAmount / $quantity, 2)
-                    : 0.0;
+                $quantity = $isDiscountItem
+                    ? 0.0
+                    : round((float) $payload['quantity'], 3);
+                $unitPrice = $isDiscountItem
+                    ? $totalAmount
+                    : ($quantity > 0 ? round($totalAmount / $quantity, 2) : 0.0);
 
                 $user->purchaseEntries()->create([
                     'product_id' => $product->id,
@@ -250,9 +264,11 @@ class PurchaseEntryController extends Controller
                     ),
                 ]);
 
-                $product->update([
-                    'current_stock' => (float) $product->current_stock + $quantity,
-                ]);
+                if (! $isDiscountItem) {
+                    $product->update([
+                        'current_stock' => (float) $product->current_stock + $quantity,
+                    ]);
+                }
             }
         });
 
@@ -336,6 +352,7 @@ class PurchaseEntryController extends Controller
                         'unit' => $item['unit'],
                         'unit_price' => (float) $item['unit_price'],
                         'total_amount' => (float) $item['total_amount'],
+                        'is_discount' => (bool) ($item['is_discount'] ?? false),
                         'suggested_product_id' => $matchedProduct?->id,
                         'suggested_product_name' => $matchedProduct?->name ?? $item['name'],
                         'suggested_category_id' => $matchedProduct?->category_id,
@@ -380,6 +397,32 @@ class PurchaseEntryController extends Controller
             ->lower()
             ->squish()
             ->toString();
+    }
+
+    /**
+     * @param  array<string, mixed>  $preview
+     * @return array<int, array<string, mixed>>
+     */
+    private function appendDiscountItem(array $preview): array
+    {
+        $items = array_values((array) ($preview['items'] ?? []));
+        $discountAmount = round((float) ($preview['discount_amount'] ?? 0), 2);
+
+        if ($discountAmount <= 0) {
+            return $items;
+        }
+
+        $items[] = [
+            'name' => self::IMPORT_DISCOUNT_PRODUCT_NAME,
+            'code' => null,
+            'quantity' => 0,
+            'unit' => 'UN',
+            'unit_price' => -$discountAmount,
+            'total_amount' => -$discountAmount,
+            'is_discount' => true,
+        ];
+
+        return $items;
     }
 
     /**
