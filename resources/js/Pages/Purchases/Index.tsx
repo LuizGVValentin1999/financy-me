@@ -8,7 +8,24 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import {
+    ColumnDef,
+    ColumnFiltersState,
+    ExpandedState,
+    FilterFn,
+    GroupingState,
+    SortingState,
+    flexRender,
+    getCoreRowModel,
+    getExpandedRowModel,
+    getFilteredRowModel,
+    getGroupedRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from '@tanstack/react-table';
+import { ChevronDown, ChevronRight, GripVertical, ListFilter, X } from 'lucide-react';
+import { FormEvent, Fragment, useState } from 'react';
 
 interface PurchasesPageProps {
     products: Array<{
@@ -498,6 +515,521 @@ function ImportPreviewSection({
     );
 }
 
+type PurchaseEntryRow = PurchasesPageProps['entries'][number];
+
+type FilterMeta = {
+    filterVariant?: 'text' | 'select' | 'date' | 'range';
+    options?: Array<{ label: string; value: string }>;
+};
+
+const textFilter: FilterFn<PurchaseEntryRow> = (row, columnId, value) => {
+    const search = String(value ?? '').trim().toLowerCase();
+
+    if (search === '') {
+        return true;
+    }
+
+    return String(row.getValue(columnId) ?? '')
+        .toLowerCase()
+        .includes(search);
+};
+
+const dateFilter: FilterFn<PurchaseEntryRow> = (row, columnId, value) => {
+    if (! value) {
+        return true;
+    }
+
+    return String(row.getValue(columnId) ?? '') === String(value);
+};
+
+const rangeFilter: FilterFn<PurchaseEntryRow> = (row, columnId, value) => {
+    const [min, max] = Array.isArray(value) ? value : [];
+    const numericValue = Number(row.getValue(columnId) ?? 0);
+
+    if (min !== undefined && min !== '' && numericValue < Number(min)) {
+        return false;
+    }
+
+    if (max !== undefined && max !== '' && numericValue > Number(max)) {
+        return false;
+    }
+
+    return true;
+};
+
+function PurchaseHistoryTable({
+    entries,
+    sources,
+}: {
+    entries: PurchasesPageProps['entries'];
+    sources: PurchasesPageProps['sources'];
+}) {
+    const [sorting, setSorting] = useState<SortingState>([
+        {
+            id: 'purchased_at',
+            desc: true,
+        },
+    ]);
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [grouping, setGrouping] = useState<GroupingState>([]);
+    const [expanded, setExpanded] = useState<ExpandedState>({});
+
+    const columns: ColumnDef<PurchaseEntryRow>[] = [
+        {
+            accessorKey: 'product',
+            header: 'Produto',
+            cell: ({ row }) => (
+                <div>
+                    <p className="font-semibold text-slate-900">
+                        {row.original.product ?? 'Produto removido'}
+                    </p>
+                    <p className="mt-1 text-slate-500">
+                        {row.original.unit ?? 'un'}
+                    </p>
+                </div>
+            ),
+            filterFn: textFilter,
+            enableGrouping: true,
+            aggregationFn: 'count',
+            aggregatedCell: ({ row, getValue }) => (
+                <span className="font-semibold text-slate-900">
+                    {String(getValue() ?? row.subRows.length)} itens
+                </span>
+            ),
+            meta: {
+                filterVariant: 'text',
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'purchased_at',
+            header: 'Data',
+            cell: ({ row }) => formatDate(row.original.purchased_at),
+            filterFn: dateFilter,
+            enableGrouping: true,
+            meta: {
+                filterVariant: 'date',
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'source',
+            header: 'Origem',
+            cell: ({ row }) => (
+                <span className="rounded-full bg-[#eef7f7] px-3 py-1 text-xs font-semibold text-slate-700">
+                    {row.original.source === 'nota_fiscal'
+                        ? 'Nota fiscal'
+                        : 'Manual'}
+                </span>
+            ),
+            filterFn: textFilter,
+            enableGrouping: true,
+            meta: {
+                filterVariant: 'select',
+                options: [
+                    {
+                        label: 'Todas',
+                        value: '',
+                    },
+                    ...sources,
+                ],
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'invoice_reference',
+            header: 'Nota',
+            cell: ({ row }) => row.original.invoice_reference || '--',
+            filterFn: textFilter,
+            enableGrouping: true,
+            meta: {
+                filterVariant: 'text',
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'quantity',
+            header: 'Quantidade',
+            cell: ({ row }) =>
+                `${formatQuantity(row.original.quantity)} ${row.original.unit ?? 'un'}`,
+            aggregationFn: 'sum',
+            aggregatedCell: ({ getValue }) =>
+                formatQuantity(Number(getValue() ?? 0)),
+            filterFn: rangeFilter,
+            enableGrouping: false,
+            meta: {
+                filterVariant: 'range',
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'unit_price',
+            header: 'Unitario',
+            cell: ({ row }) => formatCurrency(row.original.unit_price),
+            filterFn: rangeFilter,
+            enableGrouping: false,
+            meta: {
+                filterVariant: 'range',
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'total_amount',
+            header: 'Total',
+            cell: ({ row }) => (
+                <span className="font-semibold text-slate-900">
+                    {formatCurrency(row.original.total_amount)}
+                </span>
+            ),
+            aggregationFn: 'sum',
+            aggregatedCell: ({ getValue }) => (
+                <span className="font-semibold text-slate-900">
+                    {formatCurrency(Number(getValue() ?? 0))}
+                </span>
+            ),
+            filterFn: rangeFilter,
+            enableGrouping: false,
+            meta: {
+                filterVariant: 'range',
+            } satisfies FilterMeta,
+        },
+        {
+            accessorKey: 'notes',
+            header: 'Observacoes',
+            cell: ({ row }) => row.original.notes || 'Sem observacoes.',
+            filterFn: textFilter,
+            enableGrouping: false,
+            meta: {
+                filterVariant: 'text',
+            } satisfies FilterMeta,
+        },
+        {
+            id: 'actions',
+            header: 'Acao',
+            enableSorting: false,
+            enableColumnFilter: false,
+            enableGrouping: false,
+            cell: ({ row }) => (
+                <DangerButton
+                    type="button"
+                    className="px-4 py-2 text-xs"
+                    onClick={() => {
+                        if (confirm('Excluir este registro de compra?')) {
+                            router.delete(route('purchases.destroy', row.original.id), {
+                                preserveScroll: true,
+                            });
+                        }
+                    }}
+                >
+                    Excluir
+                </DangerButton>
+            ),
+        },
+    ];
+
+    const table = useReactTable({
+        data: entries,
+        columns,
+        state: {
+            sorting,
+            columnFilters,
+            grouping,
+            expanded,
+        },
+        onSortingChange: setSorting,
+        onColumnFiltersChange: setColumnFilters,
+        onGroupingChange: setGrouping,
+        onExpandedChange: setExpanded,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getGroupedRowModel: getGroupedRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        initialState: {
+            pagination: {
+                pageIndex: 0,
+                pageSize: 12,
+            },
+        },
+    });
+
+    const renderFilter = (header: ReturnType<typeof table.getHeaderGroups>[number]['headers'][number]) => {
+        const meta = header.column.columnDef.meta as FilterMeta | undefined;
+        const filterValue = header.column.getFilterValue();
+
+        if (!header.column.getCanFilter() || !meta?.filterVariant) {
+            return null;
+        }
+
+        if (meta.filterVariant === 'select') {
+            return (
+                <select
+                    value={String(filterValue ?? '')}
+                    onChange={(event) =>
+                        header.column.setFilterValue(event.target.value)
+                    }
+                    className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                >
+                    {meta.options?.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
+            );
+        }
+
+        if (meta.filterVariant === 'date') {
+            return (
+                <input
+                    type="date"
+                    value={String(filterValue ?? '')}
+                    onChange={(event) =>
+                        header.column.setFilterValue(event.target.value)
+                    }
+                    className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                />
+            );
+        }
+
+        if (meta.filterVariant === 'range') {
+            const [min, max] = Array.isArray(filterValue)
+                ? filterValue
+                : ['', ''];
+
+            return (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                    <input
+                        type="number"
+                        value={String(min ?? '')}
+                        onChange={(event) =>
+                            header.column.setFilterValue([
+                                event.target.value,
+                                max ?? '',
+                            ])
+                        }
+                        placeholder="Min"
+                        className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <input
+                        type="number"
+                        value={String(max ?? '')}
+                        onChange={(event) =>
+                            header.column.setFilterValue([
+                                min ?? '',
+                                event.target.value,
+                            ])
+                        }
+                        placeholder="Max"
+                        className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    />
+                </div>
+            );
+        }
+
+        return (
+            <input
+                type="text"
+                value={String(filterValue ?? '')}
+                onChange={(event) =>
+                    header.column.setFilterValue(event.target.value)
+                }
+                placeholder="Filtrar"
+                className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+            />
+        );
+    };
+
+    return (
+        <SectionCard
+            title="Tabela de compras"
+            description="Grade com filtros na propria tabela, agrupamento por coluna, ordenacao e paginação."
+        >
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[#f8f4ec] px-4 py-4 text-sm text-slate-600">
+                <div className="flex flex-wrap items-center gap-3">
+                    <span className="inline-flex items-center gap-2 font-semibold text-slate-700">
+                        <ListFilter className="h-4 w-4" />
+                        {table.getFilteredRowModel().rows.length} registros apos filtros
+                    </span>
+                    <span>
+                        {grouping.length > 0
+                            ? `Agrupado por ${grouping.join(', ')}`
+                            : 'Sem agrupamento ativo'}
+                    </span>
+                </div>
+
+                {grouping.length > 0 && (
+                    <SecondaryButton
+                        type="button"
+                        className="px-4 py-2 text-xs"
+                        onClick={() => setGrouping([])}
+                    >
+                        Limpar agrupamento
+                    </SecondaryButton>
+                )}
+            </div>
+
+            <div className="mt-6 rounded-[28px] border border-slate-200 bg-white">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-400">
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <Fragment key={headerGroup.id}>
+                                    <tr>
+                                        {headerGroup.headers.map((header) => (
+                                            <th
+                                                key={header.id}
+                                                className="px-5 py-4 align-top"
+                                            >
+                                                {header.isPlaceholder ? null : (
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={header.column.getToggleSortingHandler()}
+                                                                className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                                                            >
+                                                                {flexRender(
+                                                                    header
+                                                                        .column
+                                                                        .columnDef
+                                                                        .header,
+                                                                    header.getContext(),
+                                                                )}
+                                                                {header.column.getIsSorted() ===
+                                                                    'asc' &&
+                                                                    ' ↑'}
+                                                                {header.column.getIsSorted() ===
+                                                                    'desc' &&
+                                                                    ' ↓'}
+                                                            </button>
+
+                                                            {header.column.getCanGroup() && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={header.column.getToggleGroupingHandler()}
+                                                                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                                                                        header.column.getIsGrouped()
+                                                                            ? 'border-slate-900 bg-slate-900 text-white'
+                                                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                                                    }`}
+                                                                    title="Agrupar por esta coluna"
+                                                                >
+                                                                    {header.column.getIsGrouped() ? (
+                                                                        <X className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <GripVertical className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {renderFilter(header)}
+                                                    </div>
+                                                )}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </Fragment>
+                            ))}
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {table.getRowModel().rows.length > 0 ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <tr key={row.id} className="align-top">
+                                        {row.getVisibleCells().map((cell) => (
+                                            <td
+                                                key={cell.id}
+                                                className="px-5 py-4 text-slate-600"
+                                            >
+                                                {cell.getIsGrouped() ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={row.getToggleExpandedHandler()}
+                                                        className="inline-flex items-center gap-2 font-semibold text-slate-900"
+                                                    >
+                                                        {row.getIsExpanded() ? (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        )}
+                                                        {flexRender(
+                                                            cell.column.columnDef.cell,
+                                                            cell.getContext(),
+                                                        )}{' '}
+                                                        <span className="text-sm font-medium text-slate-500">
+                                                            ({row.subRows.length})
+                                                        </span>
+                                                    </button>
+                                                ) : cell.getIsAggregated() ? (
+                                                    flexRender(
+                                                        cell.column.columnDef
+                                                            .aggregatedCell ??
+                                                            cell.column
+                                                                .columnDef.cell,
+                                                        cell.getContext(),
+                                                    )
+                                                ) : cell.getIsPlaceholder() ? null : (
+                                                    flexRender(
+                                                        cell.column.columnDef
+                                                            .cell,
+                                                        cell.getContext(),
+                                                    )
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td
+                                        colSpan={columns.length}
+                                        className="px-5 py-10 text-sm text-slate-500"
+                                    >
+                                        Nenhuma compra encontrada com os filtros atuais.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-slate-500">
+                    Pagina {table.getState().pagination.pageIndex + 1} de{' '}
+                    {table.getPageCount() || 1}
+                </span>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <select
+                        value={table.getState().pagination.pageSize}
+                        onChange={(event) =>
+                            table.setPageSize(Number(event.target.value))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    >
+                        {[12, 24, 48].map((pageSize) => (
+                            <option key={pageSize} value={pageSize}>
+                                {pageSize} linhas
+                            </option>
+                        ))}
+                    </select>
+
+                    <SecondaryButton
+                        type="button"
+                        disabled={!table.getCanPreviousPage()}
+                        onClick={() => table.previousPage()}
+                    >
+                        Pagina anterior
+                    </SecondaryButton>
+                    <SecondaryButton
+                        type="button"
+                        disabled={!table.getCanNextPage()}
+                        onClick={() => table.nextPage()}
+                    >
+                        Proxima pagina
+                    </SecondaryButton>
+                </div>
+            </div>
+        </SectionCard>
+    );
+}
+
 export default function PurchasesIndex({
     products,
     categories,
@@ -604,156 +1136,108 @@ export default function PurchasesIndex({
                     />
                 )}
 
-                <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-                    <SectionCard
-                        title="Nova compra manual"
-                        description="Cada registro aumenta o estoque do produto automaticamente."
-                    >
-                        {products.length > 0 ? (
-                            <form onSubmit={submit} className="space-y-5">
+                <SectionCard
+                    title="Nova compra manual"
+                    description="Cada registro aumenta o estoque do produto automaticamente."
+                >
+                    {products.length > 0 ? (
+                        <form onSubmit={submit} className="space-y-5">
+                            <div>
+                                <InputLabel
+                                    htmlFor="product_id"
+                                    value="Produto"
+                                />
+                                <select
+                                    id="product_id"
+                                    value={data.product_id}
+                                    onChange={(event) =>
+                                        setData(
+                                            'product_id',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                >
+                                    {products.map((product) => (
+                                        <option
+                                            key={product.id}
+                                            value={product.id}
+                                        >
+                                            {product.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <InputError
+                                    message={errors.product_id}
+                                    className="mt-2"
+                                />
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <InputLabel
-                                        htmlFor="product_id"
-                                        value="Produto"
+                                        htmlFor="quantity"
+                                        value="Quantidade"
                                     />
-                                    <select
-                                        id="product_id"
-                                        value={data.product_id}
+                                    <input
+                                        id="quantity"
+                                        type="number"
+                                        min="0.001"
+                                        step="0.001"
+                                        value={data.quantity}
                                         onChange={(event) =>
                                             setData(
-                                                'product_id',
+                                                'quantity',
                                                 event.target.value,
                                             )
                                         }
                                         className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                    >
-                                        {products.map((product) => (
-                                            <option
-                                                key={product.id}
-                                                value={product.id}
-                                            >
-                                                {product.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                     <InputError
-                                        message={errors.product_id}
+                                        message={errors.quantity}
                                         className="mt-2"
                                     />
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <InputLabel
-                                            htmlFor="quantity"
-                                            value="Quantidade"
-                                        />
-                                        <input
-                                            id="quantity"
-                                            type="number"
-                                            min="0.001"
-                                            step="0.001"
-                                            value={data.quantity}
-                                            onChange={(event) =>
-                                                setData(
-                                                    'quantity',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                        />
-                                        <InputError
-                                            message={errors.quantity}
-                                            className="mt-2"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <InputLabel
-                                            htmlFor="unit_price"
-                                            value="Preco unitario"
-                                        />
-                                        <input
-                                            id="unit_price"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={data.unit_price}
-                                            onChange={(event) =>
-                                                setData(
-                                                    'unit_price',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                        />
-                                        <InputError
-                                            message={errors.unit_price}
-                                            className="mt-2"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <InputLabel
-                                            htmlFor="purchased_at"
-                                            value="Data da compra"
-                                        />
-                                        <input
-                                            id="purchased_at"
-                                            type="date"
-                                            value={data.purchased_at}
-                                            onChange={(event) =>
-                                                setData(
-                                                    'purchased_at',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <InputLabel
-                                            htmlFor="source"
-                                            value="Origem"
-                                        />
-                                        <select
-                                            id="source"
-                                            value={data.source}
-                                            onChange={(event) =>
-                                                setData(
-                                                    'source',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                        >
-                                            {sources.map((source) => (
-                                                <option
-                                                    key={source.value}
-                                                    value={source.value}
-                                                >
-                                                    {source.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
                                 <div>
                                     <InputLabel
-                                        htmlFor="invoice_reference"
-                                        value="Referencia da nota"
+                                        htmlFor="unit_price"
+                                        value="Preco unitario"
                                     />
                                     <input
-                                        id="invoice_reference"
-                                        type="text"
-                                        value={data.invoice_reference}
+                                        id="unit_price"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={data.unit_price}
                                         onChange={(event) =>
                                             setData(
-                                                'invoice_reference',
+                                                'unit_price',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    />
+                                    <InputError
+                                        message={errors.unit_price}
+                                        className="mt-2"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <InputLabel
+                                        htmlFor="purchased_at"
+                                        value="Data da compra"
+                                    />
+                                    <input
+                                        id="purchased_at"
+                                        type="date"
+                                        value={data.purchased_at}
+                                        onChange={(event) =>
+                                            setData(
+                                                'purchased_at',
                                                 event.target.value,
                                             )
                                         }
@@ -763,147 +1247,94 @@ export default function PurchasesIndex({
 
                                 <div>
                                     <InputLabel
-                                        htmlFor="notes"
-                                        value="Observacoes"
+                                        htmlFor="source"
+                                        value="Origem"
                                     />
-                                    <textarea
-                                        id="notes"
-                                        rows={4}
-                                        value={data.notes}
+                                    <select
+                                        id="source"
+                                        value={data.source}
                                         onChange={(event) =>
                                             setData(
-                                                'notes',
+                                                'source',
                                                 event.target.value,
                                             )
                                         }
                                         className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                    />
-                                </div>
-
-                                <div className="rounded-[28px] bg-[#f8f4ec] p-5">
-                                    <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
-                                        Total previsto
-                                    </p>
-                                    <p className="mt-3 text-3xl font-semibold text-slate-900">
-                                        {formatCurrency(totalPreview)}
-                                    </p>
-                                </div>
-
-                                <PrimaryButton disabled={processing}>
-                                    Registrar compra
-                                </PrimaryButton>
-                            </form>
-                        ) : (
-                            <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                Cadastre um produto antes de registrar compras.
-                            </div>
-                        )}
-                    </SectionCard>
-
-                    <SectionCard
-                        title="Historico recente"
-                        description={`${entries.length} registros mais recentes.`}
-                    >
-                        <div className="grid gap-4">
-                            {entries.length > 0 ? (
-                                entries.map((entry) => (
-                                    <div
-                                        key={entry.id}
-                                        className="rounded-[28px] border border-slate-200 bg-white p-5"
                                     >
-                                        <div className="flex flex-wrap items-start justify-between gap-4">
-                                            <div>
-                                                <p className="text-xl font-semibold text-slate-900">
-                                                    {entry.product ??
-                                                        'Produto removido'}
-                                                </p>
-                                                <p className="mt-1 text-sm text-slate-500">
-                                                    {formatDate(
-                                                        entry.purchased_at,
-                                                    )}{' '}
-                                                    •{' '}
-                                                    {entry.source ===
-                                                    'nota_fiscal'
-                                                        ? 'Nota fiscal'
-                                                        : 'Manual'}
-                                                    {entry.invoice_reference
-                                                        ? ` • ${entry.invoice_reference}`
-                                                        : ''}
-                                                </p>
-                                            </div>
-
-                                            <DangerButton
-                                                type="button"
-                                                className="px-4 py-2 text-xs"
-                                                onClick={() => {
-                                                    if (
-                                                        confirm(
-                                                            'Excluir este registro de compra?',
-                                                        )
-                                                    ) {
-                                                        router.delete(
-                                                            route(
-                                                                'purchases.destroy',
-                                                                entry.id,
-                                                            ),
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        );
-                                                    }
-                                                }}
+                                        {sources.map((source) => (
+                                            <option
+                                                key={source.value}
+                                                value={source.value}
                                             >
-                                                Excluir
-                                            </DangerButton>
-                                        </div>
-
-                                        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                                            <div className="rounded-3xl bg-[#f8f4ec] p-4">
-                                                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                    Quantidade
-                                                </p>
-                                                <p className="mt-2 text-lg font-semibold text-slate-900">
-                                                    {formatQuantity(
-                                                        entry.quantity,
-                                                    )}{' '}
-                                                    {entry.unit ?? 'un'}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-3xl bg-[#eef7f7] p-4">
-                                                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                    Preco unitario
-                                                </p>
-                                                <p className="mt-2 text-lg font-semibold text-slate-900">
-                                                    {formatCurrency(
-                                                        entry.unit_price,
-                                                    )}
-                                                </p>
-                                            </div>
-                                            <div className="rounded-3xl bg-[#fff1ec] p-4">
-                                                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                    Total
-                                                </p>
-                                                <p className="mt-2 text-lg font-semibold text-slate-900">
-                                                    {formatCurrency(
-                                                        entry.total_amount,
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <p className="mt-4 text-sm leading-6 text-slate-600">
-                                            {entry.notes || 'Sem observacoes.'}
-                                        </p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                    Nenhuma compra registrada ainda.
+                                                {source.label}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                            )}
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    htmlFor="invoice_reference"
+                                    value="Referencia da nota"
+                                />
+                                <input
+                                    id="invoice_reference"
+                                    type="text"
+                                    value={data.invoice_reference}
+                                    onChange={(event) =>
+                                        setData(
+                                            'invoice_reference',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    htmlFor="notes"
+                                    value="Observacoes"
+                                />
+                                <textarea
+                                    id="notes"
+                                    rows={4}
+                                    value={data.notes}
+                                    onChange={(event) =>
+                                        setData(
+                                            'notes',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                />
+                            </div>
+
+                            <div className="rounded-[28px] bg-[#f8f4ec] p-5">
+                                <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
+                                    Total previsto
+                                </p>
+                                <p className="mt-3 text-3xl font-semibold text-slate-900">
+                                    {formatCurrency(totalPreview)}
+                                </p>
+                            </div>
+
+                            <PrimaryButton disabled={processing}>
+                                Registrar compra
+                            </PrimaryButton>
+                        </form>
+                    ) : (
+                        <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
+                            Cadastre um produto antes de registrar compras.
                         </div>
-                    </SectionCard>
-                </div>
+                    )}
+                </SectionCard>
+
+                <PurchaseHistoryTable
+                    entries={entries}
+                    sources={sources}
+                />
             </div>
         </AuthenticatedLayout>
     );

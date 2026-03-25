@@ -57,7 +57,7 @@ class PurchaseEntryController extends Controller
             'entries' => $user->purchaseEntries()
                 ->with('product:id,name,unit')
                 ->latest('purchased_at')
-                ->limit(30)
+                ->latest('id')
                 ->get()
                 ->map(fn (PurchaseEntry $entry) => [
                     'id' => $entry->id,
