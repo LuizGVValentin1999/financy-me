@@ -34,6 +34,50 @@
 }
 
 @layer components {
+    .app-ant-menu {
+        background: transparent !important;
+        border-inline-end: none !important;
+    }
+
+    .app-ant-menu .ant-menu-item {
+        height: 52px;
+        margin: 0 0 10px !important;
+        border-radius: 18px;
+        color: rgb(203 213 225) !important;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 52px;
+    }
+
+    .app-ant-menu .ant-menu-item .ant-menu-item-icon,
+    .app-ant-menu .ant-menu-item .ant-menu-title-content {
+        color: inherit !important;
+    }
+
+    .app-ant-menu .ant-menu-item:hover {
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: white !important;
+    }
+
+    .app-ant-menu .ant-menu-item-selected {
+        background: white !important;
+        box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.75);
+        color: #0f172a !important;
+    }
+
+    .app-ant-menu .ant-menu-item-selected:hover {
+        color: #0f172a !important;
+    }
+
+    .app-mobile-drawer .ant-drawer-content,
+    .app-mobile-drawer .ant-drawer-body {
+        background: #0f172a !important;
+    }
+
+    .app-mobile-drawer .ant-drawer-mask {
+        backdrop-filter: blur(4px);
+    }
+
     .purchase-ant-table .ant-table {
         background: transparent;
     }
