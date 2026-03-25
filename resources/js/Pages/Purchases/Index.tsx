@@ -8,24 +8,9 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import {
-    ColumnDef,
-    ColumnFiltersState,
-    ExpandedState,
-    FilterFn,
-    GroupingState,
-    SortingState,
-    flexRender,
-    getCoreRowModel,
-    getExpandedRowModel,
-    getFilteredRowModel,
-    getGroupedRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    useReactTable,
-} from '@tanstack/react-table';
-import { ChevronDown, ChevronRight, GripVertical, ListFilter, X } from 'lucide-react';
-import { FormEvent, Fragment, useState } from 'react';
+import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
+import { FormEvent, Key, useState } from 'react';
 
 interface PurchasesPageProps {
     products: Array<{
@@ -517,45 +502,32 @@ function ImportPreviewSection({
 
 type PurchaseEntryRow = PurchasesPageProps['entries'][number];
 
-type FilterMeta = {
-    filterVariant?: 'text' | 'select' | 'date' | 'range';
-    options?: Array<{ label: string; value: string }>;
+type PurchaseGroupRecord = {
+    key: string;
+    id: string;
+    isGroup: true;
+    groupLabel: string;
+    groupValue: string;
+    groupBy: string;
+    product: string | null;
+    unit: string | null;
+    quantity: number;
+    unit_price: number;
+    total_amount: number;
+    source: string;
+    invoice_reference: string | null;
+    notes: string | null;
+    purchased_at: string | null;
+    created_at: string | null;
+    children: PurchaseTableRecord[];
 };
 
-const textFilter: FilterFn<PurchaseEntryRow> = (row, columnId, value) => {
-    const search = String(value ?? '').trim().toLowerCase();
-
-    if (search === '') {
-        return true;
-    }
-
-    return String(row.getValue(columnId) ?? '')
-        .toLowerCase()
-        .includes(search);
-};
-
-const dateFilter: FilterFn<PurchaseEntryRow> = (row, columnId, value) => {
-    if (! value) {
-        return true;
-    }
-
-    return String(row.getValue(columnId) ?? '') === String(value);
-};
-
-const rangeFilter: FilterFn<PurchaseEntryRow> = (row, columnId, value) => {
-    const [min, max] = Array.isArray(value) ? value : [];
-    const numericValue = Number(row.getValue(columnId) ?? 0);
-
-    if (min !== undefined && min !== '' && numericValue < Number(min)) {
-        return false;
-    }
-
-    if (max !== undefined && max !== '' && numericValue > Number(max)) {
-        return false;
-    }
-
-    return true;
-};
+type PurchaseTableRecord =
+    | (PurchaseEntryRow & {
+          key: string;
+          isGroup?: false;
+      })
+    | PurchaseGroupRecord;
 
 function PurchaseHistoryTable({
     entries,
@@ -564,467 +536,393 @@ function PurchaseHistoryTable({
     entries: PurchasesPageProps['entries'];
     sources: PurchasesPageProps['sources'];
 }) {
-    const [sorting, setSorting] = useState<SortingState>([
-        {
-            id: 'purchased_at',
-            desc: true,
-        },
-    ]);
-    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-    const [grouping, setGrouping] = useState<GroupingState>([]);
-    const [expanded, setExpanded] = useState<ExpandedState>({});
+    const [groupBy, setGroupBy] = useState('none');
 
-    const columns: ColumnDef<PurchaseEntryRow>[] = [
-        {
-            accessorKey: 'product',
-            header: 'Produto',
-            cell: ({ row }) => (
-                <div>
-                    <p className="font-semibold text-slate-900">
-                        {row.original.product ?? 'Produto removido'}
-                    </p>
-                    <p className="mt-1 text-slate-500">
-                        {row.original.unit ?? 'un'}
-                    </p>
-                </div>
-            ),
-            filterFn: textFilter,
-            enableGrouping: true,
-            aggregationFn: 'count',
-            aggregatedCell: ({ row, getValue }) => (
-                <span className="font-semibold text-slate-900">
-                    {String(getValue() ?? row.subRows.length)} itens
-                </span>
-            ),
-            meta: {
-                filterVariant: 'text',
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'purchased_at',
-            header: 'Data',
-            cell: ({ row }) => formatDate(row.original.purchased_at),
-            filterFn: dateFilter,
-            enableGrouping: true,
-            meta: {
-                filterVariant: 'date',
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'source',
-            header: 'Origem',
-            cell: ({ row }) => (
-                <span className="rounded-full bg-[#eef7f7] px-3 py-1 text-xs font-semibold text-slate-700">
-                    {row.original.source === 'nota_fiscal'
-                        ? 'Nota fiscal'
-                        : 'Manual'}
-                </span>
-            ),
-            filterFn: textFilter,
-            enableGrouping: true,
-            meta: {
-                filterVariant: 'select',
-                options: [
-                    {
-                        label: 'Todas',
-                        value: '',
-                    },
-                    ...sources,
-                ],
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'invoice_reference',
-            header: 'Nota',
-            cell: ({ row }) => row.original.invoice_reference || '--',
-            filterFn: textFilter,
-            enableGrouping: true,
-            meta: {
-                filterVariant: 'text',
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'quantity',
-            header: 'Quantidade',
-            cell: ({ row }) =>
-                `${formatQuantity(row.original.quantity)} ${row.original.unit ?? 'un'}`,
-            aggregationFn: 'sum',
-            aggregatedCell: ({ getValue }) =>
-                formatQuantity(Number(getValue() ?? 0)),
-            filterFn: rangeFilter,
-            enableGrouping: false,
-            meta: {
-                filterVariant: 'range',
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'unit_price',
-            header: 'Unitario',
-            cell: ({ row }) => formatCurrency(row.original.unit_price),
-            filterFn: rangeFilter,
-            enableGrouping: false,
-            meta: {
-                filterVariant: 'range',
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'total_amount',
-            header: 'Total',
-            cell: ({ row }) => (
-                <span className="font-semibold text-slate-900">
-                    {formatCurrency(row.original.total_amount)}
-                </span>
-            ),
-            aggregationFn: 'sum',
-            aggregatedCell: ({ getValue }) => (
-                <span className="font-semibold text-slate-900">
-                    {formatCurrency(Number(getValue() ?? 0))}
-                </span>
-            ),
-            filterFn: rangeFilter,
-            enableGrouping: false,
-            meta: {
-                filterVariant: 'range',
-            } satisfies FilterMeta,
-        },
-        {
-            accessorKey: 'notes',
-            header: 'Observacoes',
-            cell: ({ row }) => row.original.notes || 'Sem observacoes.',
-            filterFn: textFilter,
-            enableGrouping: false,
-            meta: {
-                filterVariant: 'text',
-            } satisfies FilterMeta,
-        },
-        {
-            id: 'actions',
-            header: 'Acao',
-            enableSorting: false,
-            enableColumnFilter: false,
-            enableGrouping: false,
-            cell: ({ row }) => (
-                <DangerButton
-                    type="button"
-                    className="px-4 py-2 text-xs"
-                    onClick={() => {
-                        if (confirm('Excluir este registro de compra?')) {
-                            router.delete(route('purchases.destroy', row.original.id), {
-                                preserveScroll: true,
-                            });
-                        }
-                    }}
-                >
-                    Excluir
-                </DangerButton>
-            ),
-        },
-    ];
-
-    const table = useReactTable({
-        data: entries,
-        columns,
-        state: {
-            sorting,
-            columnFilters,
-            grouping,
-            expanded,
-        },
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
-        onGroupingChange: setGrouping,
-        onExpandedChange: setExpanded,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getGroupedRowModel: getGroupedRowModel(),
-        getExpandedRowModel: getExpandedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: {
-            pagination: {
-                pageIndex: 0,
-                pageSize: 12,
-            },
+    const getTextFilter = (
+        dataIndex: keyof PurchaseEntryRow,
+        placeholder: string,
+    ): ColumnsType<PurchaseTableRecord>[number] => ({
+        filterDropdown: ({
+            selectedKeys,
+            setSelectedKeys,
+            confirm,
+            clearFilters,
+        }: FilterDropdownProps) => (
+            <div className="w-64 p-3">
+                <Input
+                    value={String(selectedKeys[0] ?? '')}
+                    placeholder={placeholder}
+                    onChange={(event) =>
+                        setSelectedKeys(
+                            event.target.value ? [event.target.value] : [],
+                        )
+                    }
+                    onPressEnter={() => confirm()}
+                />
+                <Space className="mt-3">
+                    <Button type="primary" size="small" onClick={() => confirm()}>
+                        Aplicar
+                    </Button>
+                    <Button
+                        size="small"
+                        onClick={() => {
+                            clearFilters?.();
+                            confirm();
+                        }}
+                    >
+                        Limpar
+                    </Button>
+                </Space>
+            </div>
+        ),
+        onFilter: (value: Key | boolean, record: PurchaseTableRecord) => {
+            const current = String(record[dataIndex] ?? '').toLowerCase();
+            return current.includes(String(value).toLowerCase());
         },
     });
 
-    const renderFilter = (header: ReturnType<typeof table.getHeaderGroups>[number]['headers'][number]) => {
-        const meta = header.column.columnDef.meta as FilterMeta | undefined;
-        const filterValue = header.column.getFilterValue();
+    const dataSource: PurchaseTableRecord[] =
+        groupBy === 'none'
+            ? entries.map((entry) => ({
+                  ...entry,
+                  key: String(entry.id),
+              }))
+            : Object.entries(
+                  entries.reduce<Record<string, PurchaseEntryRow[]>>(
+                      (groups, entry) => {
+                          const key =
+                              groupBy === 'product'
+                                  ? entry.product ?? 'Produto removido'
+                                  : groupBy === 'source'
+                                    ? entry.source === 'nota_fiscal'
+                                        ? 'Nota fiscal'
+                                        : 'Manual'
+                                    : groupBy === 'invoice_reference'
+                                      ? entry.invoice_reference || 'Sem referencia'
+                                      : formatDate(entry.purchased_at);
 
-        if (!header.column.getCanFilter() || !meta?.filterVariant) {
-            return null;
-        }
+                          groups[key] ??= [];
+                          groups[key].push(entry);
 
-        if (meta.filterVariant === 'select') {
-            return (
-                <select
-                    value={String(filterValue ?? '')}
-                    onChange={(event) =>
-                        header.column.setFilterValue(event.target.value)
-                    }
-                    className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                >
-                    {meta.options?.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
-            );
-        }
+                          return groups;
+                      },
+                      {},
+                  ),
+              ).map(([label, groupEntries]) => ({
+                  key: `group-${groupBy}-${label}`,
+                  id: `group-${groupBy}-${label}`,
+                  isGroup: true,
+                  groupLabel: label,
+                  groupValue: label,
+                  groupBy,
+                  product: groupBy === 'product' ? label : null,
+                  unit: null,
+                  quantity: groupEntries.reduce(
+                      (total, entry) => total + entry.quantity,
+                      0,
+                  ),
+                  unit_price: 0,
+                  total_amount: groupEntries.reduce(
+                      (total, entry) => total + entry.total_amount,
+                      0,
+                  ),
+                  source:
+                      groupBy === 'source' && label === 'Nota fiscal'
+                          ? 'nota_fiscal'
+                          : groupBy === 'source' && label === 'Manual'
+                            ? 'manual'
+                            : '',
+                  invoice_reference:
+                      groupBy === 'invoice_reference' ? label : null,
+                  notes: `${groupEntries.length} registros`,
+                  purchased_at: groupBy === 'date' ? groupEntries[0]?.purchased_at ?? null : null,
+                  created_at: null,
+                  children: groupEntries.map((entry) => ({
+                      ...entry,
+                      key: String(entry.id),
+                  })),
+              }));
 
-        if (meta.filterVariant === 'date') {
-            return (
-                <input
-                    type="date"
-                    value={String(filterValue ?? '')}
-                    onChange={(event) =>
-                        header.column.setFilterValue(event.target.value)
-                    }
-                    className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                />
-            );
-        }
-
-        if (meta.filterVariant === 'range') {
-            const [min, max] = Array.isArray(filterValue)
-                ? filterValue
-                : ['', ''];
-
-            return (
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                    <input
-                        type="number"
-                        value={String(min ?? '')}
+    const columns: ColumnsType<PurchaseTableRecord> = [
+        {
+            title: 'Produto',
+            dataIndex: 'product',
+            key: 'product',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                String(a.product ?? '').localeCompare(String(b.product ?? '')),
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup ? (
+                    <div>
+                        <p className="font-semibold text-slate-900">
+                            {record.groupLabel}
+                        </p>
+                        <p className="mt-1 text-slate-500">
+                            {record.children.length} registros neste grupo
+                        </p>
+                    </div>
+                ) : (
+                    <div>
+                        <p className="font-semibold text-slate-900">
+                            {record.product ?? 'Produto removido'}
+                        </p>
+                        <p className="mt-1 text-slate-500">
+                            {record.unit ?? 'un'}
+                        </p>
+                    </div>
+                ),
+            ...getTextFilter('product', 'Filtrar por produto'),
+        },
+        {
+            title: 'Data',
+            dataIndex: 'purchased_at',
+            key: 'purchased_at',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                String(a.purchased_at ?? '').localeCompare(
+                    String(b.purchased_at ?? ''),
+                ),
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup && groupBy !== 'date'
+                    ? '--'
+                    : formatDate(record.purchased_at),
+            filterDropdown: ({
+                selectedKeys,
+                setSelectedKeys,
+                confirm,
+                clearFilters,
+            }: FilterDropdownProps) => (
+                <div className="w-56 p-3">
+                    <Input
+                        type="date"
+                        value={String(selectedKeys[0] ?? '')}
                         onChange={(event) =>
-                            header.column.setFilterValue([
-                                event.target.value,
-                                max ?? '',
-                            ])
+                            setSelectedKeys(
+                                event.target.value ? [event.target.value] : [],
+                            )
                         }
-                        placeholder="Min"
-                        className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                     />
-                    <input
-                        type="number"
-                        value={String(max ?? '')}
-                        onChange={(event) =>
-                            header.column.setFilterValue([
-                                min ?? '',
-                                event.target.value,
-                            ])
-                        }
-                        placeholder="Max"
-                        className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                    />
+                    <Space className="mt-3">
+                        <Button type="primary" size="small" onClick={() => confirm()}>
+                            Aplicar
+                        </Button>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                clearFilters?.();
+                                confirm();
+                            }}
+                        >
+                            Limpar
+                        </Button>
+                    </Space>
                 </div>
-            );
-        }
-
-        return (
-            <input
-                type="text"
-                value={String(filterValue ?? '')}
-                onChange={(event) =>
-                    header.column.setFilterValue(event.target.value)
-                }
-                placeholder="Filtrar"
-                className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-            />
-        );
-    };
+            ),
+            onFilter: (value: Key | boolean, record: PurchaseTableRecord) =>
+                String(record.purchased_at ?? '') === String(value),
+        },
+        {
+            title: 'Origem',
+            dataIndex: 'source',
+            key: 'source',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                String(a.source).localeCompare(String(b.source)),
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup && groupBy !== 'source' ? (
+                    '--'
+                ) : (
+                    <Tag color="cyan">
+                        {record.source === 'nota_fiscal'
+                            ? 'Nota fiscal'
+                            : record.source === 'manual'
+                              ? 'Manual'
+                              : record.isGroup
+                                ? record.groupLabel
+                                : '--'}
+                    </Tag>
+                ),
+            filterDropdown: ({
+                selectedKeys,
+                setSelectedKeys,
+                confirm,
+                clearFilters,
+            }: FilterDropdownProps) => (
+                <div className="w-56 p-3">
+                    <Select
+                        value={String(selectedKeys[0] ?? '') || undefined}
+                        placeholder="Filtrar origem"
+                        className="w-full"
+                        onChange={(value: string | undefined) =>
+                            setSelectedKeys(value ? [value] : [])
+                        }
+                        options={sources.map((source) => ({
+                            value: source.value,
+                            label: source.label,
+                        }))}
+                        allowClear
+                    />
+                    <Space className="mt-3">
+                        <Button type="primary" size="small" onClick={() => confirm()}>
+                            Aplicar
+                        </Button>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                clearFilters?.();
+                                confirm();
+                            }}
+                        >
+                            Limpar
+                        </Button>
+                    </Space>
+                </div>
+            ),
+            onFilter: (value: Key | boolean, record: PurchaseTableRecord) =>
+                record.source === value,
+        },
+        {
+            title: 'Nota',
+            dataIndex: 'invoice_reference',
+            key: 'invoice_reference',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                String(a.invoice_reference ?? '').localeCompare(
+                    String(b.invoice_reference ?? ''),
+                ),
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup && groupBy !== 'invoice_reference'
+                    ? '--'
+                    : record.invoice_reference || '--',
+            ...getTextFilter('invoice_reference', 'Filtrar por referencia'),
+        },
+        {
+            title: 'Quantidade',
+            dataIndex: 'quantity',
+            key: 'quantity',
+            align: 'right',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                a.quantity - b.quantity,
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup
+                    ? formatQuantity(record.quantity)
+                    : `${formatQuantity(record.quantity)} ${record.unit ?? 'un'}`,
+        },
+        {
+            title: 'Unitario',
+            dataIndex: 'unit_price',
+            key: 'unit_price',
+            align: 'right',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                a.unit_price - b.unit_price,
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup ? '--' : formatCurrency(record.unit_price),
+        },
+        {
+            title: 'Total',
+            dataIndex: 'total_amount',
+            key: 'total_amount',
+            align: 'right',
+            sorter: (a: PurchaseTableRecord, b: PurchaseTableRecord) =>
+                a.total_amount - b.total_amount,
+            render: (_: unknown, record: PurchaseTableRecord) => (
+                <span className="font-semibold text-slate-900">
+                    {formatCurrency(record.total_amount)}
+                </span>
+            ),
+        },
+        {
+            title: 'Observacoes',
+            dataIndex: 'notes',
+            key: 'notes',
+            ellipsis: true,
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.notes || 'Sem observacoes.',
+            ...getTextFilter('notes', 'Filtrar observacoes'),
+        },
+        {
+            title: 'Acao',
+            key: 'actions',
+            align: 'right',
+            render: (_: unknown, record: PurchaseTableRecord) =>
+                record.isGroup ? null : (
+                    <DangerButton
+                        type="button"
+                        className="px-4 py-2 text-xs"
+                        onClick={() => {
+                            if (confirm('Excluir este registro de compra?')) {
+                                router.delete(
+                                    route('purchases.destroy', record.id),
+                                    {
+                                        preserveScroll: true,
+                                    },
+                                );
+                            }
+                        }}
+                    >
+                        Excluir
+                    </DangerButton>
+                ),
+        },
+    ];
 
     return (
         <SectionCard
             title="Tabela de compras"
-            description="Grade com filtros na propria tabela, agrupamento por coluna, ordenacao e paginação."
+            description="Tabela Ant Design com filtros por coluna, paginação e agrupamento."
         >
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[#f8f4ec] px-4 py-4 text-sm text-slate-600">
-                <div className="flex flex-wrap items-center gap-3">
-                    <span className="inline-flex items-center gap-2 font-semibold text-slate-700">
-                        <ListFilter className="h-4 w-4" />
-                        {table.getFilteredRowModel().rows.length} registros apos filtros
-                    </span>
-                    <span>
-                        {grouping.length > 0
-                            ? `Agrupado por ${grouping.join(', ')}`
-                            : 'Sem agrupamento ativo'}
-                    </span>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[#f8f4ec] px-4 py-4">
+                <div>
+                    <p className="text-sm font-semibold text-slate-700">
+                        {entries.length} registros carregados
+                    </p>
+                    <p className="text-sm text-slate-500">
+                        Use os filtros do cabeçalho e agrupe quando fizer sentido.
+                    </p>
                 </div>
 
-                {grouping.length > 0 && (
-                    <SecondaryButton
-                        type="button"
-                        className="px-4 py-2 text-xs"
-                        onClick={() => setGrouping([])}
-                    >
-                        Limpar agrupamento
-                    </SecondaryButton>
-                )}
-            </div>
-
-            <div className="mt-6 rounded-[28px] border border-slate-200 bg-white">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-400">
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <Fragment key={headerGroup.id}>
-                                    <tr>
-                                        {headerGroup.headers.map((header) => (
-                                            <th
-                                                key={header.id}
-                                                className="px-5 py-4 align-top"
-                                            >
-                                                {header.isPlaceholder ? null : (
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center justify-between gap-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={header.column.getToggleSortingHandler()}
-                                                                className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
-                                                            >
-                                                                {flexRender(
-                                                                    header
-                                                                        .column
-                                                                        .columnDef
-                                                                        .header,
-                                                                    header.getContext(),
-                                                                )}
-                                                                {header.column.getIsSorted() ===
-                                                                    'asc' &&
-                                                                    ' ↑'}
-                                                                {header.column.getIsSorted() ===
-                                                                    'desc' &&
-                                                                    ' ↓'}
-                                                            </button>
-
-                                                            {header.column.getCanGroup() && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={header.column.getToggleGroupingHandler()}
-                                                                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full border transition ${
-                                                                        header.column.getIsGrouped()
-                                                                            ? 'border-slate-900 bg-slate-900 text-white'
-                                                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                                                                    }`}
-                                                                    title="Agrupar por esta coluna"
-                                                                >
-                                                                    {header.column.getIsGrouped() ? (
-                                                                        <X className="h-4 w-4" />
-                                                                    ) : (
-                                                                        <GripVertical className="h-4 w-4" />
-                                                                    )}
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        {renderFilter(header)}
-                                                    </div>
-                                                )}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </Fragment>
-                            ))}
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {table.getRowModel().rows.length > 0 ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <tr key={row.id} className="align-top">
-                                        {row.getVisibleCells().map((cell) => (
-                                            <td
-                                                key={cell.id}
-                                                className="px-5 py-4 text-slate-600"
-                                            >
-                                                {cell.getIsGrouped() ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={row.getToggleExpandedHandler()}
-                                                        className="inline-flex items-center gap-2 font-semibold text-slate-900"
-                                                    >
-                                                        {row.getIsExpanded() ? (
-                                                            <ChevronDown className="h-4 w-4" />
-                                                        ) : (
-                                                            <ChevronRight className="h-4 w-4" />
-                                                        )}
-                                                        {flexRender(
-                                                            cell.column.columnDef.cell,
-                                                            cell.getContext(),
-                                                        )}{' '}
-                                                        <span className="text-sm font-medium text-slate-500">
-                                                            ({row.subRows.length})
-                                                        </span>
-                                                    </button>
-                                                ) : cell.getIsAggregated() ? (
-                                                    flexRender(
-                                                        cell.column.columnDef
-                                                            .aggregatedCell ??
-                                                            cell.column
-                                                                .columnDef.cell,
-                                                        cell.getContext(),
-                                                    )
-                                                ) : cell.getIsPlaceholder() ? null : (
-                                                    flexRender(
-                                                        cell.column.columnDef
-                                                            .cell,
-                                                        cell.getContext(),
-                                                    )
-                                                )}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td
-                                        colSpan={columns.length}
-                                        className="px-5 py-10 text-sm text-slate-500"
-                                    >
-                                        Nenhuma compra encontrada com os filtros atuais.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="flex min-w-[260px] items-center gap-3">
+                    <Select
+                        value={groupBy}
+                        className="w-full"
+                        onChange={setGroupBy}
+                        options={[
+                            { value: 'none', label: 'Sem agrupamento' },
+                            { value: 'product', label: 'Agrupar por produto' },
+                            { value: 'source', label: 'Agrupar por origem' },
+                            {
+                                value: 'invoice_reference',
+                                label: 'Agrupar por referencia',
+                            },
+                            { value: 'date', label: 'Agrupar por data' },
+                        ]}
+                    />
+                    {groupBy !== 'none' && (
+                        <Button onClick={() => setGroupBy('none')}>
+                            Limpar
+                        </Button>
+                    )}
                 </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                <span className="text-sm text-slate-500">
-                    Pagina {table.getState().pagination.pageIndex + 1} de{' '}
-                    {table.getPageCount() || 1}
-                </span>
-
-                <div className="flex flex-wrap items-center gap-2">
-                    <select
-                        value={table.getState().pagination.pageSize}
-                        onChange={(event) =>
-                            table.setPageSize(Number(event.target.value))
-                        }
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                    >
-                        {[12, 24, 48].map((pageSize) => (
-                            <option key={pageSize} value={pageSize}>
-                                {pageSize} linhas
-                            </option>
-                        ))}
-                    </select>
-
-                    <SecondaryButton
-                        type="button"
-                        disabled={!table.getCanPreviousPage()}
-                        onClick={() => table.previousPage()}
-                    >
-                        Pagina anterior
-                    </SecondaryButton>
-                    <SecondaryButton
-                        type="button"
-                        disabled={!table.getCanNextPage()}
-                        onClick={() => table.nextPage()}
-                    >
-                        Proxima pagina
-                    </SecondaryButton>
-                </div>
+            <div className="purchase-ant-table">
+                <Table<PurchaseTableRecord>
+                    rowKey="key"
+                    columns={columns}
+                    dataSource={dataSource}
+                    pagination={{
+                        pageSize: 12,
+                        showSizeChanger: true,
+                        pageSizeOptions: [12, 24, 48],
+                        showTotal: (total, range) =>
+                            `${range[0]}-${range[1]} de ${total} compras`,
+                    }}
+                    expandable={
+                        groupBy === 'none'
+                            ? undefined
+                            : {
+                                  defaultExpandAllRows: false,
+                              }
+                    }
+                    size="middle"
+                    scroll={{ x: 1200 }}
+                />
             </div>
         </SectionCard>
     );

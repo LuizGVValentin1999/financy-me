@@ -32,3 +32,38 @@
         @apply bg-[#e07a5f] text-white;
     }
 }
+
+@layer components {
+    .purchase-ant-table .ant-table {
+        background: transparent;
+    }
+
+    .purchase-ant-table .ant-table-container {
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgb(226 232 240);
+    }
+
+    .purchase-ant-table .ant-table-thead > tr > th {
+        background: #f8f4ec;
+        color: rgb(100 116 139);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+    }
+
+    .purchase-ant-table .ant-table-tbody > tr > td {
+        vertical-align: top;
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    .purchase-ant-table .ant-pagination .ant-pagination-item-active {
+        border-color: #0f172a;
+        background: #0f172a;
+    }
+
+    .purchase-ant-table .ant-pagination .ant-pagination-item-active a {
+        color: white;
+    }
+}
