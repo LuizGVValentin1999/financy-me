@@ -85,21 +85,19 @@ export default function Login({
                 </div>
 
                 <div className="mt-4 block">
-                    <label className="flex items-center">
-                        <Checkbox
-                            name="remember"
-                            checked={data.remember}
-                            onChange={(e) =>
-                                setData(
-                                    'remember',
-                                    (e.target.checked || false) as false,
-                                )
-                            }
-                        />
-                        <span className="ms-2 text-sm text-slate-600">
-                            Lembrar de mim
-                        </span>
-                    </label>
+                    <Checkbox
+                        name="remember"
+                        checked={data.remember}
+                        onChange={(e) =>
+                            setData(
+                                'remember',
+                                (e.target.checked || false) as false,
+                            )
+                        }
+                        className="text-sm text-slate-600"
+                    >
+                        Lembrar de mim
+                    </Checkbox>
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

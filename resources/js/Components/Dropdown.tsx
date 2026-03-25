@@ -1,11 +1,16 @@
-import { Transition } from '@headlessui/react';
+import { Dropdown as AntDropdown } from 'antd';
 import { InertiaLinkProps, Link } from '@inertiajs/react';
 import {
+    ReactElement,
+    ReactNode,
+    cloneElement,
     createContext,
     Dispatch,
     PropsWithChildren,
+    isValidElement,
     SetStateAction,
     useContext,
+    useEffect,
     useState,
 } from 'react';
 
@@ -13,40 +18,89 @@ const DropDownContext = createContext<{
     open: boolean;
     setOpen: Dispatch<SetStateAction<boolean>>;
     toggleOpen: () => void;
+    content: ReactNode;
+    setContent: Dispatch<SetStateAction<ReactNode>>;
+    placement: 'bottomLeft' | 'bottomRight';
+    setPlacement: Dispatch<SetStateAction<'bottomLeft' | 'bottomRight'>>;
+    popupClassName: string;
+    setPopupClassName: Dispatch<SetStateAction<string>>;
 }>({
     open: false,
     setOpen: () => {},
     toggleOpen: () => {},
+    content: null,
+    setContent: () => {},
+    placement: 'bottomRight',
+    setPlacement: () => {},
+    popupClassName: '',
+    setPopupClassName: () => {},
 });
 
 const Dropdown = ({ children }: PropsWithChildren) => {
     const [open, setOpen] = useState(false);
+    const [content, setContent] = useState<ReactNode>(null);
+    const [placement, setPlacement] = useState<'bottomLeft' | 'bottomRight'>(
+        'bottomRight',
+    );
+    const [popupClassName, setPopupClassName] = useState('');
 
     const toggleOpen = () => {
         setOpen((previousState) => !previousState);
     };
 
     return (
-        <DropDownContext.Provider value={{ open, setOpen, toggleOpen }}>
+        <DropDownContext.Provider
+            value={{
+                open,
+                setOpen,
+                toggleOpen,
+                content,
+                setContent,
+                placement,
+                setPlacement,
+                popupClassName,
+                setPopupClassName,
+            }}
+        >
             <div className="relative">{children}</div>
         </DropDownContext.Provider>
     );
 };
 
 const Trigger = ({ children }: PropsWithChildren) => {
-    const { open, setOpen, toggleOpen } = useContext(DropDownContext);
+    const { open, setOpen, content, placement, popupClassName } =
+        useContext(DropDownContext);
+
+    if (!content) {
+        return <>{children}</>;
+    }
+
+    if (!isValidElement(children)) {
+        return (
+            <AntDropdown
+                open={open}
+                onOpenChange={setOpen}
+                trigger={['click']}
+                placement={placement}
+                dropdownRender={() => <div>{content}</div>}
+                overlayClassName={popupClassName}
+            >
+                <span>{children}</span>
+            </AntDropdown>
+        );
+    }
 
     return (
-        <>
-            <div onClick={toggleOpen}>{children}</div>
-
-            {open && (
-                <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setOpen(false)}
-                ></div>
-            )}
-        </>
+        <AntDropdown
+            open={open}
+            onOpenChange={setOpen}
+            trigger={['click']}
+            placement={placement}
+            dropdownRender={() => <div>{content}</div>}
+            overlayClassName={popupClassName}
+        >
+            {cloneElement(children as ReactElement)}
+        </AntDropdown>
     );
 };
 
@@ -60,49 +114,35 @@ const Content = ({
     width?: '48';
     contentClasses?: string;
 }>) => {
-    const { open, setOpen } = useContext(DropDownContext);
+    const { setContent, setPlacement, setPopupClassName } =
+        useContext(DropDownContext);
 
-    let alignmentClasses = 'origin-top';
-
-    if (align === 'left') {
-        alignmentClasses = 'ltr:origin-top-left rtl:origin-top-right start-0';
-    } else if (align === 'right') {
-        alignmentClasses = 'ltr:origin-top-right rtl:origin-top-left end-0';
-    }
-
-    let widthClasses = '';
-
-    if (width === '48') {
-        widthClasses = 'w-48';
-    }
-
-    return (
-        <>
-            <Transition
-                show={open}
-                enter="transition ease-out duration-200"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
+    useEffect(() => {
+        setPlacement(align === 'left' ? 'bottomLeft' : 'bottomRight');
+        setPopupClassName(width === '48' ? 'w-48' : '');
+        setContent(
+            <div
+                className={`rounded-md border border-slate-200 bg-white shadow-lg ${contentClasses}`}
             >
-                <div
-                    className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
-                    onClick={() => setOpen(false)}
-                >
-                    <div
-                        className={
-                            `rounded-md ring-1 ring-black ring-opacity-5 ` +
-                            contentClasses
-                        }
-                    >
-                        {children}
-                    </div>
-                </div>
-            </Transition>
-        </>
-    );
+                {children}
+            </div>,
+        );
+
+        return () => {
+            setContent(null);
+            setPopupClassName('');
+        };
+    }, [
+        align,
+        children,
+        contentClasses,
+        setContent,
+        setPlacement,
+        setPopupClassName,
+        width,
+    ]);
+
+    return null;
 };
 
 const DropdownLink = ({

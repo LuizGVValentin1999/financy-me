@@ -1,3 +1,4 @@
+import { Typography } from 'antd';
 import { LabelHTMLAttributes } from 'react';
 
 export default function InputLabel({
@@ -9,12 +10,11 @@ export default function InputLabel({
     return (
         <label
             {...props}
-            className={
-                `block text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 ` +
-                className
-            }
+            className={`block ${className}`}
         >
-            {value ? value : children}
+            <Typography.Text className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {value ? value : children}
+            </Typography.Text>
         </label>
     );
 }

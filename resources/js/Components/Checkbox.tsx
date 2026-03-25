@@ -1,17 +1,9 @@
-import { InputHTMLAttributes } from 'react';
+import { Checkbox as AntCheckbox } from 'antd';
+import type { CheckboxProps } from 'antd';
 
 export default function Checkbox({
     className = '',
     ...props
-}: InputHTMLAttributes<HTMLInputElement>) {
-    return (
-        <input
-            {...props}
-            type="checkbox"
-            className={
-                'rounded border-slate-300 text-[#1e7a8a] shadow-sm focus:ring-[#1e7a8a] ' +
-                className
-            }
-        />
-    );
+}: CheckboxProps) {
+    return <AntCheckbox {...props} className={className} />;
 }

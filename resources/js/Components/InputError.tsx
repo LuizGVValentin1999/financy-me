@@ -1,3 +1,4 @@
+import { Typography } from 'antd';
 import { HTMLAttributes } from 'react';
 
 export default function InputError({
@@ -6,11 +7,12 @@ export default function InputError({
     ...props
 }: HTMLAttributes<HTMLParagraphElement> & { message?: string }) {
     return message ? (
-        <p
+        <Typography.Text
             {...props}
-            className={'text-sm font-medium text-[#be3d2a] ' + className}
+            type="danger"
+            className={`block text-sm font-medium ${className}`}
         >
             {message}
-        </p>
+        </Typography.Text>
     ) : null;
 }

@@ -1,4 +1,10 @@
+import { Button } from 'antd';
 import { ButtonHTMLAttributes } from 'react';
+
+type SecondaryButtonProps = Omit<
+    ButtonHTMLAttributes<HTMLButtonElement>,
+    'color'
+>;
 
 export default function SecondaryButton({
     type = 'button',
@@ -6,19 +12,15 @@ export default function SecondaryButton({
     disabled,
     children,
     ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+}: SecondaryButtonProps) {
     return (
-        <button
+        <Button
             {...props}
-            type={type}
-            className={
-                `inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:cursor-not-allowed ${
-                    disabled && 'opacity-25'
-                } ` + className
-            }
+            htmlType={type}
+            className={`h-12 rounded-full px-5 text-sm font-semibold ${className}`}
             disabled={disabled}
         >
             {children}
-        </button>
+        </Button>
     );
 }

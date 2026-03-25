@@ -292,19 +292,19 @@ function ImportPreviewSection({
                             </div>
 
                             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[22px] bg-[#f8f4ec] px-4 py-3">
-                                <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                                    <Checkbox
-                                        checked={data.items[index].include}
-                                        onChange={(event) =>
-                                            updateItem(
-                                                index,
-                                                'include',
-                                                event.target.checked,
-                                            )
-                                        }
-                                    />
+                                <Checkbox
+                                    checked={data.items[index].include}
+                                    onChange={(event) =>
+                                        updateItem(
+                                            index,
+                                            'include',
+                                            event.target.checked,
+                                        )
+                                    }
+                                    className="text-sm font-medium text-slate-700"
+                                >
                                     Incluir este item no estoque
-                                </label>
+                                </Checkbox>
 
                                 <SecondaryButton
                                     type="button"

@@ -1,3 +1,5 @@
+import { Input } from 'antd';
+import type { InputRef } from 'antd';
 import {
     forwardRef,
     InputHTMLAttributes,
@@ -12,30 +14,39 @@ export default forwardRef(function TextInput(
         className = '',
         isFocused = false,
         ...props
-    }: InputHTMLAttributes<HTMLInputElement> & { isFocused?: boolean },
+    }: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
+        isFocused?: boolean;
+    },
     ref,
 ) {
-    const localRef = useRef<HTMLInputElement>(null);
+    const antInputRef = useRef<InputRef>(null);
 
     useImperativeHandle(ref, () => ({
-        focus: () => localRef.current?.focus(),
+        focus: () => antInputRef.current?.focus(),
     }));
 
     useEffect(() => {
         if (isFocused) {
-            localRef.current?.focus();
+            antInputRef.current?.focus();
         }
     }, [isFocused]);
 
+    if (type === 'password') {
+        return (
+            <Input.Password
+                {...props}
+                ref={antInputRef}
+                className={`h-12 rounded-2xl ${className}`}
+            />
+        );
+    }
+
     return (
-        <input
+        <Input
             {...props}
             type={type}
-            className={
-                'rounded-2xl border-slate-200 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#1e7a8a] focus:ring-[#1e7a8a]/20 ' +
-                className
-            }
-            ref={localRef}
+            ref={antInputRef}
+            className={`h-12 rounded-2xl ${className}`}
         />
     );
 });
