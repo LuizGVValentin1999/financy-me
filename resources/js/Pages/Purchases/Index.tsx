@@ -1,11 +1,13 @@
 import Checkbox from '@/Components/Checkbox';
 import DangerButton from '@/Components/DangerButton';
+import FormModalActions from '@/Components/FormModalActions';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import SecondaryButton from '@/Components/SecondaryButton';
+import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
@@ -669,32 +671,13 @@ function PurchaseHistoryTable({
             confirm,
             clearFilters,
         }: FilterDropdownProps) => (
-            <div className="w-64 p-3">
-                <Input
-                    value={String(selectedKeys[0] ?? '')}
-                    placeholder={placeholder}
-                    onChange={(event) =>
-                        setSelectedKeys(
-                            event.target.value ? [event.target.value] : [],
-                        )
-                    }
-                    onPressEnter={() => confirm()}
-                />
-                <Space className="mt-3">
-                    <Button type="primary" size="small" onClick={() => confirm()}>
-                        Aplicar
-                    </Button>
-                    <Button
-                        size="small"
-                        onClick={() => {
-                            clearFilters?.();
-                            confirm();
-                        }}
-                    >
-                        Limpar
-                    </Button>
-                </Space>
-            </div>
+            <TableTextFilterDropdown
+                selectedKeys={selectedKeys}
+                setSelectedKeys={setSelectedKeys}
+                confirm={confirm}
+                clearFilters={clearFilters}
+                placeholder={placeholder}
+            />
         ),
         onFilter: (value: Key | boolean, record: PurchaseTableRecord) => {
             const current = String(record[dataIndex] ?? '').toLowerCase();
@@ -1236,23 +1219,12 @@ function PurchaseHistoryTable({
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap justify-end gap-3">
-                            <SecondaryButton
-                                type="button"
-                                onClick={closeEditModal}
-                            >
-                                Cancelar
-                            </SecondaryButton>
-                            <DangerButton
-                                type="button"
-                                onClick={deleteEditingEntry}
-                            >
-                                Excluir
-                            </DangerButton>
-                            <PrimaryButton disabled={processing}>
-                                Salvar alteracoes
-                            </PrimaryButton>
-                        </div>
+                        <FormModalActions
+                            onCancel={closeEditModal}
+                            onDelete={deleteEditingEntry}
+                            saveLabel="Salvar alteracoes"
+                            saveDisabled={processing}
+                        />
                     </form>
                 </div>
             </Modal>

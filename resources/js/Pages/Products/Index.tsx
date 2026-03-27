@@ -1,14 +1,14 @@
 import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
+import FormModalActions from '@/Components/FormModalActions';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
+import ProductFormFields from '@/Components/Products/ProductFormFields';
 import SectionCard from '@/Components/SectionCard';
-import SecondaryButton from '@/Components/SecondaryButton';
+import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -96,6 +96,13 @@ export default function ProductsIndex({
         });
     };
 
+    const handleCreateFieldChange = (
+        field: keyof typeof data,
+        value: string,
+    ) => {
+        setData(field as keyof typeof data, value as never);
+    };
+
     const closeEditModal = () => {
         setEditingProduct(null);
         resetEdit();
@@ -127,6 +134,13 @@ export default function ProductsIndex({
             preserveScroll: true,
             onSuccess: () => closeEditModal(),
         });
+    };
+
+    const handleEditFieldChange = (
+        field: keyof typeof editData,
+        value: string,
+    ) => {
+        setEditData(field as keyof typeof editData, value as never);
     };
 
     const deleteEditingProduct = () => {
@@ -180,32 +194,13 @@ export default function ProductsIndex({
             confirm,
             clearFilters,
         }: FilterDropdownProps) => (
-            <div className="w-64 p-3">
-                <Input
-                    value={String(selectedKeys[0] ?? '')}
-                    placeholder={placeholder}
-                    onChange={(event) =>
-                        setSelectedKeys(
-                            event.target.value ? [event.target.value] : [],
-                        )
-                    }
-                    onPressEnter={() => confirm()}
-                />
-                <Space className="mt-3">
-                    <Button type="primary" size="small" onClick={() => confirm()}>
-                        Aplicar
-                    </Button>
-                    <Button
-                        size="small"
-                        onClick={() => {
-                            clearFilters?.();
-                            confirm();
-                        }}
-                    >
-                        Limpar
-                    </Button>
-                </Space>
-            </div>
+            <TableTextFilterDropdown
+                selectedKeys={selectedKeys}
+                setSelectedKeys={setSelectedKeys}
+                confirm={confirm}
+                clearFilters={clearFilters}
+                placeholder={placeholder}
+            />
         ),
         onFilter: (value: Key | boolean, record: ProductTableRecord) => {
             const current = String(record[dataIndex] ?? '').toLowerCase();
@@ -446,153 +441,21 @@ export default function ProductsIndex({
                     </div>
 
                     <form onSubmit={submitEdit} className="mt-6 space-y-5">
-                        <div>
-                            <InputLabel htmlFor="edit_name" value="Nome" />
-                            <input
-                                id="edit_name"
-                                type="text"
-                                value={editData.name}
-                                onChange={(event) =>
-                                    setEditData('name', event.target.value)
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={editErrors.name} className="mt-2" />
-                        </div>
+                        <ProductFormFields
+                            data={editData}
+                            errors={editErrors}
+                            categories={categories}
+                            units={units}
+                            idPrefix="edit"
+                            onFieldChange={handleEditFieldChange}
+                        />
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="edit_brand" value="Marca" />
-                                <input
-                                    id="edit_brand"
-                                    type="text"
-                                    value={editData.brand}
-                                    onChange={(event) =>
-                                        setEditData('brand', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel htmlFor="edit_sku" value="SKU ou codigo" />
-                                <input
-                                    id="edit_sku"
-                                    type="text"
-                                    value={editData.sku}
-                                    onChange={(event) =>
-                                        setEditData('sku', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="sm:col-span-2">
-                                <InputLabel
-                                    htmlFor="edit_category_id"
-                                    value="Categoria"
-                                />
-                                <Select
-                                    id="edit_category_id"
-                                    value={editData.category_id || undefined}
-                                    onChange={(value) =>
-                                        setEditData('category_id', value ?? '')
-                                    }
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    allowClear
-                                    placeholder="Sem categoria"
-                                    options={categories
-                                        .filter(
-                                            (category) =>
-                                                category.kind === 'produto',
-                                        )
-                                        .map((category) => ({
-                                            value: String(category.id),
-                                            label: category.name,
-                                        }))}
-                                />
-                                <InputError
-                                    message={editErrors.category_id}
-                                    className="mt-2"
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel htmlFor="edit_unit" value="Unidade" />
-                                <Select
-                                    id="edit_unit"
-                                    value={editData.unit}
-                                    onChange={(value) => setEditData('unit', value)}
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    options={units.map((unit) => ({
-                                        value: unit.value,
-                                        label: unit.label,
-                                    }))}
-                                />
-                                <InputError message={editErrors.unit} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <div>
-                            <InputLabel
-                                htmlFor="edit_minimum_stock"
-                                value="Estoque minimo"
-                            />
-                            <input
-                                id="edit_minimum_stock"
-                                type="number"
-                                min="0"
-                                step="0.001"
-                                value={editData.minimum_stock}
-                                onChange={(event) =>
-                                    setEditData(
-                                        'minimum_stock',
-                                        event.target.value,
-                                    )
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError
-                                message={editErrors.minimum_stock}
-                                className="mt-2"
-                            />
-                        </div>
-
-                        <div>
-                            <InputLabel htmlFor="edit_notes" value="Observacoes" />
-                            <textarea
-                                id="edit_notes"
-                                rows={5}
-                                value={editData.notes}
-                                onChange={(event) =>
-                                    setEditData('notes', event.target.value)
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={editErrors.notes} className="mt-2" />
-                        </div>
-
-                        <div className="flex flex-wrap justify-end gap-3">
-                            <SecondaryButton
-                                type="button"
-                                onClick={closeEditModal}
-                            >
-                                Cancelar
-                            </SecondaryButton>
-                            <DangerButton
-                                type="button"
-                                onClick={deleteEditingProduct}
-                            >
-                                Excluir
-                            </DangerButton>
-                            <PrimaryButton disabled={editProcessing}>
-                                Salvar alteracoes
-                            </PrimaryButton>
-                        </div>
+                        <FormModalActions
+                            onCancel={closeEditModal}
+                            onDelete={deleteEditingProduct}
+                            saveLabel="Salvar alteracoes"
+                            saveDisabled={editProcessing}
+                        />
                     </form>
                 </div>
             </Modal>
@@ -617,146 +480,19 @@ export default function ProductsIndex({
                     </div>
 
                     <form onSubmit={submit} className="mt-6 space-y-5">
-                        <div>
-                            <InputLabel htmlFor="name" value="Nome" />
-                            <input
-                                id="name"
-                                type="text"
-                                value={data.name}
-                                onChange={(event) =>
-                                    setData('name', event.target.value)
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={errors.name} className="mt-2" />
-                        </div>
+                        <ProductFormFields
+                            data={data}
+                            errors={errors}
+                            categories={categories}
+                            units={units}
+                            onFieldChange={handleCreateFieldChange}
+                        />
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="brand" value="Marca" />
-                                <input
-                                    id="brand"
-                                    type="text"
-                                    value={data.brand}
-                                    onChange={(event) =>
-                                        setData('brand', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel htmlFor="sku" value="SKU ou codigo" />
-                                <input
-                                    id="sku"
-                                    type="text"
-                                    value={data.sku}
-                                    onChange={(event) =>
-                                        setData('sku', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-3">
-                            <div className="sm:col-span-2">
-                                <InputLabel
-                                    htmlFor="category_id"
-                                    value="Categoria"
-                                />
-                                <Select
-                                    id="category_id"
-                                    value={data.category_id || undefined}
-                                    onChange={(value) =>
-                                        setData('category_id', value ?? '')
-                                    }
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    allowClear
-                                    placeholder="Sem categoria"
-                                    options={categories
-                                        .filter(
-                                            (category) =>
-                                                category.kind === 'produto',
-                                        )
-                                        .map((category) => ({
-                                            value: String(category.id),
-                                            label: category.name,
-                                        }))}
-                                />
-                                <InputError
-                                    message={errors.category_id}
-                                    className="mt-2"
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel htmlFor="unit" value="Unidade" />
-                                <Select
-                                    id="unit"
-                                    value={data.unit}
-                                    onChange={(value) => setData('unit', value)}
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    options={units.map((unit) => ({
-                                        value: unit.value,
-                                        label: unit.label,
-                                    }))}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <InputLabel
-                                htmlFor="minimum_stock"
-                                value="Estoque minimo"
-                            />
-                            <input
-                                id="minimum_stock"
-                                type="number"
-                                min="0"
-                                step="0.001"
-                                value={data.minimum_stock}
-                                onChange={(event) =>
-                                    setData(
-                                        'minimum_stock',
-                                        event.target.value,
-                                    )
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError
-                                message={errors.minimum_stock}
-                                className="mt-2"
-                            />
-                        </div>
-
-                        <div>
-                            <InputLabel htmlFor="notes" value="Observacoes" />
-                            <textarea
-                                id="notes"
-                                rows={5}
-                                value={data.notes}
-                                onChange={(event) =>
-                                    setData('notes', event.target.value)
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={errors.notes} className="mt-2" />
-                        </div>
-
-                        <div className="flex flex-wrap justify-end gap-3">
-                            <SecondaryButton
-                                type="button"
-                                onClick={closeCreateModal}
-                            >
-                                Cancelar
-                            </SecondaryButton>
-                            <PrimaryButton disabled={processing}>
-                                Criar produto
-                            </PrimaryButton>
-                        </div>
+                        <FormModalActions
+                            onCancel={closeCreateModal}
+                            saveLabel="Criar produto"
+                            saveDisabled={processing}
+                        />
                     </form>
                 </div>
             </Modal>
