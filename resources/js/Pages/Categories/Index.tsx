@@ -7,6 +7,7 @@ import SectionCard from '@/Components/SectionCard';
 import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
+import { Select } from 'antd';
 import { FormEvent, useState } from 'react';
 
 interface CategoryPageProps {
@@ -199,23 +200,17 @@ export default function CategoriesIndex({ categories, kinds }: CategoryPageProps
                         <div className="grid gap-4 sm:grid-cols-[1fr,140px]">
                             <div>
                                 <InputLabel htmlFor="kind" value="Tipo" />
-                                <select
+                                <Select
                                     id="kind"
                                     value={data.kind}
-                                    onChange={(event) =>
-                                        setData('kind', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    {kinds.map((kind) => (
-                                        <option
-                                            key={kind.value}
-                                            value={kind.value}
-                                        >
-                                            {kind.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setData('kind', value)}
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    options={kinds.map((kind) => ({
+                                        value: kind.value,
+                                        label: kind.label,
+                                    }))}
+                                />
                             </div>
 
                             <div>

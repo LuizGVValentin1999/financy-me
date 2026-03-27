@@ -170,7 +170,7 @@ function ImportPreviewSection({
                 </DangerButton>
             }
         >
-            <div className="grid gap-4 lg:grid-cols-[0.9fr,1.1fr]">
+            <div className="grid gap-4 2xl:grid-cols-[0.9fr,1.1fr]">
                 <div className="space-y-4 rounded-[28px] bg-[#f8f4ec] p-5">
                     <div>
                         <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
@@ -339,7 +339,7 @@ function ImportPreviewSection({
                                 </SecondaryButton>
                             </div>
 
-                            <div className="mt-5 grid gap-4 lg:grid-cols-4">
+                            <div className="mt-5 grid gap-4 2xl:grid-cols-4">
                                 <div>
                                     <InputLabel
                                         htmlFor={`items.${index}.quantity`}
@@ -386,31 +386,23 @@ function ImportPreviewSection({
                                         htmlFor={`items.${index}.unit`}
                                         value="Unidade"
                                     />
-                                    <select
+                                    <Select
                                         id={`items.${index}.unit`}
                                         value={data.items[index].unit}
                                         disabled={
                                             !data.items[index].include ||
                                             item.is_discount
                                         }
-                                        onChange={(event) =>
-                                            updateItem(
-                                                index,
-                                                'unit',
-                                                event.target.value,
-                                            )
+                                        onChange={(value) =>
+                                            updateItem(index, 'unit', value)
                                         }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
-                                    >
-                                        {importUnits.map((unit) => (
-                                            <option
-                                                key={unit.value}
-                                                value={unit.value}
-                                            >
-                                                {unit.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        className="mt-2 w-full"
+                                        size="large"
+                                        options={importUnits.map((unit) => ({
+                                            value: unit.value,
+                                            label: unit.value.toUpperCase(),
+                                        }))}
+                                    />
                                     <InputError
                                         message={errors[`items.${index}.unit`]}
                                         className="mt-2"
@@ -422,29 +414,26 @@ function ImportPreviewSection({
                                         htmlFor={`items.${index}.product_id`}
                                         value="Produto existente"
                                     />
-                                    <select
+                                    <Select
                                         id={`items.${index}.product_id`}
-                                        value={data.items[index].product_id}
+                                        value={data.items[index].product_id || undefined}
                                         disabled={!data.items[index].include}
-                                        onChange={(event) =>
+                                        onChange={(value) =>
                                             updateItem(
                                                 index,
                                                 'product_id',
-                                                event.target.value,
+                                                value ?? '',
                                             )
                                         }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
-                                    >
-                                        <option value="">Criar pelo nome abaixo</option>
-                                        {products.map((product) => (
-                                            <option
-                                                key={product.id}
-                                                value={product.id}
-                                            >
-                                                {product.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        className="mt-2 w-full"
+                                        size="large"
+                                        allowClear
+                                        placeholder="Criar pelo nome abaixo"
+                                        options={products.map((product) => ({
+                                            value: String(product.id),
+                                            label: product.name,
+                                        }))}
+                                    />
                                     <InputError
                                         message={
                                             errors[
@@ -460,32 +449,29 @@ function ImportPreviewSection({
                                         htmlFor={`items.${index}.category_id`}
                                         value="Categoria"
                                     />
-                                    <select
+                                    <Select
                                         id={`items.${index}.category_id`}
-                                        value={data.items[index].category_id}
+                                        value={data.items[index].category_id || undefined}
                                         disabled={
                                             !data.items[index].include ||
                                             item.is_discount
                                         }
-                                        onChange={(event) =>
+                                        onChange={(value) =>
                                             updateItem(
                                                 index,
                                                 'category_id',
-                                                event.target.value,
+                                                value ?? '',
                                             )
                                         }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
-                                    >
-                                        <option value="">Sem categoria</option>
-                                        {categories.map((category) => (
-                                            <option
-                                                key={category.id}
-                                                value={category.id}
-                                            >
-                                                {category.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        className="mt-2 w-full"
+                                        size="large"
+                                        allowClear
+                                        placeholder="Sem categoria"
+                                        options={categories.map((category) => ({
+                                            value: String(category.id),
+                                            label: category.name,
+                                        }))}
+                                    />
                                     <InputError
                                         message={
                                             errors[
@@ -899,6 +885,7 @@ function PurchaseHistoryTable({
                         value={String(selectedKeys[0] ?? '') || undefined}
                         placeholder="Filtrar origem"
                         className="w-full"
+                        size="middle"
                         onChange={(value: string | undefined) =>
                             setSelectedKeys(value ? [value] : [])
                         }
@@ -1016,6 +1003,7 @@ function PurchaseHistoryTable({
                     <Select
                         value={groupBy}
                         className="w-full"
+                        size="large"
                         onChange={setGroupBy}
                         options={[
                             { value: 'none', label: 'Sem agrupamento' },
@@ -1120,21 +1108,21 @@ function PurchaseHistoryTable({
                     <form onSubmit={submitEdit} className="mt-6 space-y-5">
                         <div>
                             <InputLabel htmlFor="edit_product_id" value="Produto" />
-                            <select
+                            <Select
                                 id="edit_product_id"
-                                value={editData.product_id}
-                                onChange={(event) =>
-                                    setEditData('product_id', event.target.value)
+                                value={editData.product_id || undefined}
+                                onChange={(value) =>
+                                    setEditData('product_id', value ?? '')
                                 }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            >
-                                <option value="">Selecione um produto</option>
-                                {products.map((product) => (
-                                    <option key={product.id} value={product.id}>
-                                        {product.name}
-                                    </option>
-                                ))}
-                            </select>
+                                className="mt-2 w-full"
+                                size="large"
+                                allowClear
+                                placeholder="Selecione um produto"
+                                options={products.map((product) => ({
+                                    value: String(product.id),
+                                    label: product.name,
+                                }))}
+                            />
                             <InputError
                                 message={errors.product_id}
                                 className="mt-2"
@@ -1201,23 +1189,19 @@ function PurchaseHistoryTable({
 
                             <div>
                                 <InputLabel htmlFor="edit_source" value="Origem" />
-                                <select
+                                <Select
                                     id="edit_source"
                                     value={editData.source}
-                                    onChange={(event) =>
-                                        setEditData('source', event.target.value)
+                                    onChange={(value) =>
+                                        setEditData('source', value)
                                     }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    {sources.map((source) => (
-                                        <option
-                                            key={source.value}
-                                            value={source.value}
-                                        >
-                                            {source.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    options={sources.map((source) => ({
+                                        value: source.value,
+                                        label: source.label,
+                                    }))}
+                                />
                                 <InputError
                                     message={errors.source}
                                     className="mt-2"
@@ -1495,26 +1479,19 @@ export default function PurchasesIndex({
                                     htmlFor="product_id"
                                     value="Produto"
                                 />
-                                <select
+                                <Select
                                     id="product_id"
                                     value={data.product_id}
-                                    onChange={(event) =>
-                                        setData(
-                                            'product_id',
-                                            event.target.value,
-                                        )
+                                    onChange={(value) =>
+                                        setData('product_id', value)
                                     }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    {products.map((product) => (
-                                        <option
-                                            key={product.id}
-                                            value={product.id}
-                                        >
-                                            {product.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    options={products.map((product) => ({
+                                        value: String(product.id),
+                                        label: product.name,
+                                    }))}
+                                />
                                 <InputError
                                     message={errors.product_id}
                                     className="mt-2"
@@ -1598,26 +1575,19 @@ export default function PurchasesIndex({
                                         htmlFor="source"
                                         value="Origem"
                                     />
-                                    <select
+                                    <Select
                                         id="source"
                                         value={data.source}
-                                        onChange={(event) =>
-                                            setData(
-                                                'source',
-                                                event.target.value,
-                                            )
+                                        onChange={(value) =>
+                                            setData('source', value)
                                         }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                    >
-                                        {sources.map((source) => (
-                                            <option
-                                                key={source.value}
-                                                value={source.value}
-                                            >
-                                                {source.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        className="mt-2 w-full"
+                                        size="large"
+                                        options={sources.map((source) => ({
+                                            value: source.value,
+                                            label: source.label,
+                                        }))}
+                                    />
                                 </div>
                             </div>
 

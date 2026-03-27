@@ -51,8 +51,8 @@ class PurchaseEntryController extends Controller
                 ['value' => 'nota_fiscal', 'label' => 'Nota fiscal'],
             ],
             'importUnits' => [
-                ['value' => 'un', 'label' => 'Unidade'],
-                ['value' => 'kg', 'label' => 'Quilos'],
+                ['value' => 'un', 'label' => 'UN'],
+                ['value' => 'kg', 'label' => 'KG'],
             ],
             'importPreview' => $this->previewFromSession(
                 $request,

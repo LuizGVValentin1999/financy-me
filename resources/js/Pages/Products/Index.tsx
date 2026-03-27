@@ -8,6 +8,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
+import { Select } from 'antd';
 import { FormEvent, useState } from 'react';
 
 interface ProductsPageProps {
@@ -299,32 +300,26 @@ export default function ProductsIndex({
                                     htmlFor="category_id"
                                     value="Categoria"
                                 />
-                                <select
+                                <Select
                                     id="category_id"
-                                    value={data.category_id}
-                                    onChange={(event) =>
-                                        setData(
-                                            'category_id',
-                                            event.target.value,
-                                        )
+                                    value={data.category_id || undefined}
+                                    onChange={(value) =>
+                                        setData('category_id', value ?? '')
                                     }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    <option value="">Sem categoria</option>
-                                    {categories
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    allowClear
+                                    placeholder="Sem categoria"
+                                    options={categories
                                         .filter(
                                             (category) =>
                                                 category.kind === 'produto',
                                         )
-                                        .map((category) => (
-                                            <option
-                                                key={category.id}
-                                                value={category.id}
-                                            >
-                                                {category.name}
-                                            </option>
-                                        ))}
-                                </select>
+                                        .map((category) => ({
+                                            value: String(category.id),
+                                            label: category.name,
+                                        }))}
+                                />
                                 <InputError
                                     message={errors.category_id}
                                     className="mt-2"
@@ -333,23 +328,17 @@ export default function ProductsIndex({
 
                             <div>
                                 <InputLabel htmlFor="unit" value="Unidade" />
-                                <select
+                                <Select
                                     id="unit"
                                     value={data.unit}
-                                    onChange={(event) =>
-                                        setData('unit', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    {units.map((unit) => (
-                                        <option
-                                            key={unit.value}
-                                            value={unit.value}
-                                        >
-                                            {unit.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                    onChange={(value) => setData('unit', value)}
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    options={units.map((unit) => ({
+                                        value: unit.value,
+                                        label: unit.label,
+                                    }))}
+                                />
                             </div>
                         </div>
 
