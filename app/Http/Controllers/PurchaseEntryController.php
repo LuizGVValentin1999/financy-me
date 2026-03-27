@@ -453,7 +453,11 @@ class PurchaseEntryController extends Controller
             'items' => collect($preview['items'])
                 ->values()
                 ->map(function (array $item, int $index) use ($products) {
-                    $suggestion = $this->suggestProduct($products, $item['name']);
+                    $suggestion = $this->suggestProduct(
+                        $products,
+                        $item['name'],
+                        $item['code'] ?? null,
+                    );
                     $matchedProduct = $suggestion['product'] ?? null;
 
                     return [
@@ -574,8 +578,25 @@ class PurchaseEntryController extends Controller
      * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
      * @return array{product: Product, score: float}|null
      */
-    private function suggestProduct($products, string $itemName): ?array
+    private function suggestProduct(
+        $products,
+        string $itemName,
+        ?string $itemCode = null,
+    ): ?array
     {
+        $normalizedItemCode = $this->normalizeSkuOrCode($itemCode);
+
+        if ($normalizedItemCode !== '') {
+            foreach ($products as $product) {
+                if ($this->normalizeSkuOrCode($product->sku) === $normalizedItemCode) {
+                    return [
+                        'product' => $product,
+                        'score' => 100.0,
+                    ];
+                }
+            }
+        }
+
         $normalizedItemName = $this->normalizeName($itemName);
 
         if ($normalizedItemName === '') {
@@ -607,6 +628,13 @@ class PurchaseEntryController extends Controller
             'product' => $bestProduct,
             'score' => round($bestScore, 1),
         ];
+    }
+
+    private function normalizeSkuOrCode(?string $value): string
+    {
+        return Str::of(Str::upper((string) $value))
+            ->replaceMatches('/[^A-Z0-9]+/', '')
+            ->toString();
     }
 
     private function nameSimilarityScore(string $left, string $right): float
