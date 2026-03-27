@@ -115,6 +115,44 @@
         background: rgba(255, 255, 255, 0.9);
     }
 
+    .purchase-ant-table .ant-table-tbody > tr.ant-table-row-selected > td {
+        background: rgba(30, 122, 138, 0.14) !important;
+    }
+
+    .purchase-ant-table .ant-table-tbody > tr.ant-table-row-selected:hover > td {
+        background: rgba(30, 122, 138, 0.18) !important;
+    }
+
+    .purchase-ant-table .ant-table-tbody > tr:hover > td {
+        background: rgba(248, 244, 236, 0.92);
+    }
+
+    .purchase-ant-table .ant-table-selection-column {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    .purchase-ant-table .ant-table-selection-column .ant-checkbox-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .purchase-ant-table .ant-table-selection-column .ant-checkbox,
+    .purchase-ant-table .ant-table-selection-column .ant-checkbox-input,
+    .purchase-ant-table .ant-table-selection-column .ant-checkbox-inner {
+        border-radius: 3px !important;
+    }
+
+    .purchase-ant-table .ant-table-selection-column .ant-checkbox-inner {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    .purchase-ant-table .ant-checkbox-checked .ant-checkbox-inner::after {
+        inset-inline-start: 30%;
+    }
+
     .purchase-ant-table .ant-pagination .ant-pagination-item-active {
         border-color: #0f172a;
         background: #0f172a;

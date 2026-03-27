@@ -23,6 +23,9 @@ class StoreProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        $product = $this->route('product');
+        $productId = is_object($product) ? $product->id : $product;
+
         return [
             'category_id' => [
                 'nullable',
@@ -37,7 +40,8 @@ class StoreProductRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('products')
-                    ->where('user_id', $this->user()?->id),
+                    ->where('user_id', $this->user()?->id)
+                    ->ignore($productId),
             ],
             'brand' => ['nullable', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:255'],

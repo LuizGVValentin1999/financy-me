@@ -21,6 +21,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/produtos', [ProductController::class, 'index'])->name('products.index');
     Route::post('/produtos', [ProductController::class, 'store'])->name('products.store');
+    Route::patch('/produtos/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/produtos/lote', [ProductController::class, 'destroyMany'])->name('products.destroy-many');
     Route::delete('/produtos/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
     Route::get('/compras', [PurchaseEntryController::class, 'index'])->name('purchases.index');
