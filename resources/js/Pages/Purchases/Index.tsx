@@ -1071,25 +1071,16 @@ function PurchaseHistoryTable({
                 maxWidth="2xl"
             >
                 <div className="p-5 sm:p-6">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                            <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                                Compras
-                            </p>
-                            <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                                Editar registro
-                            </h2>
-                            <p className="mt-2 text-sm leading-6 text-slate-500">
-                                Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.
-                            </p>
-                        </div>
-
-                        <DangerButton
-                            type="button"
-                            onClick={deleteEditingEntry}
-                        >
-                            Excluir
-                        </DangerButton>
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Compras
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            Editar registro
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.
+                        </p>
                     </div>
 
                     <form onSubmit={submitEdit} className="mt-6 space-y-5">
@@ -1252,6 +1243,12 @@ function PurchaseHistoryTable({
                             >
                                 Cancelar
                             </SecondaryButton>
+                            <DangerButton
+                                type="button"
+                                onClick={deleteEditingEntry}
+                            >
+                                Excluir
+                            </DangerButton>
                             <PrimaryButton disabled={processing}>
                                 Salvar alteracoes
                             </PrimaryButton>

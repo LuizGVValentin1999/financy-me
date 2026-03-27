@@ -129,6 +129,21 @@ export default function ProductsIndex({
         });
     };
 
+    const deleteEditingProduct = () => {
+        if (!editingProduct) {
+            return;
+        }
+
+        if (!confirm('Excluir este produto?')) {
+            return;
+        }
+
+        router.delete(route('products.destroy', editingProduct.id), {
+            preserveScroll: true,
+            onSuccess: () => closeEditModal(),
+        });
+    };
+
     const deleteSelectedProducts = () => {
         if (selectedRowKeys.length === 0) {
             return;
@@ -568,6 +583,12 @@ export default function ProductsIndex({
                             >
                                 Cancelar
                             </SecondaryButton>
+                            <DangerButton
+                                type="button"
+                                onClick={deleteEditingProduct}
+                            >
+                                Excluir
+                            </DangerButton>
                             <PrimaryButton disabled={editProcessing}>
                                 Salvar alteracoes
                             </PrimaryButton>
