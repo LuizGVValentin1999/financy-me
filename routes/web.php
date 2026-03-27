@@ -25,9 +25,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/compras', [PurchaseEntryController::class, 'index'])->name('purchases.index');
     Route::post('/compras', [PurchaseEntryController::class, 'store'])->name('purchases.store');
+    Route::patch('/compras/{purchaseEntry}', [PurchaseEntryController::class, 'update'])->name('purchases.update');
     Route::post('/compras/importar-link', [PurchaseEntryController::class, 'importFromLink'])->name('purchases.import-link');
     Route::post('/compras/importar-confirmar', [PurchaseEntryController::class, 'confirmImported'])->name('purchases.import-confirm');
     Route::delete('/compras/importacao', [PurchaseEntryController::class, 'clearImported'])->name('purchases.import-clear');
+    Route::delete('/compras/lote', [PurchaseEntryController::class, 'destroyMany'])->name('purchases.destroy-many');
     Route::delete('/compras/{purchaseEntry}', [PurchaseEntryController::class, 'destroy'])->name('purchases.destroy');
     Route::get('/notas-fiscais', [PurchaseInvoiceController::class, 'index'])->name('invoices.index');
 

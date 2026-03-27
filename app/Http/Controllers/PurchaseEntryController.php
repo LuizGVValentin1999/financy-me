@@ -50,6 +50,10 @@ class PurchaseEntryController extends Controller
                 ['value' => 'manual', 'label' => 'Manual'],
                 ['value' => 'nota_fiscal', 'label' => 'Nota fiscal'],
             ],
+            'importUnits' => [
+                ['value' => 'un', 'label' => 'Unidade'],
+                ['value' => 'kg', 'label' => 'Quilos'],
+            ],
             'importPreview' => $this->previewFromSession(
                 $request,
                 $products,
@@ -61,6 +65,7 @@ class PurchaseEntryController extends Controller
                 ->get()
                 ->map(fn (PurchaseEntry $entry) => [
                     'id' => $entry->id,
+                    'product_id' => $entry->product_id,
                     'product' => $entry->product?->name,
                     'unit' => $entry->product?->unit,
                     'quantity' => (float) $entry->quantity,
@@ -100,6 +105,47 @@ class PurchaseEntryController extends Controller
         });
 
         return back()->with('success', 'Compra registrada com sucesso.');
+    }
+
+    public function update(
+        StorePurchaseEntryRequest $request,
+        PurchaseEntry $purchaseEntry,
+    ): RedirectResponse {
+        abort_unless($purchaseEntry->user_id === $request->user()->id, 404);
+
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($request, $purchaseEntry, $validated) {
+            $previousProduct = $purchaseEntry->product;
+            $nextProduct = $request->user()
+                ->products()
+                ->findOrFail($validated['product_id']);
+
+            if ($previousProduct) {
+                $previousProduct->update([
+                    'current_stock' => max(
+                        0,
+                        (float) $previousProduct->current_stock - (float) $purchaseEntry->quantity,
+                    ),
+                ]);
+            }
+
+            $totalAmount = round(
+                (float) $validated['quantity'] * (float) $validated['unit_price'],
+                2,
+            );
+
+            $purchaseEntry->update([
+                ...$validated,
+                'total_amount' => $totalAmount,
+            ]);
+
+            $nextProduct->update([
+                'current_stock' => (float) $nextProduct->current_stock + (float) $validated['quantity'],
+            ]);
+        });
+
+        return back()->with('success', 'Compra atualizada com sucesso.');
     }
 
     public function importFromLink(
@@ -164,6 +210,7 @@ class PurchaseEntryController extends Controller
                 'integer',
                 Rule::exists('categories', 'id')->where('user_id', $user->id),
             ],
+            'items.*.unit' => ['nullable', Rule::in(['un', 'kg'])],
         ])->after(function ($validator) use ($request, $preview) {
             if ($request->string('token')->toString() !== $preview['token']) {
                 $validator->errors()->add('token', 'A revisao dessa importacao ficou desatualizada.');
@@ -187,6 +234,13 @@ class PurchaseEntryController extends Controller
                     $validator->errors()->add(
                         "items.$index.quantity",
                         'Informe uma quantidade maior que zero.',
+                    );
+                }
+
+                if (! $isDiscountItem && blank($item['unit'] ?? null)) {
+                    $validator->errors()->add(
+                        "items.$index.unit",
+                        'Escolha o tipo de unidade do item.',
                     );
                 }
 
@@ -216,6 +270,9 @@ class PurchaseEntryController extends Controller
                 }
 
                 $isDiscountItem = (bool) ($previewItem['is_discount'] ?? false);
+                $unit = $isDiscountItem
+                    ? 'un'
+                    : (($payload['unit'] ?? null) ?: $importer->normalizeUnit($previewItem['unit'] ?? null));
 
                 $product = ! empty($payload['product_id'])
                     ? $user->products()->findOrFail($payload['product_id'])
@@ -224,9 +281,7 @@ class PurchaseEntryController extends Controller
                         trim($payload['product_name']),
                         $isDiscountItem ? null : ($payload['category_id'] ?? null),
                         $previewItem['code'] ?? null,
-                        $isDiscountItem
-                            ? 'un'
-                            : $importer->normalizeUnit($previewItem['unit'] ?? null),
+                        $unit,
                     );
 
                 if (
@@ -236,6 +291,12 @@ class PurchaseEntryController extends Controller
                 ) {
                     $product->update([
                         'category_id' => $payload['category_id'],
+                    ]);
+                }
+
+                if (! $isDiscountItem && $product->unit !== $unit) {
+                    $product->update([
+                        'unit' => $unit,
                     ]);
                 }
 
@@ -312,6 +373,53 @@ class PurchaseEntryController extends Controller
         return back()->with('success', 'Registro de compra removido.');
     }
 
+    public function destroyMany(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => [
+                'required',
+                'integer',
+                Rule::exists('purchase_entries', 'id')->where(
+                    'user_id',
+                    $request->user()->id,
+                ),
+            ],
+        ]);
+
+        $entries = $request->user()
+            ->purchaseEntries()
+            ->with('product')
+            ->whereIn('id', $validated['ids'])
+            ->get();
+
+        DB::transaction(function () use ($entries) {
+            foreach ($entries as $entry) {
+                $product = $entry->product;
+
+                if ($product) {
+                    $product->update([
+                        'current_stock' => max(
+                            0,
+                            (float) $product->current_stock - (float) $entry->quantity,
+                        ),
+                    ]);
+                }
+
+                $entry->delete();
+            }
+        });
+
+        $count = $entries->count();
+
+        return back()->with(
+            'success',
+            $count === 1
+                ? '1 registro de compra removido.'
+                : "{$count} registros de compra removidos.",
+        );
+    }
+
     /**
      * @param  \Illuminate\Database\Eloquent\Collection<int, Product>  $products
      * @return array<string, mixed>|null
@@ -361,9 +469,19 @@ class PurchaseEntryController extends Controller
                         'suggested_product_name' => $matchedProduct?->name ?? $item['name'],
                         'suggested_category_id' => $matchedProduct?->category_id,
                         'suggestion_score' => $suggestion['score'] ?? null,
+                        'suggested_unit' => $matchedProduct?->unit
+                            ?? $this->normalizeImportUnit($item['unit'] ?? null),
                     ];
                 }),
         ];
+    }
+
+    private function normalizeImportUnit(?string $unit): string
+    {
+        return match (Str::lower(trim((string) $unit))) {
+            'kg' => 'kg',
+            default => 'un',
+        };
     }
 
     private function firstOrCreateImportedProduct(

@@ -1,11 +1,13 @@
 import DangerButton from '@/Components/DangerButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
+import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 
 interface CategoryPageProps {
     categories: Array<{
@@ -24,125 +26,70 @@ interface CategoryPageProps {
 }
 
 export default function CategoriesIndex({ categories, kinds }: CategoryPageProps) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '',
         kind: kinds[0]?.value ?? 'produto',
         color: '#1F7A8C',
         description: '',
     });
 
+    const closeCreateModal = () => {
+        setIsCreateModalOpen(false);
+        reset();
+        clearErrors();
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         post(route('categories.store'), {
             preserveScroll: true,
-            onSuccess: () => reset('name', 'description'),
+            onSuccess: () => {
+                reset();
+                setIsCreateModalOpen(false);
+            },
         });
     };
 
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
-                        Categorias
-                    </p>
-                    <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                        Organize produtos e servicos.
-                    </h1>
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
+                            Categorias
+                        </p>
+                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
+                            Organize produtos e servicos.
+                        </h1>
+                    </div>
+
+                    <PrimaryButton
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(true)}
+                    >
+                        Nova categoria
+                    </PrimaryButton>
                 </div>
             }
         >
             <Head title="Categorias" />
 
-            <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-                <SectionCard
-                    title="Nova categoria"
-                    description="Crie grupos para classificar produtos, servicos e itens importados depois."
-                >
-                    <form onSubmit={submit} className="space-y-5">
-                        <div>
-                            <InputLabel htmlFor="name" value="Nome" />
-                            <input
-                                id="name"
-                                type="text"
-                                value={data.name}
-                                onChange={(event) =>
-                                    setData('name', event.target.value)
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={errors.name} className="mt-2" />
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-[1fr,140px]">
-                            <div>
-                                <InputLabel htmlFor="kind" value="Tipo" />
-                                <select
-                                    id="kind"
-                                    value={data.kind}
-                                    onChange={(event) =>
-                                        setData('kind', event.target.value)
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                >
-                                    {kinds.map((kind) => (
-                                        <option
-                                            key={kind.value}
-                                            value={kind.value}
-                                        >
-                                            {kind.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <InputLabel htmlFor="color" value="Cor" />
-                                <input
-                                    id="color"
-                                    type="color"
-                                    value={data.color}
-                                    onChange={(event) =>
-                                        setData('color', event.target.value)
-                                    }
-                                    className="mt-2 block h-[52px] w-full rounded-2xl border border-slate-200 bg-white p-2"
-                                />
-                                <InputError message={errors.color} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <div>
-                            <InputLabel
-                                htmlFor="description"
-                                value="Descricao"
-                            />
-                            <textarea
-                                id="description"
-                                value={data.description}
-                                onChange={(event) =>
-                                    setData('description', event.target.value)
-                                }
-                                rows={4}
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError
-                                message={errors.description}
-                                className="mt-2"
-                            />
-                        </div>
-
-                        <PrimaryButton disabled={processing}>
-                            Criar categoria
-                        </PrimaryButton>
-                    </form>
-                </SectionCard>
-
+            <div className="space-y-6">
                 <SectionCard
                     title="Categorias cadastradas"
                     description={`${categories.length} categorias prontas para uso.`}
+                    actions={
+                        <PrimaryButton
+                            type="button"
+                            onClick={() => setIsCreateModalOpen(true)}
+                        >
+                            Nova categoria
+                        </PrimaryButton>
+                    }
                 >
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {categories.length > 0 ? (
                             categories.map((category) => (
                                 <div
@@ -214,6 +161,112 @@ export default function CategoriesIndex({ categories, kinds }: CategoryPageProps
                     </div>
                 </SectionCard>
             </div>
+
+            <Modal
+                show={isCreateModalOpen}
+                onClose={closeCreateModal}
+                maxWidth="xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Categorias
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            Nova categoria
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Crie grupos para classificar produtos, servicos e
+                            itens importados depois.
+                        </p>
+                    </div>
+
+                    <form onSubmit={submit} className="mt-6 space-y-5">
+                        <div>
+                            <InputLabel htmlFor="name" value="Nome" />
+                            <input
+                                id="name"
+                                type="text"
+                                value={data.name}
+                                onChange={(event) =>
+                                    setData('name', event.target.value)
+                                }
+                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            />
+                            <InputError message={errors.name} className="mt-2" />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-[1fr,140px]">
+                            <div>
+                                <InputLabel htmlFor="kind" value="Tipo" />
+                                <select
+                                    id="kind"
+                                    value={data.kind}
+                                    onChange={(event) =>
+                                        setData('kind', event.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                >
+                                    {kinds.map((kind) => (
+                                        <option
+                                            key={kind.value}
+                                            value={kind.value}
+                                        >
+                                            {kind.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="color" value="Cor" />
+                                <input
+                                    id="color"
+                                    type="color"
+                                    value={data.color}
+                                    onChange={(event) =>
+                                        setData('color', event.target.value)
+                                    }
+                                    className="mt-2 block h-[52px] w-full rounded-2xl border border-slate-200 bg-white p-2"
+                                />
+                                <InputError message={errors.color} className="mt-2" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <InputLabel
+                                htmlFor="description"
+                                value="Descricao"
+                            />
+                            <textarea
+                                id="description"
+                                value={data.description}
+                                onChange={(event) =>
+                                    setData('description', event.target.value)
+                                }
+                                rows={5}
+                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            />
+                            <InputError
+                                message={errors.description}
+                                className="mt-2"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap justify-end gap-3">
+                            <SecondaryButton
+                                type="button"
+                                onClick={closeCreateModal}
+                            >
+                                Cancelar
+                            </SecondaryButton>
+                            <PrimaryButton disabled={processing}>
+                                Criar categoria
+                            </PrimaryButton>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

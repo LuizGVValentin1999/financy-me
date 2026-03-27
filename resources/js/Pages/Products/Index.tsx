@@ -1,12 +1,14 @@
 import DangerButton from '@/Components/DangerButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
+import SecondaryButton from '@/Components/SecondaryButton';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 
 interface ProductsPageProps {
     categories: Array<{
@@ -40,7 +42,8 @@ export default function ProductsIndex({
     units,
     products,
 }: ProductsPageProps) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         category_id: '',
         name: '',
         brand: '',
@@ -50,37 +53,204 @@ export default function ProductsIndex({
         notes: '',
     });
 
+    const closeCreateModal = () => {
+        setIsCreateModalOpen(false);
+        reset();
+        clearErrors();
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         post(route('products.store'), {
             preserveScroll: true,
-            onSuccess: () =>
-                reset('category_id', 'name', 'brand', 'sku', 'minimum_stock', 'notes'),
+            onSuccess: () => {
+                reset();
+                setIsCreateModalOpen(false);
+            },
         });
     };
 
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
-                        Produtos
-                    </p>
-                    <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                        Cadastre o que entra no estoque.
-                    </h1>
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
+                            Produtos
+                        </p>
+                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
+                            Cadastre o que entra no estoque.
+                        </h1>
+                    </div>
+
+                    <PrimaryButton
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(true)}
+                    >
+                        Novo produto
+                    </PrimaryButton>
                 </div>
             }
         >
             <Head title="Produtos" />
 
-            <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
+            <div className="space-y-6">
                 <SectionCard
-                    title="Novo produto"
-                    description="Estoque inicial fica em zero e passa a crescer conforme voce registra compras."
+                    title="Produtos cadastrados"
+                    description={`${products.length} itens no catalogo atual.`}
+                    actions={
+                        <PrimaryButton
+                            type="button"
+                            onClick={() => setIsCreateModalOpen(true)}
+                        >
+                            Novo produto
+                        </PrimaryButton>
+                    }
                 >
-                    <form onSubmit={submit} className="space-y-5">
+                    <div className="grid gap-4 xl:grid-cols-2">
+                        {products.length > 0 ? (
+                            products.map((product) => (
+                                <div
+                                    key={product.id}
+                                    className="rounded-[28px] border border-slate-200 bg-white p-5"
+                                >
+                                    <div className="flex flex-wrap items-start justify-between gap-4">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="text-xl font-semibold text-slate-900">
+                                                    {product.name}
+                                                </p>
+                                                {product.category && (
+                                                    <span
+                                                        className="inline-flex rounded-full px-3 py-1 text-xs font-semibold text-slate-900"
+                                                        style={{
+                                                            backgroundColor: `${product.category.color}22`,
+                                                        }}
+                                                    >
+                                                        {product.category.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="mt-1 text-sm text-slate-500">
+                                                {product.brand || 'Sem marca'}{' '}
+                                                {product.sku
+                                                    ? `• ${product.sku}`
+                                                    : ''}
+                                            </p>
+                                        </div>
+
+                                        <DangerButton
+                                            type="button"
+                                            className="px-4 py-2 text-xs"
+                                            onClick={() => {
+                                                if (
+                                                    confirm(
+                                                        `Excluir o produto "${product.name}"?`,
+                                                    )
+                                                ) {
+                                                    router.delete(
+                                                        route(
+                                                            'products.destroy',
+                                                            product.id,
+                                                        ),
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            Excluir
+                                        </DangerButton>
+                                    </div>
+
+                                    <div className="mt-5 grid gap-4 sm:grid-cols-4">
+                                        <div className="rounded-3xl bg-[#f8f4ec] p-4">
+                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                                                Estoque
+                                            </p>
+                                            <p
+                                                className={`mt-2 text-lg font-semibold ${
+                                                    product.current_stock <=
+                                                    product.minimum_stock
+                                                        ? 'text-[#be3d2a]'
+                                                        : 'text-slate-900'
+                                                }`}
+                                            >
+                                                {formatQuantity(
+                                                    product.current_stock,
+                                                )}{' '}
+                                                {product.unit}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-3xl bg-[#eef7f7] p-4">
+                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                                                Minimo
+                                            </p>
+                                            <p className="mt-2 text-lg font-semibold text-slate-900">
+                                                {formatQuantity(
+                                                    product.minimum_stock,
+                                                )}{' '}
+                                                {product.unit}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-3xl bg-[#fff1ec] p-4">
+                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                                                Total gasto
+                                            </p>
+                                            <p className="mt-2 text-lg font-semibold text-slate-900">
+                                                {formatCurrency(
+                                                    product.total_spent,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-3xl bg-[#f3efe6] p-4">
+                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                                                Ultima compra
+                                            </p>
+                                            <p className="mt-2 text-lg font-semibold text-slate-900">
+                                                {formatDate(
+                                                    product.last_purchase_at,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p className="mt-4 text-sm leading-6 text-slate-600">
+                                        {product.notes || 'Sem observacoes.'}
+                                    </p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
+                                Nenhum produto cadastrado ainda.
+                            </div>
+                        )}
+                    </div>
+                </SectionCard>
+            </div>
+
+            <Modal
+                show={isCreateModalOpen}
+                onClose={closeCreateModal}
+                maxWidth="2xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Produtos
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            Novo produto
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Estoque inicial fica em zero e passa a crescer
+                            conforme voce registra compras.
+                        </p>
+                    </div>
+
+                    <form onSubmit={submit} className="mt-6 space-y-5">
                         <div>
                             <InputLabel htmlFor="name" value="Nome" />
                             <input
@@ -212,7 +382,7 @@ export default function ProductsIndex({
                             <InputLabel htmlFor="notes" value="Observacoes" />
                             <textarea
                                 id="notes"
-                                rows={4}
+                                rows={5}
                                 value={data.notes}
                                 onChange={(event) =>
                                     setData('notes', event.target.value)
@@ -222,138 +392,20 @@ export default function ProductsIndex({
                             <InputError message={errors.notes} className="mt-2" />
                         </div>
 
-                        <PrimaryButton disabled={processing}>
-                            Criar produto
-                        </PrimaryButton>
+                        <div className="flex flex-wrap justify-end gap-3">
+                            <SecondaryButton
+                                type="button"
+                                onClick={closeCreateModal}
+                            >
+                                Cancelar
+                            </SecondaryButton>
+                            <PrimaryButton disabled={processing}>
+                                Criar produto
+                            </PrimaryButton>
+                        </div>
                     </form>
-                </SectionCard>
-
-                <SectionCard
-                    title="Produtos cadastrados"
-                    description={`${products.length} itens no catalogo atual.`}
-                >
-                    <div className="grid gap-4">
-                        {products.length > 0 ? (
-                            products.map((product) => (
-                                <div
-                                    key={product.id}
-                                    className="rounded-[28px] border border-slate-200 bg-white p-5"
-                                >
-                                    <div className="flex flex-wrap items-start justify-between gap-4">
-                                        <div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <p className="text-xl font-semibold text-slate-900">
-                                                    {product.name}
-                                                </p>
-                                                {product.category && (
-                                                    <span
-                                                        className="inline-flex rounded-full px-3 py-1 text-xs font-semibold text-slate-900"
-                                                        style={{
-                                                            backgroundColor: `${product.category.color}22`,
-                                                        }}
-                                                    >
-                                                        {product.category.name}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="mt-1 text-sm text-slate-500">
-                                                {product.brand || 'Sem marca'}{' '}
-                                                {product.sku
-                                                    ? `• ${product.sku}`
-                                                    : ''}
-                                            </p>
-                                        </div>
-
-                                        <DangerButton
-                                            type="button"
-                                            className="px-4 py-2 text-xs"
-                                            onClick={() => {
-                                                if (
-                                                    confirm(
-                                                        `Excluir o produto "${product.name}"?`,
-                                                    )
-                                                ) {
-                                                    router.delete(
-                                                        route(
-                                                            'products.destroy',
-                                                            product.id,
-                                                        ),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            Excluir
-                                        </DangerButton>
-                                    </div>
-
-                                    <div className="mt-5 grid gap-4 sm:grid-cols-4">
-                                        <div className="rounded-3xl bg-[#f8f4ec] p-4">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                Estoque
-                                            </p>
-                                            <p
-                                                className={`mt-2 text-lg font-semibold ${
-                                                    product.current_stock <=
-                                                    product.minimum_stock
-                                                        ? 'text-[#be3d2a]'
-                                                        : 'text-slate-900'
-                                                }`}
-                                            >
-                                                {formatQuantity(
-                                                    product.current_stock,
-                                                )}{' '}
-                                                {product.unit}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-3xl bg-[#eef7f7] p-4">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                Minimo
-                                            </p>
-                                            <p className="mt-2 text-lg font-semibold text-slate-900">
-                                                {formatQuantity(
-                                                    product.minimum_stock,
-                                                )}{' '}
-                                                {product.unit}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-3xl bg-[#fff1ec] p-4">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                Total gasto
-                                            </p>
-                                            <p className="mt-2 text-lg font-semibold text-slate-900">
-                                                {formatCurrency(
-                                                    product.total_spent,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-3xl bg-[#f3efe6] p-4">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                                Ultima compra
-                                            </p>
-                                            <p className="mt-2 text-lg font-semibold text-slate-900">
-                                                {formatDate(
-                                                    product.last_purchase_at,
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <p className="mt-4 text-sm leading-6 text-slate-600">
-                                        {product.notes || 'Sem observacoes.'}
-                                    </p>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                Nenhum produto cadastrado ainda.
-                            </div>
-                        )}
-                    </div>
-                </SectionCard>
-            </div>
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

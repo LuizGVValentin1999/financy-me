@@ -78,6 +78,19 @@
         backdrop-filter: blur(4px);
     }
 
+    .app-fullscreen-modal .ant-drawer-content-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .app-fullscreen-modal .ant-drawer-content {
+        border-radius: 0 !important;
+    }
+
+    .app-responsive-modal .ant-modal-content {
+        overflow: hidden;
+    }
+
     .purchase-ant-table .ant-table {
         background: transparent;
     }

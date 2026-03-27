@@ -2,6 +2,7 @@ import Checkbox from '@/Components/Checkbox';
 import DangerButton from '@/Components/DangerButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -25,6 +26,10 @@ interface PurchasesPageProps {
         id: number;
         name: string;
         color: string;
+    }>;
+    importUnits: Array<{
+        value: string;
+        label: string;
     }>;
     sources: Array<{
         value: string;
@@ -62,10 +67,12 @@ interface PurchasesPageProps {
             suggested_product_name: string;
             suggested_category_id: number | null;
             suggestion_score: number | null;
+            suggested_unit: string;
         }>;
     } | null;
     entries: Array<{
         id: number;
+        product_id: number | null;
         product: string | null;
         unit: string | null;
         quantity: number;
@@ -83,10 +90,12 @@ function ImportPreviewSection({
     preview,
     products,
     categories,
+    importUnits,
 }: {
     preview: NonNullable<PurchasesPageProps['importPreview']>;
     products: PurchasesPageProps['products'];
     categories: PurchasesPageProps['categories'];
+    importUnits: PurchasesPageProps['importUnits'];
 }) {
     const {
         data,
@@ -106,12 +115,19 @@ function ImportPreviewSection({
             category_id: item.suggested_category_id
                 ? String(item.suggested_category_id)
                 : '',
+            unit: item.suggested_unit,
         })),
     });
 
     const updateItem = (
         index: number,
-        key: 'include' | 'product_id' | 'product_name' | 'quantity' | 'category_id',
+        key:
+            | 'include'
+            | 'product_id'
+            | 'product_name'
+            | 'quantity'
+            | 'category_id'
+            | 'unit',
         value: boolean | string,
     ) => {
         setData(
@@ -323,7 +339,7 @@ function ImportPreviewSection({
                                 </SecondaryButton>
                             </div>
 
-                            <div className="mt-5 grid gap-4 lg:grid-cols-[0.65fr,1fr,1fr]">
+                            <div className="mt-5 grid gap-4 lg:grid-cols-4">
                                 <div>
                                     <InputLabel
                                         htmlFor={`items.${index}.quantity`}
@@ -361,6 +377,42 @@ function ImportPreviewSection({
                                         message={
                                             errors[`items.${index}.quantity`]
                                         }
+                                        className="mt-2"
+                                    />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor={`items.${index}.unit`}
+                                        value="Unidade"
+                                    />
+                                    <select
+                                        id={`items.${index}.unit`}
+                                        value={data.items[index].unit}
+                                        disabled={
+                                            !data.items[index].include ||
+                                            item.is_discount
+                                        }
+                                        onChange={(event) =>
+                                            updateItem(
+                                                index,
+                                                'unit',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    >
+                                        {importUnits.map((unit) => (
+                                            <option
+                                                key={unit.value}
+                                                value={unit.value}
+                                            >
+                                                {unit.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError
+                                        message={errors[`items.${index}.unit`]}
                                         className="mt-2"
                                     />
                                 </div>
@@ -509,6 +561,7 @@ type PurchaseGroupRecord = {
     groupLabel: string;
     groupValue: string;
     groupBy: string;
+    product_id: null;
     product: string | null;
     unit: string | null;
     quantity: number;
@@ -532,11 +585,106 @@ type PurchaseTableRecord =
 function PurchaseHistoryTable({
     entries,
     sources,
+    products,
 }: {
     entries: PurchasesPageProps['entries'];
     sources: PurchasesPageProps['sources'];
+    products: PurchasesPageProps['products'];
 }) {
     const [groupBy, setGroupBy] = useState('none');
+    const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+    const [editingEntry, setEditingEntry] = useState<PurchaseEntryRow | null>(null);
+    const {
+        data: editData,
+        setData: setEditData,
+        patch,
+        processing,
+        errors,
+        reset,
+        clearErrors,
+    } = useForm({
+        product_id: '',
+        quantity: '1',
+        unit_price: '0',
+        purchased_at: new Date().toISOString().slice(0, 10),
+        source: sources[0]?.value ?? 'manual',
+        invoice_reference: '',
+        notes: '',
+    });
+
+    const closeEditModal = () => {
+        setEditingEntry(null);
+        reset();
+        clearErrors();
+    };
+
+    const openEditModal = (entry: PurchaseEntryRow) => {
+        setEditingEntry(entry);
+        setEditData({
+            product_id: entry.product_id ? String(entry.product_id) : '',
+            quantity: String(entry.quantity),
+            unit_price: String(entry.unit_price),
+            purchased_at: entry.purchased_at ?? new Date().toISOString().slice(0, 10),
+            source: entry.source,
+            invoice_reference: entry.invoice_reference ?? '',
+            notes: entry.notes ?? '',
+        });
+        clearErrors();
+    };
+
+    const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!editingEntry) {
+            return;
+        }
+
+        patch(route('purchases.update', editingEntry.id), {
+            preserveScroll: true,
+            onSuccess: () => closeEditModal(),
+        });
+    };
+
+    const deleteEditingEntry = () => {
+        if (!editingEntry) {
+            return;
+        }
+
+        if (!confirm('Excluir este registro de compra?')) {
+            return;
+        }
+
+        router.delete(route('purchases.destroy', editingEntry.id), {
+            preserveScroll: true,
+            onSuccess: () => closeEditModal(),
+        });
+    };
+
+    const deleteSelectedEntries = () => {
+        if (selectedRowKeys.length === 0) {
+            return;
+        }
+
+        const total = selectedRowKeys.length;
+
+        if (
+            !confirm(
+                total === 1
+                    ? 'Excluir 1 registro selecionado?'
+                    : `Excluir ${total} registros selecionados?`,
+            )
+        ) {
+            return;
+        }
+
+        router.delete(route('purchases.destroy-many'), {
+            data: {
+                ids: selectedRowKeys.map((key) => Number(key)),
+            },
+            preserveScroll: true,
+            onSuccess: () => setSelectedRowKeys([]),
+        });
+    };
 
     const getTextFilter = (
         dataIndex: keyof PurchaseEntryRow,
@@ -615,6 +763,7 @@ function PurchaseHistoryTable({
                   groupLabel: label,
                   groupValue: label,
                   groupBy,
+                  product_id: null,
                   product: groupBy === 'product' ? label : null,
                   unit: null,
                   quantity: groupEntries.reduce(
@@ -836,36 +985,22 @@ function PurchaseHistoryTable({
                 record.notes || 'Sem observacoes.',
             ...getTextFilter('notes', 'Filtrar observacoes'),
         },
-        {
-            title: 'Acao',
-            key: 'actions',
-            align: 'right',
-            render: (_: unknown, record: PurchaseTableRecord) =>
-                record.isGroup ? null : (
-                    <DangerButton
-                        type="button"
-                        className="px-4 py-2 text-xs"
-                        onClick={() => {
-                            if (confirm('Excluir este registro de compra?')) {
-                                router.delete(
-                                    route('purchases.destroy', record.id),
-                                    {
-                                        preserveScroll: true,
-                                    },
-                                );
-                            }
-                        }}
-                    >
-                        Excluir
-                    </DangerButton>
-                ),
-        },
     ];
 
     return (
         <SectionCard
             title="Tabela de compras"
-            description="Tabela Ant Design com filtros por coluna, paginação e agrupamento."
+            description="Clique em um registro para editar. Use os checkboxes para selecionar e excluir em lote."
+            actions={
+                selectedRowKeys.length > 0 ? (
+                    <DangerButton
+                        type="button"
+                        onClick={deleteSelectedEntries}
+                    >
+                        Excluir selecionados ({selectedRowKeys.length})
+                    </DangerButton>
+                ) : null
+            }
         >
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[#f8f4ec] px-4 py-4">
                 <div>
@@ -873,7 +1008,7 @@ function PurchaseHistoryTable({
                         {entries.length} registros carregados
                     </p>
                     <p className="text-sm text-slate-500">
-                        Use os filtros do cabeçalho e agrupe quando fizer sentido.
+                        Use os filtros do cabeçalho, clique na linha para editar e agrupe quando fizer sentido.
                     </p>
                 </div>
 
@@ -906,6 +1041,14 @@ function PurchaseHistoryTable({
                     rowKey="key"
                     columns={columns}
                     dataSource={dataSource}
+                    rowSelection={{
+                        selectedRowKeys,
+                        onChange: (keys) => setSelectedRowKeys(keys),
+                        getCheckboxProps: (record) => ({
+                            disabled: Boolean(record.isGroup),
+                        }),
+                        preserveSelectedRowKeys: true,
+                    }}
                     pagination={{
                         pageSize: 12,
                         showSizeChanger: true,
@@ -922,8 +1065,229 @@ function PurchaseHistoryTable({
                     }
                     size="middle"
                     scroll={{ x: 1200 }}
+                    rowClassName={(record) =>
+                        record.isGroup ? '' : 'cursor-pointer'
+                    }
+                    onRow={(record) => ({
+                        onClick: (event) => {
+                            if (record.isGroup) {
+                                return;
+                            }
+
+                            const target = event.target as HTMLElement;
+
+                            if (
+                                target.closest(
+                                    'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                                )
+                            ) {
+                                return;
+                            }
+
+                            openEditModal(record);
+                        },
+                    })}
                 />
             </div>
+
+            <Modal
+                show={Boolean(editingEntry)}
+                onClose={closeEditModal}
+                maxWidth="2xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                                Compras
+                            </p>
+                            <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                                Editar registro
+                            </h2>
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                                Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.
+                            </p>
+                        </div>
+
+                        <DangerButton
+                            type="button"
+                            onClick={deleteEditingEntry}
+                        >
+                            Excluir
+                        </DangerButton>
+                    </div>
+
+                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
+                        <div>
+                            <InputLabel htmlFor="edit_product_id" value="Produto" />
+                            <select
+                                id="edit_product_id"
+                                value={editData.product_id}
+                                onChange={(event) =>
+                                    setEditData('product_id', event.target.value)
+                                }
+                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            >
+                                <option value="">Selecione um produto</option>
+                                {products.map((product) => (
+                                    <option key={product.id} value={product.id}>
+                                        {product.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <InputError
+                                message={errors.product_id}
+                                className="mt-2"
+                            />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel htmlFor="edit_quantity" value="Quantidade" />
+                                <input
+                                    id="edit_quantity"
+                                    type="number"
+                                    min="0.001"
+                                    step="0.001"
+                                    value={editData.quantity}
+                                    onChange={(event) =>
+                                        setEditData('quantity', event.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                />
+                                <InputError
+                                    message={errors.quantity}
+                                    className="mt-2"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="edit_unit_price" value="Preco unitario" />
+                                <input
+                                    id="edit_unit_price"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={editData.unit_price}
+                                    onChange={(event) =>
+                                        setEditData('unit_price', event.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                />
+                                <InputError
+                                    message={errors.unit_price}
+                                    className="mt-2"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel htmlFor="edit_purchased_at" value="Data da compra" />
+                                <input
+                                    id="edit_purchased_at"
+                                    type="date"
+                                    value={editData.purchased_at}
+                                    onChange={(event) =>
+                                        setEditData('purchased_at', event.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                />
+                                <InputError
+                                    message={errors.purchased_at}
+                                    className="mt-2"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="edit_source" value="Origem" />
+                                <select
+                                    id="edit_source"
+                                    value={editData.source}
+                                    onChange={(event) =>
+                                        setEditData('source', event.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                >
+                                    {sources.map((source) => (
+                                        <option
+                                            key={source.value}
+                                            value={source.value}
+                                        >
+                                            {source.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <InputError
+                                    message={errors.source}
+                                    className="mt-2"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <InputLabel
+                                htmlFor="edit_invoice_reference"
+                                value="Referencia da nota"
+                            />
+                            <input
+                                id="edit_invoice_reference"
+                                type="text"
+                                value={editData.invoice_reference}
+                                onChange={(event) =>
+                                    setEditData('invoice_reference', event.target.value)
+                                }
+                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            />
+                            <InputError
+                                message={errors.invoice_reference}
+                                className="mt-2"
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel htmlFor="edit_notes" value="Observacoes" />
+                            <textarea
+                                id="edit_notes"
+                                rows={5}
+                                value={editData.notes}
+                                onChange={(event) =>
+                                    setEditData('notes', event.target.value)
+                                }
+                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            />
+                            <InputError
+                                message={errors.notes}
+                                className="mt-2"
+                            />
+                        </div>
+
+                        <div className="rounded-[28px] bg-[#f8f4ec] p-5">
+                            <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
+                                Total previsto
+                            </p>
+                            <p className="mt-3 text-3xl font-semibold text-slate-900">
+                                {formatCurrency(
+                                    Number(editData.quantity || 0) *
+                                        Number(editData.unit_price || 0),
+                                )}
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap justify-end gap-3">
+                            <SecondaryButton
+                                type="button"
+                                onClick={closeEditModal}
+                            >
+                                Cancelar
+                            </SecondaryButton>
+                            <PrimaryButton disabled={processing}>
+                                Salvar alteracoes
+                            </PrimaryButton>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
         </SectionCard>
     );
 }
@@ -931,11 +1295,14 @@ function PurchaseHistoryTable({
 export default function PurchasesIndex({
     products,
     categories,
+    importUnits,
     sources,
     importPreview,
     entries,
 }: PurchasesPageProps) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         product_id: products[0] ? String(products[0].id) : '',
         quantity: '1',
         unit_price: '0',
@@ -952,12 +1319,27 @@ export default function PurchasesIndex({
     const totalPreview =
         Number(data.quantity || 0) * Number(data.unit_price || 0);
 
+    const closeImportModal = () => {
+        setIsImportModalOpen(false);
+        importForm.setData('receipt_url', '');
+        importForm.clearErrors();
+    };
+
+    const closePurchaseModal = () => {
+        setIsPurchaseModalOpen(false);
+        reset();
+        clearErrors();
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         post(route('purchases.store'), {
             preserveScroll: true,
-            onSuccess: () => reset('quantity', 'unit_price', 'invoice_reference', 'notes'),
+            onSuccess: () => {
+                reset();
+                setIsPurchaseModalOpen(false);
+            },
         });
     };
 
@@ -966,30 +1348,83 @@ export default function PurchasesIndex({
 
         importForm.post(route('purchases.import-link'), {
             preserveScroll: true,
+            onSuccess: () => {
+                importForm.setData('receipt_url', '');
+                setIsImportModalOpen(false);
+            },
         });
     };
 
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
-                        Compras
-                    </p>
-                    <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                        Registre entradas no estoque.
-                    </h1>
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
+                            Compras
+                        </p>
+                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
+                            Registre entradas no estoque.
+                        </h1>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                        <SecondaryButton
+                            type="button"
+                            onClick={() => setIsImportModalOpen(true)}
+                        >
+                            Importar NFC-e
+                        </SecondaryButton>
+                        <PrimaryButton
+                            type="button"
+                            onClick={() => setIsPurchaseModalOpen(true)}
+                        >
+                            Nova compra manual
+                        </PrimaryButton>
+                    </div>
                 </div>
             }
         >
             <Head title="Compras" />
 
             <div className="space-y-6">
-                <SectionCard
-                    title="Importar compra por link da NFC-e"
-                    description="Cole o link publico da SEFAZ do Parana. O sistema busca os itens da nota, monta um rascunho e voce classifica cada produto antes de confirmar."
-                >
-                    <form onSubmit={submitImport} className="space-y-4">
+                {importPreview && (
+                    <ImportPreviewSection
+                        preview={importPreview}
+                        products={products}
+                        categories={categories}
+                        importUnits={importUnits}
+                    />
+                )}
+
+                <PurchaseHistoryTable
+                    entries={entries}
+                    sources={sources}
+                    products={products}
+                />
+            </div>
+
+            <Modal
+                show={isImportModalOpen}
+                onClose={closeImportModal}
+                maxWidth="xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Compras
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            Importar compra por link da NFC-e
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Cole o link publico da SEFAZ do Parana. O sistema
+                            busca os itens da nota, monta um rascunho e voce
+                            classifica cada produto antes de confirmar.
+                        </p>
+                    </div>
+
+                    <form onSubmit={submitImport} className="mt-6 space-y-4">
                         <div>
                             <InputLabel
                                 htmlFor="receipt_url"
@@ -1014,32 +1449,47 @@ export default function PurchasesIndex({
                             />
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-[#f8f4ec] px-4 py-4 text-sm text-slate-600">
-                            <span>
-                                Suporte inicial para consulta publica da NFC-e
-                                do Parana.
-                            </span>
+                        <div className="rounded-[24px] bg-[#f8f4ec] px-4 py-4 text-sm text-slate-600">
+                            Suporte inicial para consulta publica da NFC-e do
+                            Parana.
+                        </div>
+
+                        <div className="flex flex-wrap justify-end gap-3">
+                            <SecondaryButton
+                                type="button"
+                                onClick={closeImportModal}
+                            >
+                                Cancelar
+                            </SecondaryButton>
                             <PrimaryButton disabled={importForm.processing}>
                                 Buscar nota
                             </PrimaryButton>
                         </div>
                     </form>
-                </SectionCard>
+                </div>
+            </Modal>
 
-                {importPreview && (
-                    <ImportPreviewSection
-                        preview={importPreview}
-                        products={products}
-                        categories={categories}
-                    />
-                )}
+            <Modal
+                show={isPurchaseModalOpen}
+                onClose={closePurchaseModal}
+                maxWidth="2xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Compras
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            Nova compra manual
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Cada registro aumenta o estoque do produto
+                            automaticamente.
+                        </p>
+                    </div>
 
-                <SectionCard
-                    title="Nova compra manual"
-                    description="Cada registro aumenta o estoque do produto automaticamente."
-                >
                     {products.length > 0 ? (
-                        <form onSubmit={submit} className="space-y-5">
+                        <form onSubmit={submit} className="mt-6 space-y-5">
                             <div>
                                 <InputLabel
                                     htmlFor="product_id"
@@ -1197,7 +1647,7 @@ export default function PurchasesIndex({
                                 />
                                 <textarea
                                     id="notes"
-                                    rows={4}
+                                    rows={5}
                                     value={data.notes}
                                     onChange={(event) =>
                                         setData(
@@ -1218,22 +1668,25 @@ export default function PurchasesIndex({
                                 </p>
                             </div>
 
-                            <PrimaryButton disabled={processing}>
-                                Registrar compra
-                            </PrimaryButton>
+                            <div className="flex flex-wrap justify-end gap-3">
+                                <SecondaryButton
+                                    type="button"
+                                    onClick={closePurchaseModal}
+                                >
+                                    Cancelar
+                                </SecondaryButton>
+                                <PrimaryButton disabled={processing}>
+                                    Registrar compra
+                                </PrimaryButton>
+                            </div>
                         </form>
                     ) : (
-                        <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
+                        <div className="mt-6 rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
                             Cadastre um produto antes de registrar compras.
                         </div>
                     )}
-                </SectionCard>
-
-                <PurchaseHistoryTable
-                    entries={entries}
-                    sources={sources}
-                />
-            </div>
+                </div>
+            </Modal>
         </AuthenticatedLayout>
     );
 }
