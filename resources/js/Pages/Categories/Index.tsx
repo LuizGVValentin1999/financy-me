@@ -15,6 +15,7 @@ import { FormEvent, Key, useState } from 'react';
 interface CategoriesPageProps {
     categories: Array<{
         id: number;
+        code: string;
         name: string;
         color: string;
         description: string | null;
@@ -32,6 +33,7 @@ export default function CategoriesIndex({
     const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
+        code: '',
         name: '',
         color: '#1F7A8C',
         description: '',
@@ -45,6 +47,7 @@ export default function CategoriesIndex({
         reset: resetEdit,
         clearErrors: clearEditErrors,
     } = useForm({
+        code: '',
         name: '',
         color: '#1F7A8C',
         description: '',
@@ -84,6 +87,7 @@ export default function CategoriesIndex({
     const openEditModal = (category: CategoryRow) => {
         setEditingCategory(category);
         setEditData({
+            code: category.code,
             name: category.name,
             color: category.color,
             description: category.description ?? '',
@@ -182,6 +186,19 @@ export default function CategoriesIndex({
     }));
 
     const columns: ColumnsType<CategoryTableRecord> = [
+        {
+            title: 'Código',
+            dataIndex: 'code',
+            key: 'code',
+            width: 120,
+            sorter: (a, b) => a.code.localeCompare(b.code),
+            render: (value: string) => (
+                <span className="font-mono text-sm font-semibold text-slate-600">
+                    {value}
+                </span>
+            ),
+            ...getTextFilter('code', 'Filtrar por código'),
+        },
         {
             title: 'Categoria',
             dataIndex: 'name',

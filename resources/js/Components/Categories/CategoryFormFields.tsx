@@ -2,6 +2,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 
 type CategoryFormData = {
+    code: string;
     name: string;
     color: string;
     description: string;
@@ -28,16 +29,30 @@ export default function CategoryFormFields({
 
     return (
         <>
-            <div>
-                <InputLabel htmlFor={id('name')} value="Nome" />
-                <input
-                    id={id('name')}
-                    type="text"
-                    value={data.name}
-                    onChange={(event) => onFieldChange('name', event.target.value)}
-                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                />
-                <InputError message={errors.name} className="mt-2" />
+            <div className="grid gap-4 sm:grid-cols-[1fr,150px]">
+                <div>
+                    <InputLabel htmlFor={id('name')} value="Nome" />
+                    <input
+                        id={id('name')}
+                        type="text"
+                        value={data.name}
+                        onChange={(event) => onFieldChange('name', event.target.value)}
+                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                    />
+                    <InputError message={errors.name} className="mt-2" />
+                </div>
+
+                <div>
+                    <InputLabel htmlFor={id('code')} value="Código" />
+                    <input
+                        id={id('code')}
+                        type="text"
+                        value={data.code}
+                        onChange={(event) => onFieldChange('code', event.target.value)}
+                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm"
+                    />
+                    <InputError message={errors.code} className="mt-2" />
+                </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

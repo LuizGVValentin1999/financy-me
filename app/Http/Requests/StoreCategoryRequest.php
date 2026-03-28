@@ -24,6 +24,12 @@ class StoreCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('categories'),
+            ],
             'name' => [
                 'required',
                 'string',

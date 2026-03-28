@@ -20,6 +20,7 @@ class CategoryController extends Controller
             ->get()
             ->map(fn (Category $category) => [
                 'id' => $category->id,
+                'code' => $category->code,
                 'name' => $category->name,
                 'color' => $category->color,
                 'description' => $category->description,
