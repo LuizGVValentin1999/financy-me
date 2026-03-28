@@ -17,7 +17,6 @@ interface ProductsPageProps {
         id: number;
         name: string;
         color: string;
-        kind: string;
     }>;
     units: Array<{
         value: string;
@@ -255,7 +254,6 @@ export default function ProductsIndex({
                             setSelectedKeys(value ? [value] : [])
                         }
                         options={categories
-                            .filter((category) => category.kind === 'produto')
                             .map((category) => ({
                                 value: category.name,
                                 label: category.name,

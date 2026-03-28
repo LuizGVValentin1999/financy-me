@@ -6,7 +6,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCategoryRequest extends FormRequest
+class UpdateCategoryRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -29,7 +29,8 @@ class StoreCategoryRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('categories')
-                    ->where('user_id', $this->user()?->id),
+                    ->where('user_id', $this->user()?->id)
+                    ->ignore($this->route('category')),
             ],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'description' => ['nullable', 'string', 'max:1000'],

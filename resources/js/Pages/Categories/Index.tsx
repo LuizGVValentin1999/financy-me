@@ -1,36 +1,51 @@
 import DangerButton from '@/Components/DangerButton';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
+import FormModalActions from '@/Components/FormModalActions';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
+import CategoryFormFields from '@/Components/Categories/CategoryFormFields';
 import SectionCard from '@/Components/SectionCard';
-import SecondaryButton from '@/Components/SecondaryButton';
+import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Select } from 'antd';
-import { FormEvent, useState } from 'react';
+import { Button, Table, Tag } from 'antd';
+import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
+import { FormEvent, Key, useState } from 'react';
 
-interface CategoryPageProps {
+interface CategoriesPageProps {
     categories: Array<{
         id: number;
         name: string;
-        kind: string;
         color: string;
         description: string | null;
-        products_count: number;
-        created_at: string | null;
-    }>;
-    kinds: Array<{
-        value: string;
-        label: string;
+        created_at: string;
     }>;
 }
 
-export default function CategoriesIndex({ categories, kinds }: CategoryPageProps) {
+type CategoryRow = CategoriesPageProps['categories'][number];
+type CategoryTableRecord = CategoryRow & { key: string };
+
+export default function CategoriesIndex({
+    categories,
+}: CategoriesPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
+    const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '',
-        kind: kinds[0]?.value ?? 'produto',
+        color: '#1F7A8C',
+        description: '',
+    });
+    const {
+        data: editData,
+        setData: setEditData,
+        patch,
+        processing: editProcessing,
+        errors: editErrors,
+        reset: resetEdit,
+        clearErrors: clearEditErrors,
+    } = useForm({
+        name: '',
         color: '#1F7A8C',
         description: '',
     });
@@ -53,6 +68,156 @@ export default function CategoriesIndex({ categories, kinds }: CategoryPageProps
         });
     };
 
+    const handleCreateFieldChange = (
+        field: keyof typeof data,
+        value: string,
+    ) => {
+        setData(field as keyof typeof data, value as never);
+    };
+
+    const closeEditModal = () => {
+        setEditingCategory(null);
+        resetEdit();
+        clearEditErrors();
+    };
+
+    const openEditModal = (category: CategoryRow) => {
+        setEditingCategory(category);
+        setEditData({
+            name: category.name,
+            color: category.color,
+            description: category.description ?? '',
+        });
+        clearEditErrors();
+    };
+
+    const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!editingCategory) {
+            return;
+        }
+
+        patch(route('categories.update', editingCategory.id), {
+            preserveScroll: true,
+            onSuccess: () => closeEditModal(),
+        });
+    };
+
+    const handleEditFieldChange = (
+        field: keyof typeof editData,
+        value: string,
+    ) => {
+        setEditData(field as keyof typeof editData, value as never);
+    };
+
+    const deleteEditingCategory = () => {
+        if (!editingCategory) {
+            return;
+        }
+
+        if (!confirm('Excluir esta categoria?')) {
+            return;
+        }
+
+        router.delete(route('categories.destroy', editingCategory.id), {
+            preserveScroll: true,
+            onSuccess: () => closeEditModal(),
+        });
+    };
+
+    const deleteSelectedCategories = () => {
+        if (selectedRowKeys.length === 0) {
+            return;
+        }
+
+        const total = selectedRowKeys.length;
+
+        if (
+            !confirm(
+                total === 1
+                    ? 'Excluir 1 categoria selecionada?'
+                    : `Excluir ${total} categorias selecionadas?`,
+            )
+        ) {
+            return;
+        }
+
+        router.delete(route('categories.destroy-many'), {
+            data: {
+                ids: selectedRowKeys.map((key) => Number(key)),
+            },
+            preserveScroll: true,
+            onSuccess: () => setSelectedRowKeys([]),
+        });
+    };
+
+    const getTextFilter = (
+        dataIndex: keyof CategoryRow,
+        placeholder: string,
+    ): ColumnsType<CategoryTableRecord>[number] => ({
+        filterDropdown: ({
+            selectedKeys,
+            setSelectedKeys,
+            confirm,
+            clearFilters,
+        }: FilterDropdownProps) => (
+            <TableTextFilterDropdown
+                selectedKeys={selectedKeys}
+                setSelectedKeys={setSelectedKeys}
+                confirm={confirm}
+                clearFilters={clearFilters}
+                placeholder={placeholder}
+            />
+        ),
+        onFilter: (value: Key | boolean, record: CategoryTableRecord) => {
+            const current = String(record[dataIndex] ?? '').toLowerCase();
+            return current.includes(String(value).toLowerCase());
+        },
+    });
+
+    const dataSource: CategoryTableRecord[] = categories.map((category) => ({
+        ...category,
+        key: String(category.id),
+    }));
+
+    const columns: ColumnsType<CategoryTableRecord> = [
+        {
+            title: 'Categoria',
+            dataIndex: 'name',
+            key: 'name',
+            sorter: (a, b) => a.name.localeCompare(b.name),
+            render: (_: unknown, record) => (
+                <div className="flex items-center gap-3">
+                    <div
+                        className="h-6 w-6 rounded-md border border-slate-200"
+                        style={{ backgroundColor: record.color }}
+                    />
+                    <p className="font-semibold text-slate-900">{record.name}</p>
+                </div>
+            ),
+            ...getTextFilter('name', 'Filtrar por categoria'),
+        },
+        {
+            title: 'Descrição',
+            dataIndex: 'description',
+            key: 'description',
+            ellipsis: true,
+            render: (value: string | null) => value || 'Sem descrição.',
+            ...getTextFilter('description', 'Filtrar por descrição'),
+        },
+        {
+            title: 'Criado em',
+            dataIndex: 'created_at',
+            key: 'created_at',
+            sorter: (a, b) =>
+                String(a.created_at ?? '').localeCompare(
+                    String(b.created_at ?? ''),
+                ),
+            render: (value: string) => formatDate(value),
+        },
+    ];
+
     return (
         <AuthenticatedLayout
             header={
@@ -62,7 +227,7 @@ export default function CategoriesIndex({ categories, kinds }: CategoryPageProps
                             Categorias
                         </p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                            Organize produtos e servicos.
+                            Organize seus produtos em categorias.
                         </h1>
                     </div>
 
@@ -80,93 +245,98 @@ export default function CategoriesIndex({ categories, kinds }: CategoryPageProps
             <div className="space-y-6">
                 <SectionCard
                     title="Categorias cadastradas"
-                    description={`${categories.length} categorias prontas para uso.`}
+                    description={`${categories.length} categorias no sistema.`}
                     actions={
-                        <PrimaryButton
-                            type="button"
-                            onClick={() => setIsCreateModalOpen(true)}
-                        >
-                            Nova categoria
-                        </PrimaryButton>
+                        selectedRowKeys.length > 0 ? (
+                            <DangerButton
+                                type="button"
+                                onClick={deleteSelectedCategories}
+                            >
+                                Excluir selecionadas ({selectedRowKeys.length})
+                            </DangerButton>
+                        ) : null
                     }
                 >
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {categories.length > 0 ? (
-                            categories.map((category) => (
-                                <div
-                                    key={category.id}
-                                    className="rounded-[28px] border border-slate-200 bg-[#f8f4ec] p-5"
-                                >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <span
-                                                className="h-4 w-4 rounded-full"
-                                                style={{
-                                                    backgroundColor:
-                                                        category.color,
-                                                }}
-                                            />
-                                            <div>
-                                                <p className="font-semibold text-slate-900">
-                                                    {category.name}
-                                                </p>
-                                                <p className="text-sm capitalize text-slate-500">
-                                                    {category.kind}
-                                                </p>
-                                            </div>
-                                        </div>
+                    <div className="purchase-ant-table">
+                        <Table<CategoryTableRecord>
+                            rowKey="key"
+                            columns={columns}
+                            dataSource={dataSource}
+                            rowSelection={{
+                                selectedRowKeys,
+                                onChange: (keys) => setSelectedRowKeys(keys),
+                                preserveSelectedRowKeys: true,
+                            }}
+                            pagination={{
+                                pageSize: 12,
+                                showSizeChanger: true,
+                                pageSizeOptions: [12, 24, 48],
+                                showTotal: (total, range) =>
+                                    `${range[0]}-${range[1]} de ${total} categorias`,
+                            }}
+                            size="middle"
+                            scroll={{ x: 1200 }}
+                            rowClassName={() => 'cursor-pointer'}
+                            onRow={(record) => ({
+                                onClick: (event) => {
+                                    const target = event.target as HTMLElement;
 
-                                        <DangerButton
-                                            type="button"
-                                            className="px-4 py-2 text-xs"
-                                            onClick={() => {
-                                                if (
-                                                    confirm(
-                                                        `Excluir a categoria "${category.name}"?`,
-                                                    )
-                                                ) {
-                                                    router.delete(
-                                                        route(
-                                                            'categories.destroy',
-                                                            category.id,
-                                                        ),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    );
-                                                }
-                                            }}
-                                        >
-                                            Excluir
-                                        </DangerButton>
-                                    </div>
+                                    if (
+                                        target.closest(
+                                            'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                                        )
+                                    ) {
+                                        return;
+                                    }
 
-                                    <p className="mt-4 text-sm leading-6 text-slate-600">
-                                        {category.description ||
-                                            'Sem descricao por enquanto.'}
-                                    </p>
-
-                                    <div className="mt-5 flex items-center justify-between text-sm text-slate-500">
-                                        <span>
-                                            {category.products_count} produtos
-                                        </span>
-                                        <span>{category.created_at ?? '--'}</span>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                Nenhuma categoria criada ainda.
-                            </div>
-                        )}
+                                    openEditModal(record);
+                                },
+                            })}
+                        />
                     </div>
                 </SectionCard>
             </div>
 
             <Modal
+                show={Boolean(editingCategory)}
+                onClose={closeEditModal}
+                maxWidth="2xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Categorias
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            Editar categoria
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Ajuste os dados da categoria.
+                        </p>
+                    </div>
+
+                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
+                        <CategoryFormFields
+                            data={editData}
+                            errors={editErrors}
+                            idPrefix="edit"
+                            onFieldChange={handleEditFieldChange}
+                        />
+
+                        <FormModalActions
+                            onCancel={closeEditModal}
+                            onDelete={deleteEditingCategory}
+                            saveLabel="Salvar alterações"
+                            saveDisabled={editProcessing}
+                        />
+                    </form>
+                </div>
+            </Modal>
+
+            <Modal
                 show={isCreateModalOpen}
                 onClose={closeCreateModal}
-                maxWidth="xl"
+                maxWidth="2xl"
             >
                 <div className="p-5 sm:p-6">
                     <div>
@@ -177,88 +347,22 @@ export default function CategoriesIndex({ categories, kinds }: CategoryPageProps
                             Nova categoria
                         </h2>
                         <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Crie grupos para classificar produtos, servicos e
-                            itens importados depois.
+                            Crie categorias para organizar seus produtos.
                         </p>
                     </div>
 
                     <form onSubmit={submit} className="mt-6 space-y-5">
-                        <div>
-                            <InputLabel htmlFor="name" value="Nome" />
-                            <input
-                                id="name"
-                                type="text"
-                                value={data.name}
-                                onChange={(event) =>
-                                    setData('name', event.target.value)
-                                }
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={errors.name} className="mt-2" />
-                        </div>
+                        <CategoryFormFields
+                            data={data}
+                            errors={errors}
+                            onFieldChange={handleCreateFieldChange}
+                        />
 
-                        <div className="grid gap-4 sm:grid-cols-[1fr,140px]">
-                            <div>
-                                <InputLabel htmlFor="kind" value="Tipo" />
-                                <Select
-                                    id="kind"
-                                    value={data.kind}
-                                    onChange={(value) => setData('kind', value)}
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    options={kinds.map((kind) => ({
-                                        value: kind.value,
-                                        label: kind.label,
-                                    }))}
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel htmlFor="color" value="Cor" />
-                                <input
-                                    id="color"
-                                    type="color"
-                                    value={data.color}
-                                    onChange={(event) =>
-                                        setData('color', event.target.value)
-                                    }
-                                    className="mt-2 block h-[52px] w-full rounded-2xl border border-slate-200 bg-white p-2"
-                                />
-                                <InputError message={errors.color} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <div>
-                            <InputLabel
-                                htmlFor="description"
-                                value="Descricao"
-                            />
-                            <textarea
-                                id="description"
-                                value={data.description}
-                                onChange={(event) =>
-                                    setData('description', event.target.value)
-                                }
-                                rows={5}
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError
-                                message={errors.description}
-                                className="mt-2"
-                            />
-                        </div>
-
-                        <div className="flex flex-wrap justify-end gap-3">
-                            <SecondaryButton
-                                type="button"
-                                onClick={closeCreateModal}
-                            >
-                                Cancelar
-                            </SecondaryButton>
-                            <PrimaryButton disabled={processing}>
-                                Criar categoria
-                            </PrimaryButton>
-                        </div>
+                        <FormModalActions
+                            onCancel={closeCreateModal}
+                            saveLabel="Criar categoria"
+                            saveDisabled={processing}
+                        />
                     </form>
                 </div>
             </Modal>

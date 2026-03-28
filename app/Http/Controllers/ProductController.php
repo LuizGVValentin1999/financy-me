@@ -19,7 +19,7 @@ class ProductController extends Controller
         return Inertia::render('Products/Index', [
             'categories' => $user->categories()
                 ->orderBy('name')
-                ->get(['id', 'name', 'color', 'kind']),
+                ->get(['id', 'name', 'color']),
             'units' => [
                 ['value' => 'un', 'label' => 'Unidade'],
                 ['value' => 'kg', 'label' => 'Quilo'],

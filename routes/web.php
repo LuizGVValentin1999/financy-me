@@ -17,6 +17,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/categorias', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('/categorias', [CategoryController::class, 'store'])->name('categories.store');
+    Route::patch('/categorias/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categorias/lote', [CategoryController::class, 'destroyMany'])->name('categories.destroy-many');
     Route::delete('/categorias/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
     Route::get('/produtos', [ProductController::class, 'index'])->name('products.index');
