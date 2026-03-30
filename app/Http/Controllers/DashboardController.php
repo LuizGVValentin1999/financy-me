@@ -91,6 +91,7 @@ class DashboardController extends Controller
             ],
             'stats' => [
                 'categories' => $user->categories()->count(),
+                'accounts' => $user->accounts()->count(),
                 'products' => $user->products()->count(),
                 'current_stock' => (float) $user->products()->sum('current_stock'),
                 'period_quantity' => (float) $periodEntries->sum('quantity'),
@@ -98,6 +99,17 @@ class DashboardController extends Controller
             ],
             'products' => $products,
             'recentEntries' => $recentEntries,
+            'accounts' => $user->accounts()
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($account) => [
+                    'id' => $account->id,
+                    'code' => $account->code,
+                    'name' => $account->name,
+                    'initial_balance' => (float) $account->initial_balance,
+                    'initial_balance_date' => $account->initial_balance_date,
+                    'purchases_sum' => (float) $account->purchaseEntries()->sum('total_amount'),
+                ]),
             'categoryBreakdown' => $user->categories()
                 ->withCount('products')
                 ->orderBy('name')
@@ -105,7 +117,6 @@ class DashboardController extends Controller
                 ->map(fn ($category) => [
                     'id' => $category->id,
                     'name' => $category->name,
-                    'kind' => $category->kind,
                     'color' => $category->color,
                     'products_count' => $category->products_count,
                 ]),

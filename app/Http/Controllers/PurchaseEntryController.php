@@ -31,9 +31,12 @@ class PurchaseEntryController extends Controller
             ->get();
 
         $categories = $user->categories()
-            ->where('kind', 'produto')
             ->orderBy('name')
             ->get(['id', 'name', 'color']);
+
+        $accounts = $user->accounts()
+            ->orderBy('name')
+            ->get(['id', 'code', 'name']);
 
         return Inertia::render('Purchases/Index', [
             'products' => $products
@@ -46,6 +49,7 @@ class PurchaseEntryController extends Controller
                     'category_id' => $product->category_id,
                 ]),
             'categories' => $categories,
+            'accounts' => $accounts,
             'sources' => [
                 ['value' => 'manual', 'label' => 'Manual'],
                 ['value' => 'nota_fiscal', 'label' => 'Nota fiscal'],
@@ -59,7 +63,7 @@ class PurchaseEntryController extends Controller
                 $products,
             ),
             'entries' => $user->purchaseEntries()
-                ->with('product:id,name,unit')
+                ->with('product:id,name,unit', 'account:id,code,name')
                 ->latest('purchased_at')
                 ->latest('id')
                 ->get()
@@ -68,6 +72,12 @@ class PurchaseEntryController extends Controller
                     'product_id' => $entry->product_id,
                     'product' => $entry->product?->name,
                     'unit' => $entry->product?->unit,
+                    'account_id' => $entry->account_id,
+                    'account' => $entry->account ? [
+                        'id' => $entry->account->id,
+                        'code' => $entry->account->code,
+                        'name' => $entry->account->name,
+                    ] : null,
                     'quantity' => (float) $entry->quantity,
                     'unit_price' => (float) $entry->unit_price,
                     'total_amount' => (float) $entry->total_amount,

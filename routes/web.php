@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -15,6 +16,13 @@ Route::get('/', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    
+    Route::get('/contas', [AccountController::class, 'index'])->name('accounts.index');
+    Route::post('/contas', [AccountController::class, 'store'])->name('accounts.store');
+    Route::patch('/contas/{account}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::delete('/contas/lote', [AccountController::class, 'destroyMany'])->name('accounts.destroy-many');
+    Route::delete('/contas/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
+    
     Route::get('/categorias', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('/categorias', [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('/categorias/{category}', [CategoryController::class, 'update'])->name('categories.update');

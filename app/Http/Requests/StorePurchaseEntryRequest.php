@@ -32,6 +32,14 @@ class StorePurchaseEntryRequest extends FormRequest
                     $this->user()?->id,
                 ),
             ],
+            'account_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('accounts', 'id')->where(
+                    'user_id',
+                    $this->user()?->id,
+                ),
+            ],
             'quantity' => ['required', 'numeric', 'gt:0'],
             'unit_price' => ['required', 'numeric', 'min:0'],
             'purchased_at' => ['required', 'date'],

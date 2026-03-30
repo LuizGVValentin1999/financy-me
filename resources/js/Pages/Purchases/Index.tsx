@@ -29,6 +29,11 @@ interface PurchasesPageProps {
         name: string;
         color: string;
     }>;
+    accounts: Array<{
+        id: number;
+        code: string;
+        name: string;
+    }>;
     importUnits: Array<{
         value: string;
         label: string;
@@ -77,6 +82,8 @@ interface PurchasesPageProps {
         product_id: number | null;
         product: string | null;
         unit: string | null;
+        account_id: number | null;
+        account: { id: number; code: string; name: string } | null;
         quantity: number;
         unit_price: number;
         total_amount: number;
@@ -539,6 +546,8 @@ type PurchaseGroupRecord = {
     product_id: null;
     product: string | null;
     unit: string | null;
+    account_id: null;
+    account: null;
     quantity: number;
     unit_price: number;
     total_amount: number;
@@ -680,7 +689,8 @@ function PurchaseHistoryTable({
             />
         ),
         onFilter: (value: Key | boolean, record: PurchaseTableRecord) => {
-            const current = String(record[dataIndex] ?? '').toLowerCase();
+            if (record.isGroup) return false;
+            const current = String((record as PurchaseEntryRow)[dataIndex] ?? '').toLowerCase();
             return current.includes(String(value).toLowerCase());
         },
     });
@@ -722,6 +732,8 @@ function PurchaseHistoryTable({
                   product_id: null,
                   product: groupBy === 'product' ? label : null,
                   unit: null,
+                  account_id: null,
+                  account: null,
                   quantity: groupEntries.reduce(
                       (total, entry) => total + entry.quantity,
                       0,
@@ -941,6 +953,18 @@ function PurchaseHistoryTable({
             render: (_: unknown, record: PurchaseTableRecord) =>
                 record.notes || 'Sem observacoes.',
             ...getTextFilter('notes', 'Filtrar observacoes'),
+        },
+        {
+            title: 'Conta',
+            dataIndex: 'account',
+            key: 'account',
+            render: (_: unknown, record: PurchaseTableRecord) => {
+                if (record.isGroup) return '--';
+                const entryRecord = record as PurchaseEntryRow;
+                return entryRecord.account
+                    ? `${entryRecord.account.code} - ${entryRecord.account.name}`
+                    : 'Sem conta';
+            },
         },
     ];
 
@@ -1235,6 +1259,7 @@ function PurchaseHistoryTable({
 export default function PurchasesIndex({
     products,
     categories,
+    accounts,
     importUnits,
     sources,
     importPreview,
@@ -1244,6 +1269,7 @@ export default function PurchasesIndex({
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         product_id: products[0] ? String(products[0].id) : '',
+        account_id: accounts[0] ? String(accounts[0].id) : '',
         quantity: '1',
         unit_price: '0',
         purchased_at: new Date().toISOString().slice(0, 10),
@@ -1545,6 +1571,28 @@ export default function PurchasesIndex({
                                         }))}
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    htmlFor="account_id"
+                                    value="Conta (Opcional)"
+                                />
+                                <Select
+                                    id="account_id"
+                                    value={data.account_id || undefined}
+                                    onChange={(value) =>
+                                        setData('account_id', (value ?? '') as string)
+                                    }
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    allowClear
+                                    placeholder="Sem conta"
+                                    options={accounts.map((account) => ({
+                                        value: String(account.id),
+                                        label: `${account.code} - ${account.name}`,
+                                    }))}
+                                />
                             </div>
 
                             <div>

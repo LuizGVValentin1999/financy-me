@@ -11,6 +11,7 @@ import {
     ScrollText,
     Tags,
     UserCircle2,
+    Wallet,
     type LucideIcon,
 } from 'lucide-react';
 import { PropsWithChildren, ReactNode, useMemo, useState } from 'react';
@@ -109,6 +110,13 @@ export default function AuthenticatedLayout({
             href: route('dashboard'),
             active: route().current('dashboard'),
             icon: LayoutDashboard,
+        },
+        {
+            key: 'accounts',
+            label: 'Contas',
+            href: route('accounts.index'),
+            active: route().current('accounts.*'),
+            icon: Wallet,
         },
         {
             key: 'categories',

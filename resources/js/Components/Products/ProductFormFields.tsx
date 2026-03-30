@@ -18,7 +18,7 @@ interface ProductFormFieldsProps {
     categories: Array<{
         id: number;
         name: string;
-        kind: string;
+        color: string;
     }>;
     units: Array<{
         value: string;
@@ -96,7 +96,6 @@ export default function ProductFormFields({
                         allowClear
                         placeholder="Sem categoria"
                         options={categories
-                            .filter((category) => category.kind === 'produto')
                             .map((category) => ({
                                 value: String(category.id),
                                 label: category.name,
