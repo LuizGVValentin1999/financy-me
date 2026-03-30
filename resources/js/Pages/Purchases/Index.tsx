@@ -100,11 +100,13 @@ function ImportPreviewSection({
     products,
     categories,
     importUnits,
+    accounts,
 }: {
     preview: NonNullable<PurchasesPageProps['importPreview']>;
     products: PurchasesPageProps['products'];
     categories: PurchasesPageProps['categories'];
     importUnits: PurchasesPageProps['importUnits'];
+    accounts: PurchasesPageProps['accounts'];
 }) {
     const {
         data,
@@ -125,6 +127,7 @@ function ImportPreviewSection({
                 ? String(item.suggested_category_id)
                 : '',
             unit: item.suggested_unit,
+            account_id: '',
         })),
     });
 
@@ -136,7 +139,8 @@ function ImportPreviewSection({
             | 'product_name'
             | 'quantity'
             | 'category_id'
-            | 'unit',
+            | 'unit'
+            | 'account_id',
         value: boolean | string,
     ) => {
         setData(
@@ -477,6 +481,41 @@ function ImportPreviewSection({
                                         className="mt-2"
                                     />
                                 </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor={`items.${index}.account_id`}
+                                        value="Conta"
+                                    />
+                                    <Select
+                                        id={`items.${index}.account_id`}
+                                        value={data.items[index].account_id || undefined}
+                                        disabled={!data.items[index].include}
+                                        onChange={(value) =>
+                                            updateItem(
+                                                index,
+                                                'account_id',
+                                                value ?? '',
+                                            )
+                                        }
+                                        className="mt-2 w-full"
+                                        size="large"
+                                        allowClear
+                                        placeholder="Sem conta"
+                                        options={accounts.map((account) => ({
+                                            value: String(account.id),
+                                            label: `${account.code} - ${account.name}`,
+                                        }))}
+                                    />
+                                    <InputError
+                                        message={
+                                            errors[
+                                                `items.${index}.account_id`
+                                            ]
+                                        }
+                                        className="mt-2"
+                                    />
+                                </div>
                             </div>
 
                             <div className="mt-4">
@@ -570,10 +609,12 @@ function PurchaseHistoryTable({
     entries,
     sources,
     products,
+    accounts,
 }: {
     entries: PurchasesPageProps['entries'];
     sources: PurchasesPageProps['sources'];
     products: PurchasesPageProps['products'];
+    accounts: PurchasesPageProps['accounts'];
 }) {
     const [groupBy, setGroupBy] = useState('none');
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
@@ -588,6 +629,7 @@ function PurchaseHistoryTable({
         clearErrors,
     } = useForm({
         product_id: '',
+        account_id: '',
         quantity: '1',
         unit_price: '0',
         purchased_at: new Date().toISOString().slice(0, 10),
@@ -606,6 +648,7 @@ function PurchaseHistoryTable({
         setEditingEntry(entry);
         setEditData({
             product_id: entry.product_id ? String(entry.product_id) : '',
+            account_id: entry.account_id ? String(entry.account_id) : '',
             quantity: String(entry.quantity),
             unit_price: String(entry.unit_price),
             purchased_at: entry.purchased_at ?? new Date().toISOString().slice(0, 10),
@@ -1072,36 +1115,83 @@ function PurchaseHistoryTable({
                 />
             </div>
 
-            <Modal
-                show={Boolean(editingEntry)}
+            <PurchaseFormModal
+                isOpen={Boolean(editingEntry)}
                 onClose={closeEditModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Compras
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Editar registro
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.
-                        </p>
-                    </div>
+                isEditing={true}
+                products={products}
+                sources={sources}
+                accounts={accounts}
+                formData={editData}
+                setFormData={setEditData}
+                onSubmit={submitEdit}
+                processing={processing}
+                errors={errors}
+                onDelete={deleteEditingEntry}
+            />
+        </SectionCard>
+    );
+}
 
-                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
+function PurchaseFormModal({
+    isOpen,
+    onClose,
+    isEditing,
+    products,
+    sources,
+    accounts,
+    formData,
+    setFormData,
+    onSubmit,
+    processing,
+    errors,
+    onDelete,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    isEditing: boolean;
+    products: PurchasesPageProps['products'];
+    sources: PurchasesPageProps['sources'];
+    accounts: PurchasesPageProps['accounts'];
+    formData: Record<string, string>;
+    setFormData: (key: string, value: string) => void;
+    onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+    processing: boolean;
+    errors: Record<string, string>;
+    onDelete?: () => void;
+}) {
+    const totalValue = Number(formData.quantity || 0) * Number(formData.unit_price || 0);
+
+    return (
+        <Modal show={isOpen} onClose={onClose} maxWidth="2xl">
+            <div className="p-5 sm:p-6">
+                <div>
+                    <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                        Compras
+                    </p>
+                    <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                        {isEditing ? 'Editar registro' : 'Nova compra manual'}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                        {isEditing
+                            ? 'Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.'
+                            : 'Cada registro aumenta o estoque do produto automaticamente.'}
+                    </p>
+                </div>
+
+                {products.length > 0 ? (
+                    <form onSubmit={onSubmit} className="mt-6 space-y-5">
                         <div>
-                            <InputLabel htmlFor="edit_product_id" value="Produto" />
+                            <InputLabel htmlFor="product_id" value="Produto" />
                             <Select
-                                id="edit_product_id"
-                                value={editData.product_id || undefined}
+                                id="product_id"
+                                value={formData.product_id}
                                 onChange={(value) =>
-                                    setEditData('product_id', value ?? '')
+                                    setFormData('product_id', value ?? '')
                                 }
                                 className="mt-2 w-full"
                                 size="large"
-                                allowClear
+                                allowClear={isEditing}
                                 placeholder="Selecione um produto"
                                 options={products.map((product) => ({
                                     value: String(product.id),
@@ -1114,17 +1204,40 @@ function PurchaseHistoryTable({
                             />
                         </div>
 
+                        <div>
+                            <InputLabel htmlFor="account_id" value="Conta " />
+                            <Select
+                                id="account_id"
+                                value={formData.account_id || undefined}
+                                onChange={(value) =>
+                                    setFormData('account_id', (value ?? '') as string)
+                                }
+                                className="mt-2 w-full"
+                                size="large"
+                                allowClear
+                                placeholder="Sem conta"
+                                options={accounts.map((account) => ({
+                                    value: String(account.id),
+                                    label: `${account.code} - ${account.name}`,
+                                }))}
+                            />
+                            <InputError
+                                message={errors.account_id}
+                                className="mt-2"
+                            />
+                        </div>
+
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <InputLabel htmlFor="edit_quantity" value="Quantidade" />
+                                <InputLabel htmlFor="quantity" value="Quantidade" />
                                 <input
-                                    id="edit_quantity"
+                                    id="quantity"
                                     type="number"
                                     min="0.001"
                                     step="0.001"
-                                    value={editData.quantity}
+                                    value={formData.quantity}
                                     onChange={(event) =>
-                                        setEditData('quantity', event.target.value)
+                                        setFormData('quantity', event.target.value)
                                     }
                                     className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                                 />
@@ -1135,15 +1248,15 @@ function PurchaseHistoryTable({
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="edit_unit_price" value="Preco unitario" />
+                                <InputLabel htmlFor="unit_price" value="Preco unitario" />
                                 <input
-                                    id="edit_unit_price"
+                                    id="unit_price"
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    value={editData.unit_price}
+                                    value={formData.unit_price}
                                     onChange={(event) =>
-                                        setEditData('unit_price', event.target.value)
+                                        setFormData('unit_price', event.target.value)
                                     }
                                     className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                                 />
@@ -1156,13 +1269,13 @@ function PurchaseHistoryTable({
 
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
-                                <InputLabel htmlFor="edit_purchased_at" value="Data da compra" />
+                                <InputLabel htmlFor="purchased_at" value="Data da compra" />
                                 <input
-                                    id="edit_purchased_at"
+                                    id="purchased_at"
                                     type="date"
-                                    value={editData.purchased_at}
+                                    value={formData.purchased_at}
                                     onChange={(event) =>
-                                        setEditData('purchased_at', event.target.value)
+                                        setFormData('purchased_at', event.target.value)
                                     }
                                     className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                                 />
@@ -1173,12 +1286,12 @@ function PurchaseHistoryTable({
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="edit_source" value="Origem" />
+                                <InputLabel htmlFor="source" value="Origem" />
                                 <Select
-                                    id="edit_source"
-                                    value={editData.source}
+                                    id="source"
+                                    value={formData.source}
                                     onChange={(value) =>
-                                        setEditData('source', value)
+                                        setFormData('source', value)
                                     }
                                     className="mt-2 w-full"
                                     size="large"
@@ -1196,15 +1309,15 @@ function PurchaseHistoryTable({
 
                         <div>
                             <InputLabel
-                                htmlFor="edit_invoice_reference"
+                                htmlFor="invoice_reference"
                                 value="Referencia da nota"
                             />
                             <input
-                                id="edit_invoice_reference"
+                                id="invoice_reference"
                                 type="text"
-                                value={editData.invoice_reference}
+                                value={formData.invoice_reference}
                                 onChange={(event) =>
-                                    setEditData('invoice_reference', event.target.value)
+                                    setFormData('invoice_reference', event.target.value)
                                 }
                                 className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                             />
@@ -1215,13 +1328,13 @@ function PurchaseHistoryTable({
                         </div>
 
                         <div>
-                            <InputLabel htmlFor="edit_notes" value="Observacoes" />
+                            <InputLabel htmlFor="notes" value="Observacoes" />
                             <textarea
-                                id="edit_notes"
+                                id="notes"
                                 rows={5}
-                                value={editData.notes}
+                                value={formData.notes}
                                 onChange={(event) =>
-                                    setEditData('notes', event.target.value)
+                                    setFormData('notes', event.target.value)
                                 }
                                 className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
                             />
@@ -1236,23 +1349,35 @@ function PurchaseHistoryTable({
                                 Total previsto
                             </p>
                             <p className="mt-3 text-3xl font-semibold text-slate-900">
-                                {formatCurrency(
-                                    Number(editData.quantity || 0) *
-                                        Number(editData.unit_price || 0),
-                                )}
+                                {formatCurrency(totalValue)}
                             </p>
                         </div>
 
-                        <FormModalActions
-                            onCancel={closeEditModal}
-                            onDelete={deleteEditingEntry}
-                            saveLabel="Salvar alteracoes"
-                            saveDisabled={processing}
-                        />
+                        {isEditing ? (
+                            <FormModalActions
+                                onCancel={onClose}
+                                onDelete={onDelete}
+                                saveLabel="Salvar alteracoes"
+                                saveDisabled={processing}
+                            />
+                        ) : (
+                            <div className="flex flex-wrap justify-end gap-3">
+                                <SecondaryButton type="button" onClick={onClose}>
+                                    Cancelar
+                                </SecondaryButton>
+                                <PrimaryButton disabled={processing}>
+                                    Registrar compra
+                                </PrimaryButton>
+                            </div>
+                        )}
                     </form>
-                </div>
-            </Modal>
-        </SectionCard>
+                ) : (
+                    <div className="mt-6 rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
+                        Cadastre um produto antes de registrar compras.
+                    </div>
+                )}
+            </div>
+        </Modal>
     );
 }
 
@@ -1269,7 +1394,7 @@ export default function PurchasesIndex({
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         product_id: products[0] ? String(products[0].id) : '',
-        account_id: accounts[0] ? String(accounts[0].id) : '',
+        account_id: '',
         quantity: '1',
         unit_price: '0',
         purchased_at: new Date().toISOString().slice(0, 10),
@@ -1281,9 +1406,6 @@ export default function PurchasesIndex({
     const importForm = useForm({
         receipt_url: importPreview?.receipt_url ?? '',
     });
-
-    const totalPreview =
-        Number(data.quantity || 0) * Number(data.unit_price || 0);
 
     const closeImportModal = () => {
         setIsImportModalOpen(false);
@@ -1297,18 +1419,6 @@ export default function PurchasesIndex({
         clearErrors();
     };
 
-    const submit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        post(route('purchases.store'), {
-            preserveScroll: true,
-            onSuccess: () => {
-                reset();
-                setIsPurchaseModalOpen(false);
-            },
-        });
-    };
-
     const submitImport = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -1317,6 +1427,18 @@ export default function PurchasesIndex({
             onSuccess: () => {
                 importForm.setData('receipt_url', '');
                 setIsImportModalOpen(false);
+            },
+        });
+    };
+
+    const onSubmitPurchase = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        post(route('purchases.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+                setIsPurchaseModalOpen(false);
             },
         });
     };
@@ -1360,6 +1482,7 @@ export default function PurchasesIndex({
                         products={products}
                         categories={categories}
                         importUnits={importUnits}
+                        accounts={accounts}
                     />
                 )}
 
@@ -1367,6 +1490,7 @@ export default function PurchasesIndex({
                     entries={entries}
                     sources={sources}
                     products={products}
+                    accounts={accounts}
                 />
             </div>
 
@@ -1435,232 +1559,19 @@ export default function PurchasesIndex({
                 </div>
             </Modal>
 
-            <Modal
-                show={isPurchaseModalOpen}
+            <PurchaseFormModal
+                isOpen={isPurchaseModalOpen}
                 onClose={closePurchaseModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Compras
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Nova compra manual
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Cada registro aumenta o estoque do produto
-                            automaticamente.
-                        </p>
-                    </div>
-
-                    {products.length > 0 ? (
-                        <form onSubmit={submit} className="mt-6 space-y-5">
-                            <div>
-                                <InputLabel
-                                    htmlFor="product_id"
-                                    value="Produto"
-                                />
-                                <Select
-                                    id="product_id"
-                                    value={data.product_id}
-                                    onChange={(value) =>
-                                        setData('product_id', value)
-                                    }
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    options={products.map((product) => ({
-                                        value: String(product.id),
-                                        label: product.name,
-                                    }))}
-                                />
-                                <InputError
-                                    message={errors.product_id}
-                                    className="mt-2"
-                                />
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <InputLabel
-                                        htmlFor="quantity"
-                                        value="Quantidade"
-                                    />
-                                    <input
-                                        id="quantity"
-                                        type="number"
-                                        min="0.001"
-                                        step="0.001"
-                                        value={data.quantity}
-                                        onChange={(event) =>
-                                            setData(
-                                                'quantity',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                    />
-                                    <InputError
-                                        message={errors.quantity}
-                                        className="mt-2"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
-                                        htmlFor="unit_price"
-                                        value="Preco unitario"
-                                    />
-                                    <input
-                                        id="unit_price"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={data.unit_price}
-                                        onChange={(event) =>
-                                            setData(
-                                                'unit_price',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                    />
-                                    <InputError
-                                        message={errors.unit_price}
-                                        className="mt-2"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <InputLabel
-                                        htmlFor="purchased_at"
-                                        value="Data da compra"
-                                    />
-                                    <input
-                                        id="purchased_at"
-                                        type="date"
-                                        value={data.purchased_at}
-                                        onChange={(event) =>
-                                            setData(
-                                                'purchased_at',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
-                                        htmlFor="source"
-                                        value="Origem"
-                                    />
-                                    <Select
-                                        id="source"
-                                        value={data.source}
-                                        onChange={(value) =>
-                                            setData('source', value)
-                                        }
-                                        className="mt-2 w-full"
-                                        size="large"
-                                        options={sources.map((source) => ({
-                                            value: source.value,
-                                            label: source.label,
-                                        }))}
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <InputLabel
-                                    htmlFor="account_id"
-                                    value="Conta (Opcional)"
-                                />
-                                <Select
-                                    id="account_id"
-                                    value={data.account_id || undefined}
-                                    onChange={(value) =>
-                                        setData('account_id', (value ?? '') as string)
-                                    }
-                                    className="mt-2 w-full"
-                                    size="large"
-                                    allowClear
-                                    placeholder="Sem conta"
-                                    options={accounts.map((account) => ({
-                                        value: String(account.id),
-                                        label: `${account.code} - ${account.name}`,
-                                    }))}
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel
-                                    htmlFor="invoice_reference"
-                                    value="Referencia da nota"
-                                />
-                                <input
-                                    id="invoice_reference"
-                                    type="text"
-                                    value={data.invoice_reference}
-                                    onChange={(event) =>
-                                        setData(
-                                            'invoice_reference',
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-
-                            <div>
-                                <InputLabel
-                                    htmlFor="notes"
-                                    value="Observacoes"
-                                />
-                                <textarea
-                                    id="notes"
-                                    rows={5}
-                                    value={data.notes}
-                                    onChange={(event) =>
-                                        setData(
-                                            'notes',
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-
-                            <div className="rounded-[28px] bg-[#f8f4ec] p-5">
-                                <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
-                                    Total previsto
-                                </p>
-                                <p className="mt-3 text-3xl font-semibold text-slate-900">
-                                    {formatCurrency(totalPreview)}
-                                </p>
-                            </div>
-
-                            <div className="flex flex-wrap justify-end gap-3">
-                                <SecondaryButton
-                                    type="button"
-                                    onClick={closePurchaseModal}
-                                >
-                                    Cancelar
-                                </SecondaryButton>
-                                <PrimaryButton disabled={processing}>
-                                    Registrar compra
-                                </PrimaryButton>
-                            </div>
-                        </form>
-                    ) : (
-                        <div className="mt-6 rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                            Cadastre um produto antes de registrar compras.
-                        </div>
-                    )}
-                </div>
-            </Modal>
+                isEditing={false}
+                products={products}
+                sources={sources}
+                accounts={accounts}
+                formData={data}
+                setFormData={setData}
+                onSubmit={onSubmitPurchase}
+                processing={processing}
+                errors={errors}
+            />
         </AuthenticatedLayout>
     );
 }
