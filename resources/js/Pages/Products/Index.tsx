@@ -29,6 +29,7 @@ interface ProductsPageProps {
         brand: string | null;
         sku: string | null;
         unit: string;
+        type: 'stock' | 'service' | 'discount';
         minimum_stock: number;
         current_stock: number;
         is_active: boolean;
@@ -56,6 +57,7 @@ export default function ProductsIndex({
         brand: '',
         sku: '',
         unit: units[0]?.value ?? 'un',
+        type: 'stock',
         minimum_stock: '0',
         notes: '',
     });
@@ -73,6 +75,7 @@ export default function ProductsIndex({
         brand: '',
         sku: '',
         unit: units[0]?.value ?? 'un',
+        type: 'stock',
         minimum_stock: '0',
         notes: '',
     });
@@ -116,6 +119,7 @@ export default function ProductsIndex({
             brand: product.brand ?? '',
             sku: product.sku ?? '',
             unit: product.unit,
+            type: product.type,
             minimum_stock: String(product.minimum_stock),
             notes: product.notes ?? '',
         });
@@ -285,6 +289,34 @@ export default function ProductsIndex({
             key: 'unit',
             sorter: (a, b) => a.unit.localeCompare(b.unit),
             ...getTextFilter('unit', 'Filtrar unidade'),
+        },
+        {
+            title: 'Tipo',
+            dataIndex: 'type',
+            key: 'type',
+            sorter: (a, b) => a.type.localeCompare(b.type),
+            render: (value: ProductTableRecord['type']) => {
+                const labels: Record<ProductTableRecord['type'], string> = {
+                    stock: 'Estoque',
+                    service: 'Serviço',
+                    discount: 'Desconto',
+                };
+
+                const colors: Record<ProductTableRecord['type'], string> = {
+                    stock: 'blue',
+                    service: 'green',
+                    discount: 'orange',
+                };
+
+                return <Tag color={colors[value]}>{labels[value]}</Tag>;
+            },
+            filters: [
+                { text: 'Estoque', value: 'stock' },
+                { text: 'Serviço', value: 'service' },
+                { text: 'Desconto', value: 'discount' },
+            ],
+            onFilter: (value: Key | boolean, record: ProductTableRecord) =>
+                record.type === String(value),
         },
         {
             title: 'Estoque',

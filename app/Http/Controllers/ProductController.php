@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,6 +42,7 @@ class ProductController extends Controller
                     'brand' => $product->brand,
                     'sku' => $product->sku,
                     'unit' => $product->unit,
+                    'type' => $product->type,
                     'minimum_stock' => (float) $product->minimum_stock,
                     'current_stock' => (float) $product->current_stock,
                     'is_active' => $product->is_active,
@@ -66,6 +68,48 @@ class ProductController extends Controller
         ]);
 
         return back()->with('success', 'Produto criado com sucesso.');
+    }
+
+    public function quickStore(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('categories', 'id')->where('user_id', $request->user()->id),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products')->where('user_id', $request->user()->id),
+            ],
+            'unit' => ['required', Rule::in(['un', 'kg', 'g', 'l', 'ml', 'cx'])],
+            'type' => ['required', Rule::in(['stock', 'service', 'discount'])],
+        ]);
+
+        $product = $request->user()->products()->create([
+            ...$validated,
+            'brand' => null,
+            'sku' => null,
+            'minimum_stock' => 0,
+            'current_stock' => 0,
+            'is_active' => true,
+            'notes' => 'Criado rapidamente na compra manual.',
+        ]);
+
+        $product->load('category:id,name');
+
+        return response()->json([
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'unit' => $product->unit,
+                'current_stock' => (float) $product->current_stock,
+                'category' => $product->category?->name,
+                'category_id' => $product->category_id,
+            ],
+        ], 201);
     }
 
     public function update(

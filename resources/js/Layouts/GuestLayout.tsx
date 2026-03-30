@@ -28,8 +28,7 @@ export default function Guest({ children }: PropsWithChildren) {
                         </p>
                         <div className="grid gap-3">
                             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-                                Login rapido com React no front e Laravel no
-                                backend.
+                                Controle seus gastos.
                             </div>
                             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
                                 Categorias de produtos e servicos organizadas por

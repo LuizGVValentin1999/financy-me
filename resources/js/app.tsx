@@ -47,6 +47,8 @@ createInertiaApp({
                         Select: {
                             borderRadiusLG: 16,
                             controlHeightLG: 48,
+                            optionSelectedBg:
+                                'rgb(100 116 139 / var(--tw-text-opacity, 1))',
                         },
                         Modal: {
                             borderRadiusLG: 24,

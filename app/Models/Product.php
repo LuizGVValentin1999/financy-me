@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
     'brand',
     'sku',
     'unit',
+    'type',
     'minimum_stock',
     'current_stock',
     'is_active',

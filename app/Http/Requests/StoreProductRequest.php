@@ -46,6 +46,7 @@ class StoreProductRequest extends FormRequest
             'brand' => ['nullable', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:255'],
             'unit' => ['required', Rule::in(['un', 'kg', 'g', 'l', 'ml', 'cx'])],
+            'type' => ['required', Rule::in(['stock', 'service', 'discount'])],
             'minimum_stock' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

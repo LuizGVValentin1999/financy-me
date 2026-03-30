@@ -12,8 +12,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import axios from 'axios';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
-import { FormEvent, Key, useState } from 'react';
+import { FormEvent, Key, useEffect, useState } from 'react';
 
 interface PurchasesPageProps {
     products: Array<{
@@ -127,6 +128,7 @@ function ImportPreviewSection({
                 ? String(item.suggested_category_id)
                 : '',
             unit: item.suggested_unit,
+            type: item.is_discount ? 'discount' : 'stock',
             account_id: '',
         })),
     });
@@ -140,6 +142,7 @@ function ImportPreviewSection({
             | 'quantity'
             | 'category_id'
             | 'unit'
+            | 'type'
             | 'account_id',
         value: boolean | string,
     ) => {
@@ -269,13 +272,17 @@ function ImportPreviewSection({
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
-                    {preview.items.map((item, index) => (
+                    {preview.items.map((item, index) => {
+                        const isIncluded = data.items[index].include;
+                        const hasExistingProduct = Boolean(data.items[index].product_id);
+
+                        return (
                         <div
                             key={`${item.index}-${item.name}`}
-                            className={`rounded-[28px] border p-5 transition ${
-                                data.items[index].include
+                            className={`rounded-[28px] border p-5 shadow-sm transition ${
+                                isIncluded
                                     ? 'border-slate-200 bg-white'
-                                    : 'border-dashed border-slate-200 bg-slate-50/90'
+                                    : 'border-dashed border-slate-200 bg-slate-50/90 opacity-80'
                             }`}
                         >
                             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -294,9 +301,19 @@ function ImportPreviewSection({
                                                 Desconto global
                                             </span>
                                         )}
-                                        {!data.items[index].include && (
+                                        {!isIncluded && (
                                             <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
                                                 Excluido do lancamento
+                                            </span>
+                                        )}
+                                        {isIncluded && hasExistingProduct && (
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+                                                Produto existente
+                                            </span>
+                                        )}
+                                        {isIncluded && !hasExistingProduct && !item.is_discount && (
+                                            <span className="rounded-full bg-[#eef7f7] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
+                                                Novo produto
                                             </span>
                                         )}
                                     </div>
@@ -315,13 +332,34 @@ function ImportPreviewSection({
                                     )}
                                 </div>
 
-                                <div className="rounded-full bg-[#eef7f7] px-4 py-2 text-sm font-semibold text-slate-700">
+                                <div className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                                    item.is_discount
+                                        ? 'bg-[#fff1ec] text-[#be3d2a]'
+                                        : 'bg-[#eef7f7] text-slate-700'
+                                }`}>
                                     {formatCurrency(item.total_amount)}
                                 </div>
                             </div>
 
-                            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[22px] bg-[#f8f4ec] px-4 py-3">
-                            
+                            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+                                <label
+                                    htmlFor={`items.${index}.include`}
+                                    className="flex items-center gap-3 text-sm font-medium text-slate-700"
+                                >
+                                    <Checkbox
+                                        id={`items.${index}.include`}
+                                        checked={isIncluded}
+                                        onChange={(event) =>
+                                            updateItem(
+                                                index,
+                                                'include',
+                                                event.target.checked,
+                                            )
+                                        }
+                                    />
+                                    Incluir este item no lancamento
+                                </label>
+
                                 <SecondaryButton
                                     type="button"
                                     className="px-4 py-2 text-xs"
@@ -329,17 +367,17 @@ function ImportPreviewSection({
                                         updateItem(
                                             index,
                                             'include',
-                                            !data.items[index].include,
+                                            !isIncluded,
                                         )
                                     }
                                 >
-                                    {data.items[index].include
+                                    {isIncluded
                                         ? 'Excluir desta importacao'
                                         : 'Restaurar item'}
                                 </SecondaryButton>
                             </div>
 
-                            <div className="mt-5 grid gap-4 2xl:grid-cols-4">
+                            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 <div>
                                     <InputLabel
                                         htmlFor={`items.${index}.quantity`}
@@ -356,7 +394,7 @@ function ImportPreviewSection({
                                         step="0.001"
                                         value={data.items[index].quantity}
                                         disabled={
-                                            !data.items[index].include ||
+                                            !isIncluded ||
                                             item.is_discount
                                         }
                                         onChange={(event) =>
@@ -390,7 +428,7 @@ function ImportPreviewSection({
                                         id={`items.${index}.unit`}
                                         value={data.items[index].unit}
                                         disabled={
-                                            !data.items[index].include ||
+                                            !isIncluded ||
                                             item.is_discount
                                         }
                                         onChange={(value) =>
@@ -417,7 +455,7 @@ function ImportPreviewSection({
                                     <Select
                                         id={`items.${index}.product_id`}
                                         value={data.items[index].product_id || undefined}
-                                        disabled={!data.items[index].include}
+                                        disabled={!isIncluded}
                                         onChange={(value) =>
                                             updateItem(
                                                 index,
@@ -428,7 +466,7 @@ function ImportPreviewSection({
                                         className="mt-2 w-full"
                                         size="large"
                                         allowClear
-                                        placeholder="Criar pelo nome abaixo"
+                                        placeholder="Criar novo produto"
                                         options={products.map((product) => ({
                                             value: String(product.id),
                                             label: product.name,
@@ -453,7 +491,7 @@ function ImportPreviewSection({
                                         id={`items.${index}.category_id`}
                                         value={data.items[index].category_id || undefined}
                                         disabled={
-                                            !data.items[index].include ||
+                                            !isIncluded ||
                                             item.is_discount
                                         }
                                         onChange={(value) =>
@@ -490,7 +528,7 @@ function ImportPreviewSection({
                                     <Select
                                         id={`items.${index}.account_id`}
                                         value={data.items[index].account_id || undefined}
-                                        disabled={!data.items[index].include}
+                                        disabled={!isIncluded}
                                         onChange={(value) =>
                                             updateItem(
                                                 index,
@@ -516,6 +554,41 @@ function ImportPreviewSection({
                                         className="mt-2"
                                     />
                                 </div>
+
+                                <div>
+                                    <InputLabel
+                                        htmlFor={`items.${index}.type`}
+                                        value="Tipo do novo produto"
+                                    />
+                                    <Select
+                                        id={`items.${index}.type`}
+                                        value={data.items[index].type}
+                                        disabled={
+                                            !isIncluded
+                                            || item.is_discount
+                                            || hasExistingProduct
+                                        }
+                                        onChange={(value) =>
+                                            updateItem(index, 'type', value)
+                                        }
+                                        className="mt-2 w-full"
+                                        size="large"
+                                        options={[
+                                            { value: 'stock', label: 'Estoque' },
+                                            { value: 'service', label: 'Serviço' },
+                                            { value: 'discount', label: 'Desconto' },
+                                        ]}
+                                    />
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        {hasExistingProduct
+                                            ? 'Limpe o produto existente para definir o tipo do novo cadastro.'
+                                            : 'Usado apenas quando o produto for criado pelo nome.'}
+                                    </p>
+                                    <InputError
+                                        message={errors[`items.${index}.type`]}
+                                        className="mt-2"
+                                    />
+                                </div>
                             </div>
 
                             <div className="mt-4">
@@ -527,7 +600,7 @@ function ImportPreviewSection({
                                     id={`items.${index}.product_name`}
                                     type="text"
                                     value={data.items[index].product_name}
-                                    disabled={!data.items[index].include}
+                                    disabled={!isIncluded || hasExistingProduct}
                                     onChange={(event) =>
                                         updateItem(
                                             index,
@@ -543,9 +616,15 @@ function ImportPreviewSection({
                                     }
                                     className="mt-2"
                                 />
+                                <p className="mt-2 text-xs text-slate-500">
+                                    {hasExistingProduct
+                                        ? 'Campo desativado porque um produto existente foi selecionado.'
+                                        : 'Esse nome sera usado no cadastro automatico do novo produto.'}
+                                </p>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
 
                     <input type="hidden" name="token" value={data.token} />
                     <InputError message={errors.token} className="mt-2" />
@@ -1138,6 +1217,7 @@ function PurchaseFormModal({
     onClose,
     isEditing,
     products,
+    categories,
     sources,
     accounts,
     formData,
@@ -1146,11 +1226,13 @@ function PurchaseFormModal({
     processing,
     errors,
     onDelete,
+    onProductCreated,
 }: {
     isOpen: boolean;
     onClose: () => void;
     isEditing: boolean;
     products: PurchasesPageProps['products'];
+    categories?: PurchasesPageProps['categories'];
     sources: PurchasesPageProps['sources'];
     accounts: PurchasesPageProps['accounts'];
     formData: Record<string, string>;
@@ -1159,45 +1241,127 @@ function PurchaseFormModal({
     processing: boolean;
     errors: Record<string, string>;
     onDelete?: () => void;
+    onProductCreated?: (product: PurchasesPageProps['products'][number]) => void;
 }) {
     const totalValue = Number(formData.quantity || 0) * Number(formData.unit_price || 0);
+    const [productSearch, setProductSearch] = useState('');
+    const [isQuickProductModalOpen, setIsQuickProductModalOpen] = useState(false);
+    const [isQuickProductProcessing, setIsQuickProductProcessing] = useState(false);
+    const [quickProductErrors, setQuickProductErrors] = useState<Record<string, string>>({});
+    const [quickProductData, setQuickProductData] = useState({
+        name: '',
+        category_id: '',
+        unit: 'un',
+        type: 'stock',
+    });
+
+    const openQuickProductModal = () => {
+        setQuickProductErrors({});
+        setQuickProductData((current) => ({
+            ...current,
+            name: productSearch.trim(),
+        }));
+        setIsQuickProductModalOpen(true);
+    };
+
+    const submitQuickProduct = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        setIsQuickProductProcessing(true);
+        setQuickProductErrors({});
+
+        try {
+            const response = await axios.post(route('products.quick-store'), {
+                name: quickProductData.name,
+                category_id: quickProductData.category_id || null,
+                unit: quickProductData.unit,
+                type: quickProductData.type,
+            });
+
+            const createdProduct = response.data.product as PurchasesPageProps['products'][number];
+
+            onProductCreated?.(createdProduct);
+            setFormData('product_id', String(createdProduct.id));
+            setProductSearch(createdProduct.name);
+            setIsQuickProductModalOpen(false);
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 422) {
+                const serverErrors = (error.response.data?.errors ?? {}) as Record<string, string | string[]>;
+
+                setQuickProductErrors(
+                    Object.entries(serverErrors).reduce<Record<string, string>>(
+                        (acc, [key, value]) => {
+                            acc[key] = Array.isArray(value) ? value[0] : value;
+                            return acc;
+                        },
+                        {},
+                    ),
+                );
+            } else {
+                setQuickProductErrors({
+                    general: 'Nao foi possivel criar o produto agora. Tente novamente.',
+                });
+            }
+        } finally {
+            setIsQuickProductProcessing(false);
+        }
+    };
 
     return (
-        <Modal show={isOpen} onClose={onClose} maxWidth="2xl">
-            <div className="p-5 sm:p-6">
-                <div>
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                        Compras
-                    </p>
-                    <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                        {isEditing ? 'Editar registro' : 'Nova compra manual'}
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                        {isEditing
-                            ? 'Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.'
-                            : 'Cada registro aumenta o estoque do produto automaticamente.'}
-                    </p>
-                </div>
+        <>
+            <Modal show={isOpen} onClose={onClose} maxWidth="2xl">
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Compras
+                        </p>
+                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                            {isEditing ? 'Editar registro' : 'Nova compra manual'}
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            {isEditing
+                                ? 'Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.'
+                                : 'Pesquise o produto para agilizar o lancamento ou crie um novo sem sair desta tela.'}
+                        </p>
+                    </div>
 
-                {products.length > 0 ? (
                     <form onSubmit={onSubmit} className="mt-6 space-y-5">
                         <div>
                             <InputLabel htmlFor="product_id" value="Produto" />
                             <Select
                                 id="product_id"
-                                value={formData.product_id}
+                                value={formData.product_id || undefined}
+                                onSearch={(value) => setProductSearch(value)}
                                 onChange={(value) =>
-                                    setFormData('product_id', value ?? '')
+                                    setFormData('product_id', (value ?? '') as string)
                                 }
                                 className="mt-2 w-full"
                                 size="large"
-                                allowClear={isEditing}
-                                placeholder="Selecione um produto"
+                                showSearch
+                                optionFilterProp="label"
+                                filterOption={(input, option) =>
+                                    String(option?.label ?? '')
+                                        .toLowerCase()
+                                        .includes(input.toLowerCase())
+                                }
+                                allowClear
+                                placeholder="Pesquise por nome do produto"
                                 options={products.map((product) => ({
                                     value: String(product.id),
                                     label: product.name,
                                 }))}
+                                notFoundContent="Nenhum produto encontrado"
                             />
+                            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                                <span>Não encontrou o produto na busca?</span>
+                                <button
+                                    type="button"
+                                    onClick={openQuickProductModal}
+                                    className="font-semibold text-slate-700 underline underline-offset-2"
+                                >
+                                    Cadastrar novo produto agora
+                                </button>
+                            </div>
                             <InputError
                                 message={errors.product_id}
                                 className="mt-2"
@@ -1371,13 +1535,134 @@ function PurchaseFormModal({
                             </div>
                         )}
                     </form>
-                ) : (
-                    <div className="mt-6 rounded-[28px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                        Cadastre um produto antes de registrar compras.
+                </div>
+            </Modal>
+
+            <Modal
+                show={isQuickProductModalOpen}
+                onClose={() => setIsQuickProductModalOpen(false)}
+                maxWidth="xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
+                            Produtos
+                        </p>
+                        <h3 className="mt-2 text-2xl font-semibold text-slate-900">
+                            Cadastro rapido de produto
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Crie o produto sem sair da compra. Ao salvar, ele sera selecionado automaticamente.
+                        </p>
                     </div>
-                )}
-            </div>
-        </Modal>
+
+                    <form onSubmit={submitQuickProduct} className="mt-6 space-y-4">
+                        <div>
+                            <InputLabel htmlFor="quick_product_name" value="Nome" />
+                            <input
+                                id="quick_product_name"
+                                type="text"
+                                value={quickProductData.name}
+                                onChange={(event) =>
+                                    setQuickProductData((current) => ({
+                                        ...current,
+                                        name: event.target.value,
+                                    }))
+                                }
+                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            />
+                            <InputError message={quickProductErrors.name} className="mt-2" />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel htmlFor="quick_product_category" value="Categoria" />
+                                <Select
+                                    id="quick_product_category"
+                                    value={quickProductData.category_id || undefined}
+                                    onChange={(value) =>
+                                        setQuickProductData((current) => ({
+                                            ...current,
+                                            category_id: (value ?? '') as string,
+                                        }))
+                                    }
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    allowClear
+                                    placeholder="Sem categoria"
+                                    options={(categories ?? []).map((category) => ({
+                                        value: String(category.id),
+                                        label: category.name,
+                                    }))}
+                                />
+                                <InputError message={quickProductErrors.category_id} className="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="quick_product_unit" value="Unidade" />
+                                <Select
+                                    id="quick_product_unit"
+                                    value={quickProductData.unit}
+                                    onChange={(value) =>
+                                        setQuickProductData((current) => ({
+                                            ...current,
+                                            unit: value,
+                                        }))
+                                    }
+                                    className="mt-2 w-full"
+                                    size="large"
+                                    options={[
+                                        { value: 'un', label: 'Unidade' },
+                                        { value: 'kg', label: 'Quilo' },
+                                        { value: 'g', label: 'Grama' },
+                                        { value: 'l', label: 'Litro' },
+                                        { value: 'ml', label: 'Mililitro' },
+                                        { value: 'cx', label: 'Caixa' },
+                                    ]}
+                                />
+                                <InputError message={quickProductErrors.unit} className="mt-2" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <InputLabel htmlFor="quick_product_type" value="Tipo" />
+                            <Select
+                                id="quick_product_type"
+                                value={quickProductData.type}
+                                onChange={(value) =>
+                                    setQuickProductData((current) => ({
+                                        ...current,
+                                        type: value,
+                                    }))
+                                }
+                                className="mt-2 w-full"
+                                size="large"
+                                options={[
+                                    { value: 'stock', label: 'Estoque' },
+                                    { value: 'service', label: 'Serviço' },
+                                    { value: 'discount', label: 'Desconto' },
+                                ]}
+                            />
+                            <InputError message={quickProductErrors.type} className="mt-2" />
+                        </div>
+
+                        <InputError message={quickProductErrors.general} className="mt-2" />
+
+                        <div className="flex flex-wrap justify-end gap-3">
+                            <SecondaryButton
+                                type="button"
+                                onClick={() => setIsQuickProductModalOpen(false)}
+                            >
+                                Cancelar
+                            </SecondaryButton>
+                            <PrimaryButton disabled={isQuickProductProcessing}>
+                                Criar produto
+                            </PrimaryButton>
+                        </div>
+                    </form>
+                </div>
+            </Modal>
+        </>
     );
 }
 
@@ -1392,6 +1677,12 @@ export default function PurchasesIndex({
 }: PurchasesPageProps) {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+    const [productsCatalog, setProductsCatalog] = useState(products);
+
+    useEffect(() => {
+        setProductsCatalog(products);
+    }, [products]);
+
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         product_id: products[0] ? String(products[0].id) : '',
         account_id: '',
@@ -1443,6 +1734,20 @@ export default function PurchasesIndex({
         });
     };
 
+    const handleProductCreated = (
+        product: PurchasesPageProps['products'][number],
+    ) => {
+        setProductsCatalog((current) => {
+            if (current.some((item) => item.id === product.id)) {
+                return current;
+            }
+
+            return [...current, product].sort((a, b) => a.name.localeCompare(b.name));
+        });
+
+        setData('product_id', String(product.id));
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -1479,7 +1784,7 @@ export default function PurchasesIndex({
                 {importPreview && (
                     <ImportPreviewSection
                         preview={importPreview}
-                        products={products}
+                        products={productsCatalog}
                         categories={categories}
                         importUnits={importUnits}
                         accounts={accounts}
@@ -1489,7 +1794,7 @@ export default function PurchasesIndex({
                 <PurchaseHistoryTable
                     entries={entries}
                     sources={sources}
-                    products={products}
+                    products={productsCatalog}
                     accounts={accounts}
                 />
             </div>
@@ -1563,7 +1868,8 @@ export default function PurchasesIndex({
                 isOpen={isPurchaseModalOpen}
                 onClose={closePurchaseModal}
                 isEditing={false}
-                products={products}
+                products={productsCatalog}
+                categories={categories}
                 sources={sources}
                 accounts={accounts}
                 formData={data}
@@ -1571,6 +1877,7 @@ export default function PurchasesIndex({
                 onSubmit={onSubmitPurchase}
                 processing={processing}
                 errors={errors}
+                onProductCreated={handleProductCreated}
             />
         </AuthenticatedLayout>
     );

@@ -59,11 +59,6 @@ function SidebarContent({
                 </div>
             </Link>
 
-            <p className="mt-8 max-w-xs text-sm leading-7 text-slate-300">
-                Estoque, compras e categorias num fluxo simples para uso
-                domestico.
-            </p>
-
             <Menu
                 mode="inline"
                 selectedKeys={selectedKey ? [selectedKey] : []}

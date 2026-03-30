@@ -109,9 +109,12 @@ class PurchaseEntryController extends Controller
                 'total_amount' => $totalAmount,
             ]);
 
-            $product->update([
-                'current_stock' => (float) $product->current_stock + (float) $validated['quantity'],
-            ]);
+            // Only update stock if the product is not a service or discount
+            if ($product->type !== 'service' && $product->type !== 'discount') {
+                $product->update([
+                    'current_stock' => (float) $product->current_stock + (float) $validated['quantity'],
+                ]);
+            }
         });
 
         return back()->with('success', 'Compra registrada com sucesso.');
@@ -131,7 +134,9 @@ class PurchaseEntryController extends Controller
                 ->products()
                 ->findOrFail($validated['product_id']);
 
-            if ($previousProduct) {
+                // Reverse previous stock adjustment
+                if ($previousProduct && $previousProduct->type !== 'service' && $previousProduct->type !== 'discount') {
+
                 $previousProduct->update([
                     'current_stock' => max(
                         0,
@@ -150,9 +155,12 @@ class PurchaseEntryController extends Controller
                 'total_amount' => $totalAmount,
             ]);
 
-            $nextProduct->update([
-                'current_stock' => (float) $nextProduct->current_stock + (float) $validated['quantity'],
-            ]);
+            // Only update stock if the new product is not a service or discount
+            if ($nextProduct->type !== 'service' && $nextProduct->type !== 'discount') {
+                $nextProduct->update([
+                    'current_stock' => (float) $nextProduct->current_stock + (float) $validated['quantity'],
+                ]);
+            }
         });
 
         return back()->with('success', 'Compra atualizada com sucesso.');
@@ -221,6 +229,7 @@ class PurchaseEntryController extends Controller
                 Rule::exists('categories', 'id')->where('user_id', $user->id),
             ],
             'items.*.unit' => ['nullable', Rule::in(['un', 'kg'])],
+            'items.*.type' => ['nullable', Rule::in(['stock', 'service', 'discount'])],
         ])->after(function ($validator) use ($request, $preview) {
             if ($request->string('token')->toString() !== $preview['token']) {
                 $validator->errors()->add('token', 'A revisao dessa importacao ficou desatualizada.');
@@ -260,6 +269,17 @@ class PurchaseEntryController extends Controller
                         'Escolha um produto existente ou informe um nome.',
                     );
                 }
+
+                if (
+                    ! $isDiscountItem
+                    && blank($item['product_id'] ?? null)
+                    && blank($item['type'] ?? null)
+                ) {
+                    $validator->errors()->add(
+                        "items.$index.type",
+                        'Escolha o tipo para o novo produto.',
+                    );
+                }
             }
 
             if ($includedItems === 0) {
@@ -280,6 +300,9 @@ class PurchaseEntryController extends Controller
                 }
 
                 $isDiscountItem = (bool) ($previewItem['is_discount'] ?? false);
+                $selectedType = $isDiscountItem
+                    ? 'discount'
+                    : (($payload['type'] ?? null) ?: 'stock');
                 $unit = $isDiscountItem
                     ? 'un'
                     : (($payload['unit'] ?? null) ?: $importer->normalizeUnit($previewItem['unit'] ?? null));
@@ -292,6 +315,7 @@ class PurchaseEntryController extends Controller
                         $isDiscountItem ? null : ($payload['category_id'] ?? null),
                         $previewItem['code'] ?? null,
                         $unit,
+                        $selectedType,
                     );
 
                 if (
@@ -302,6 +326,7 @@ class PurchaseEntryController extends Controller
                     $product->update([
                         'category_id' => $payload['category_id'],
                     ]);
+
                 }
 
                 if (! $isDiscountItem && $product->unit !== $unit) {
@@ -339,7 +364,8 @@ class PurchaseEntryController extends Controller
                     ),
                 ]);
 
-                if (! $isDiscountItem) {
+                // Only update stock if not a discount item and the product type is stock
+                if (! $isDiscountItem && $product->type === 'stock') {
                     $product->update([
                         'current_stock' => (float) $product->current_stock + $quantity,
                     ]);
@@ -368,7 +394,8 @@ class PurchaseEntryController extends Controller
         DB::transaction(function () use ($purchaseEntry) {
             $product = $purchaseEntry->product;
 
-            if ($product) {
+            // Only reverse stock if the product is not a service or discount
+            if ($product && $product->type !== 'service' && $product->type !== 'discount') {
                 $product->update([
                     'current_stock' => max(
                         0,
@@ -407,7 +434,8 @@ class PurchaseEntryController extends Controller
             foreach ($entries as $entry) {
                 $product = $entry->product;
 
-                if ($product) {
+                // Only reverse stock if the product is not a service or discount
+                if ($product && $product->type !== 'service' && $product->type !== 'discount') {
                     $product->update([
                         'current_stock' => max(
                             0,
@@ -504,12 +532,23 @@ class PurchaseEntryController extends Controller
         ?int $categoryId,
         ?string $sku,
         string $unit,
+        string $type = 'stock',
     ): Product {
         $existingProduct = $user->products()
             ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
             ->first();
 
         if ($existingProduct) {
+            if (
+                $type === 'discount'
+                && $existingProduct->name === self::IMPORT_DISCOUNT_PRODUCT_NAME
+                && $existingProduct->type !== 'discount'
+            ) {
+                $existingProduct->update([
+                    'type' => 'discount',
+                ]);
+            }
+
             return $existingProduct;
         }
 
@@ -519,6 +558,7 @@ class PurchaseEntryController extends Controller
             'brand' => null,
             'sku' => $sku,
             'unit' => $unit,
+            'type' => $type,
             'minimum_stock' => 0,
             'current_stock' => 0,
             'is_active' => true,

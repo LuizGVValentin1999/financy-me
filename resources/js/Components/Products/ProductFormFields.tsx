@@ -8,6 +8,7 @@ type ProductFormData = {
     brand: string;
     sku: string;
     unit: string;
+    type: string;
     minimum_stock: string;
     notes: string;
 };
@@ -121,20 +122,39 @@ export default function ProductFormFields({
                 </div>
             </div>
 
-            <div>
-                <InputLabel htmlFor={id('minimum_stock')} value="Estoque minimo" />
-                <input
-                    id={id('minimum_stock')}
-                    type="number"
-                    min="0"
-                    step="0.001"
-                    value={data.minimum_stock}
-                    onChange={(event) =>
-                        onFieldChange('minimum_stock', event.target.value)
-                    }
-                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                />
-                <InputError message={errors.minimum_stock} className="mt-2" />
+            <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <InputLabel htmlFor={id('type')} value="Tipo" />
+                    <Select
+                        id={id('type')}
+                        value={data.type}
+                        onChange={(value) => onFieldChange('type', value)}
+                        className="mt-2 w-full"
+                        size="large"
+                        options={[
+                            { value: 'stock', label: 'Estoque' },
+                            { value: 'service', label: 'Serviço' },
+                            { value: 'discount', label: 'Desconto' },
+                        ]}
+                    />
+                    <InputError message={errors.type} className="mt-2" />
+                </div>
+
+                <div>
+                    <InputLabel htmlFor={id('minimum_stock')} value="Estoque minimo" />
+                    <input
+                        id={id('minimum_stock')}
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={data.minimum_stock}
+                        onChange={(event) =>
+                            onFieldChange('minimum_stock', event.target.value)
+                        }
+                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                    />
+                    <InputError message={errors.minimum_stock} className="mt-2" />
+                </div>
             </div>
 
             <div>
