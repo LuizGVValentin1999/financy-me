@@ -48,7 +48,7 @@ export default function ManageHousesForm({
         router.patch(route('house.set-active', houseId), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                message.success('Casa alterada com sucesso!');
+                message.info('Casa alterada com sucesso!');
                 // Reload the page to ensure all data is fresh
                 router.reload();
             },
@@ -63,7 +63,7 @@ export default function ManageHousesForm({
         router.post(route('house.store'), createData, {
             preserveScroll: true,
             onSuccess: () => {
-                message.success('Casa criada com sucesso!');
+                message.info('Casa criada com sucesso!');
                 setIsCreateModalOpen(false);
                 setCreateData({
                     name: '',
@@ -89,7 +89,7 @@ export default function ManageHousesForm({
         router.post(route('house.join'), joinData, {
             preserveScroll: true,
             onSuccess: () => {
-                message.success('Você entrou na casa com sucesso!');
+                message.info('Você entrou na casa com sucesso!');
                 setIsJoinModalOpen(false);
                 setJoinData({
                     code: '',

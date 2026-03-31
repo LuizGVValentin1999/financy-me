@@ -8,7 +8,7 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Select, Space, Table, Tag } from 'antd';
+import { Button, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -92,9 +92,11 @@ export default function ProductsIndex({
         post(route('products.store'), {
             preserveScroll: true,
             onSuccess: () => {
+                message.info('Produto criado com sucesso!');
                 reset();
                 setIsCreateModalOpen(false);
             },
+            onError: () => message.error('Erro ao criar produto'),
         });
     };
 
@@ -135,7 +137,11 @@ export default function ProductsIndex({
 
         patch(route('products.update', editingProduct.id), {
             preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => {
+                message.info('Produto atualizado com sucesso!');
+                closeEditModal();
+            },
+            onError: () => message.error('Erro ao atualizar produto'),
         });
     };
 
@@ -151,13 +157,21 @@ export default function ProductsIndex({
             return;
         }
 
-        if (!confirm('Excluir este produto?')) {
-            return;
-        }
-
-        router.delete(route('products.destroy', editingProduct.id), {
-            preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: 'Excluir este produto?',
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('products.destroy', editingProduct.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info('Produto excluído com sucesso!');
+                        closeEditModal();
+                    },
+                    onError: () => message.error('Erro ao excluir produto'),
+                });
+            },
         });
     };
 
@@ -168,22 +182,26 @@ export default function ProductsIndex({
 
         const total = selectedRowKeys.length;
 
-        if (
-            !confirm(
-                total === 1
-                    ? 'Excluir 1 produto selecionado?'
-                    : `Excluir ${total} produtos selecionados?`,
-            )
-        ) {
-            return;
-        }
-
-        router.delete(route('products.destroy-many'), {
-            data: {
-                ids: selectedRowKeys.map((key) => Number(key)),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: total === 1
+                ? 'Excluir 1 produto selecionado?'
+                : `Excluir ${total} produtos selecionados?`,
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('products.destroy-many'), {
+                    data: {
+                        ids: selectedRowKeys.map((key) => Number(key)),
+                    },
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info(`${selectedRowKeys.length} produtos excluídos com sucesso!`);
+                        setSelectedRowKeys([]);
+                    },
+                    onError: () => message.error('Erro ao excluir produtos'),
+                });
             },
-            preserveScroll: true,
-            onSuccess: () => setSelectedRowKeys([]),
         });
     };
 

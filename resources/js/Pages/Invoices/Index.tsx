@@ -3,6 +3,7 @@ import StatCard from '@/Components/StatCard';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, Link, router } from '@inertiajs/react';
+import { Modal, message } from 'antd';
 
 interface InvoicesPageProps {
     stats: {
@@ -40,12 +41,18 @@ interface InvoicesPageProps {
 
 export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
     const deleteInvoice = (invoiceId: number) => {
-        if (!confirm('Excluir esta nota fiscal? Isso vai remover tambem as compras e os lancamentos financeiros gerados por ela.')) {
-            return;
-        }
-
-        router.delete(route('invoices.destroy', invoiceId), {
-            preserveScroll: true,
+        Modal.confirm({
+            title: 'Confirmar exclusão',
+            content: 'Excluir esta nota fiscal? Isso vai remover também as compras e os lançamentos financeiros gerados por ela.',
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('invoices.destroy', invoiceId), {
+                    preserveScroll: true,
+                    onSuccess: () => message.info('Nota fiscal excluída com sucesso!'),
+                    onError: () => message.error('Erro ao excluir nota fiscal'),
+                });
+            },
         });
     };
 

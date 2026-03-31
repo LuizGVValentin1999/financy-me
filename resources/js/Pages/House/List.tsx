@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
+import { message } from 'antd';
 
 type HouseItem = {
     id: number;
@@ -34,7 +35,11 @@ export default function ListHouses({ houses }: Props) {
 
                                 <button
                                     type="button"
-                                    onClick={() => router.patch(route('house.set-active', house.id))}
+                                    onClick={() => router.patch(route('house.set-active', house.id), {}, {
+                                        preserveScroll: true,
+                                        onSuccess: () => message.info('Casa alterada com sucesso!'),
+                                        onError: () => message.error('Erro ao alterar casa ativa'),
+                                    })}
                                     className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
                                     disabled={house.is_active}
                                 >

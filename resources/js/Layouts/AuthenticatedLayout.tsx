@@ -1,6 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { PageProps } from '@/types';
-import { Button, Drawer, Menu, type MenuProps, Alert } from 'antd';
+import { Button, Drawer, Menu, type MenuProps, message } from 'antd';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Boxes,
@@ -15,7 +15,7 @@ import {
     Wallet,
     type LucideIcon,
 } from 'lucide-react';
-import { PropsWithChildren, ReactNode, useMemo, useState } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 type NavigationItem = {
     key: string;
@@ -180,6 +180,18 @@ export default function AuthenticatedLayout({
     ];
 
     const selectedKey = navigation.find((item) => item.active)?.key;
+    const lastErrorFlashRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        const nextError = flash.error ?? null;
+
+        if (!nextError || lastErrorFlashRef.current === nextError) {
+            return;
+        }
+
+        lastErrorFlashRef.current = nextError;
+        message.error(nextError);
+    }, [flash.error]);
 
     const handleNavigate = (key: string) => {
         const item = navigation.find((entry) => entry.key === key);
@@ -229,15 +241,6 @@ export default function AuthenticatedLayout({
 
                     <div className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 xl:px-10">
                         {header && <div className="mb-6">{header}</div>}
-
-                        {(flash.success || flash.error) && (
-                            <Alert
-                                showIcon
-                                className="mb-6 rounded-[22px]"
-                                type={flash.success ? 'success' : 'error'}
-                                message={flash.success ?? flash.error}
-                            />
-                        )}
 
                         <main className="w-full">{children}</main>
                     </div>

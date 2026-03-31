@@ -8,7 +8,7 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Table, Tag } from 'antd';
+import { Button, Modal as AntdModal, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -65,9 +65,11 @@ export default function AccountsIndex({
         post(route('accounts.store'), {
             preserveScroll: true,
             onSuccess: () => {
+                message.info('Conta criada com sucesso!');
                 reset();
                 setIsCreateModalOpen(false);
             },
+            onError: () => message.error('Erro ao criar conta'),
         });
     };
 
@@ -104,7 +106,11 @@ export default function AccountsIndex({
 
         patch(route('accounts.update', editingAccount.id), {
             preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => {
+                message.info('Conta atualizada com sucesso!');
+                closeEditModal();
+            },
+            onError: () => message.error('Erro ao atualizar conta'),
         });
     };
 
@@ -120,13 +126,21 @@ export default function AccountsIndex({
             return;
         }
 
-        if (!confirm('Excluir esta conta?')) {
-            return;
-        }
-
-        router.delete(route('accounts.destroy', editingAccount.id), {
-            preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: 'Excluir esta conta?',
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('accounts.destroy', editingAccount.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info('Conta excluída com sucesso!');
+                        closeEditModal();
+                    },
+                    onError: () => message.error('Erro ao excluir conta'),
+                });
+            },
         });
     };
 
@@ -137,22 +151,26 @@ export default function AccountsIndex({
 
         const total = selectedRowKeys.length;
 
-        if (
-            !confirm(
-                total === 1
-                    ? 'Excluir 1 conta selecionada?'
-                    : `Excluir ${total} contas selecionadas?`,
-            )
-        ) {
-            return;
-        }
-
-        router.delete(route('accounts.destroy-many'), {
-            data: {
-                ids: selectedRowKeys.map((key) => Number(key)),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: total === 1
+                ? 'Excluir 1 conta selecionada?'
+                : `Excluir ${total} contas selecionadas?`,
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('accounts.destroy-many'), {
+                    data: {
+                        ids: selectedRowKeys.map((key) => Number(key)),
+                    },
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info(`${selectedRowKeys.length} contas excluídas com sucesso!`);
+                        setSelectedRowKeys([]);
+                    },
+                    onError: () => message.error('Erro ao excluir contas'),
+                });
             },
-            preserveScroll: true,
-            onSuccess: () => setSelectedRowKeys([]),
         });
     };
 

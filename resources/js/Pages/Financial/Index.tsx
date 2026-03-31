@@ -9,7 +9,7 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Select, Table, Tag } from 'antd';
+import { Modal as AntdModal, Select, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useMemo, useState } from 'react';
 
@@ -86,9 +86,11 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
         post(route('financial.store'), {
             preserveScroll: true,
             onSuccess: () => {
+                message.info('Lançamento criado com sucesso!');
                 reset();
                 setIsCreateModalOpen(false);
             },
+            onError: () => message.error('Erro ao criar lançamento'),
         });
     };
 
@@ -124,7 +126,11 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
 
         patch(route('financial.update', editingEntry.id), {
             preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => {
+                message.info('Lançamento atualizado com sucesso!');
+                closeEditModal();
+            },
+            onError: () => message.error('Erro ao atualizar lançamento'),
         });
     };
 
@@ -133,13 +139,21 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             return;
         }
 
-        if (!confirm('Excluir este lançamento?')) {
-            return;
-        }
-
-        router.delete(route('financial.destroy', editingEntry.id), {
-            preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: 'Excluir este lançamento?',
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('financial.destroy', editingEntry.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info('Lançamento excluído com sucesso!');
+                        closeEditModal();
+                    },
+                    onError: () => message.error('Erro ao excluir lançamento'),
+                });
+            },
         });
     };
 
@@ -148,16 +162,28 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             return;
         }
 
-        if (!confirm(`Excluir ${selectedRowKeys.length} lançamentos manuais selecionados?`)) {
-            return;
-        }
+        const total = selectedRowKeys.length;
 
-        router.delete(route('financial.destroy-many'), {
-            data: {
-                ids: selectedRowKeys.map((key) => Number(key)),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: total === 1
+                ? 'Excluir 1 lançamento manual selecionado?'
+                : `Excluir ${total} lançamentos manuais selecionados?`,
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('financial.destroy-many'), {
+                    data: {
+                        ids: selectedRowKeys.map((key) => Number(key)),
+                    },
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info(`${selectedRowKeys.length} lançamentos excluídos com sucesso!`);
+                        setSelectedRowKeys([]);
+                    },
+                    onError: () => message.error('Erro ao excluir lançamentos'),
+                });
             },
-            preserveScroll: true,
-            onSuccess: () => setSelectedRowKeys([]),
         });
     };
 

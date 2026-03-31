@@ -8,7 +8,7 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Table, Tag } from 'antd';
+import { Button, Modal as AntdModal, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -65,9 +65,11 @@ export default function CategoriesIndex({
         post(route('categories.store'), {
             preserveScroll: true,
             onSuccess: () => {
+                message.info('Categoria criada com sucesso!');
                 reset();
                 setIsCreateModalOpen(false);
             },
+            onError: () => message.error('Erro ao criar categoria'),
         });
     };
 
@@ -104,7 +106,11 @@ export default function CategoriesIndex({
 
         patch(route('categories.update', editingCategory.id), {
             preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => {
+                message.info('Categoria atualizada com sucesso!');
+                closeEditModal();
+            },
+            onError: () => message.error('Erro ao atualizar categoria'),
         });
     };
 
@@ -120,13 +126,21 @@ export default function CategoriesIndex({
             return;
         }
 
-        if (!confirm('Excluir esta categoria?')) {
-            return;
-        }
-
-        router.delete(route('categories.destroy', editingCategory.id), {
-            preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: 'Excluir esta categoria?',
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('categories.destroy', editingCategory.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info('Categoria excluída com sucesso!');
+                        closeEditModal();
+                    },
+                    onError: () => message.error('Erro ao excluir categoria'),
+                });
+            },
         });
     };
 
@@ -137,22 +151,26 @@ export default function CategoriesIndex({
 
         const total = selectedRowKeys.length;
 
-        if (
-            !confirm(
-                total === 1
-                    ? 'Excluir 1 categoria selecionada?'
-                    : `Excluir ${total} categorias selecionadas?`,
-            )
-        ) {
-            return;
-        }
-
-        router.delete(route('categories.destroy-many'), {
-            data: {
-                ids: selectedRowKeys.map((key) => Number(key)),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: total === 1
+                ? 'Excluir 1 categoria selecionada?'
+                : `Excluir ${total} categorias selecionadas?`,
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('categories.destroy-many'), {
+                    data: {
+                        ids: selectedRowKeys.map((key) => Number(key)),
+                    },
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info(`${selectedRowKeys.length} categorias excluídas com sucesso!`);
+                        setSelectedRowKeys([]);
+                    },
+                    onError: () => message.error('Erro ao excluir categorias'),
+                });
             },
-            preserveScroll: true,
-            onSuccess: () => setSelectedRowKeys([]),
         });
     };
 

@@ -10,8 +10,9 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
+import { useDependencyErrorNotification } from '@/hooks/useDependencyErrorNotification';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, Input, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
 import axios from 'axios';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useEffect, useMemo, useState } from 'react';
@@ -175,6 +176,12 @@ function ImportPreviewSection({
         ],
     });
 
+
+    useDependencyErrorNotification(errors, {
+        dependencyPatterns: [/^payments\./, /account_id$/],
+        customMessage: 'Revise a(s) conta(s) de pagamento e campos obrigatórios'
+    });
+
     const updateItem = (
         index: number,
         key:
@@ -284,6 +291,8 @@ function ImportPreviewSection({
 
         post(route('purchases.import-confirm'), {
             preserveScroll: true,
+            onSuccess: () => message.success('Nota fiscal importada com sucesso!'),
+            onError: () => message.error('Erro ao importar nota fiscal'),
         });
     };
 
@@ -295,11 +304,21 @@ function ImportPreviewSection({
                 <DangerButton
                     type="button"
                     className="px-4 py-2 text-xs"
-                    onClick={() =>
-                        router.delete(route('purchases.import-clear'), {
-                            preserveScroll: true,
-                        })
-                    }
+                    onClick={() => {
+                        AntdModal.confirm({
+                            title: 'Confirmar exclusão',
+                            content: 'Excluir rascunho da importação?',
+                            okText: 'Sim',
+                            cancelText: 'Não',
+                            onOk: () => {
+                                router.delete(route('purchases.import-clear'), {
+                                    preserveScroll: true,
+                                    onSuccess: () => message.info('Rascunho da importação removido.'),
+                                    onError: () => message.error('Erro ao remover rascunho'),
+                                });
+                            },
+                        });
+                    }}
                 >
                     Limpar rascunho
                 </DangerButton>
@@ -1104,7 +1123,11 @@ function PurchaseHistoryTable({
 
         patch(route('purchases.update', editingEntry.id), {
             preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => {
+                message.info('Compra atualizada com sucesso!');
+                closeEditModal();
+            },
+            onError: () => message.error('Erro ao atualizar compra'),
         });
     };
 
@@ -1113,13 +1136,21 @@ function PurchaseHistoryTable({
             return;
         }
 
-        if (!confirm('Excluir este registro de compra?')) {
-            return;
-        }
-
-        router.delete(route('purchases.destroy', editingEntry.id), {
-            preserveScroll: true,
-            onSuccess: () => closeEditModal(),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: 'Excluir este registro de compra?',
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('purchases.destroy', editingEntry.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info('Compra excluída com sucesso!');
+                        closeEditModal();
+                    },
+                    onError: () => message.error('Erro ao excluir compra'),
+                });
+            },
         });
     };
 
@@ -1130,22 +1161,26 @@ function PurchaseHistoryTable({
 
         const total = selectedRowKeys.length;
 
-        if (
-            !confirm(
-                total === 1
-                    ? 'Excluir 1 registro selecionado?'
-                    : `Excluir ${total} registros selecionados?`,
-            )
-        ) {
-            return;
-        }
-
-        router.delete(route('purchases.destroy-many'), {
-            data: {
-                ids: selectedRowKeys.map((key) => Number(key)),
+        AntdModal.confirm({
+            title: 'Confirmar exclusão',
+            content: total === 1
+                ? 'Excluir 1 registro selecionado?'
+                : `Excluir ${total} registros selecionados?`,
+            okText: 'Sim',
+            cancelText: 'Não',
+            onOk: () => {
+                router.delete(route('purchases.destroy-many'), {
+                    data: {
+                        ids: selectedRowKeys.map((key) => Number(key)),
+                    },
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        message.info(`${selectedRowKeys.length} compras excluídas com sucesso!`);
+                        setSelectedRowKeys([]);
+                    },
+                    onError: () => message.error('Erro ao excluir compras'),
+                });
             },
-            preserveScroll: true,
-            onSuccess: () => setSelectedRowKeys([]),
         });
     };
 
@@ -2072,9 +2107,11 @@ export default function PurchasesIndex({
         importForm.post(route('purchases.import-link'), {
             preserveScroll: true,
             onSuccess: () => {
+                message.info('Link de NFC-e importado com sucesso!');
                 importForm.setData('receipt_url', '');
                 setIsImportModalOpen(false);
             },
+            onError: () => message.error('Erro ao importar link de NFC-e'),
         });
     };
 
@@ -2084,9 +2121,11 @@ export default function PurchasesIndex({
         post(route('purchases.store'), {
             preserveScroll: true,
             onSuccess: () => {
+                message.info('Compra criada com sucesso!');
                 reset();
                 setIsPurchaseModalOpen(false);
             },
+            onError: () => message.error('Erro ao criar compra'),
         });
     };
 
