@@ -5,7 +5,14 @@
     "scripts": {
         "build": "tsc && vite build",
         "dev": "vite",
-        "lint": "eslint resources/js --ext .js,.jsx,.ts,.tsx --ignore-path .gitignore --fix"
+        "lint": "eslint resources/js --ext .js,.jsx,.ts,.tsx --ignore-path .gitignore --fix",
+        "cypress:open": "cypress open",
+        "cypress:run": "cypress run",
+        "e2e:db:file": "mkdir -p database && touch database/e2e.sqlite",
+        "e2e:reset-db": "npm run e2e:db:file && APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=database/e2e.sqlite php artisan migrate:fresh --force",
+        "e2e:serve": "concurrently -k -s first \"APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=database/e2e.sqlite php artisan serve --host=127.0.0.1 --port=8010\" \"npm run dev -- --host 127.0.0.1 --port 5180\"",
+        "e2e:open": "npm run e2e:reset-db && start-server-and-test e2e:serve http://127.0.0.1:8010 cypress:open",
+        "e2e:run": "npm run e2e:reset-db && start-server-and-test e2e:serve http://127.0.0.1:8010 cypress:run"
     },
     "devDependencies": {
         "@inertiajs/react": "^2.0.0",
@@ -20,6 +27,7 @@
         "autoprefixer": "^10.4.12",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "cypress": "^15.13.0",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.1.3",
@@ -32,6 +40,7 @@
         "prettier-plugin-tailwindcss": "^0.6.5",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "start-server-and-test": "^3.0.0",
         "tailwindcss": "^3.2.1",
         "typescript": "^5.0.2",
         "vite": "^8.0.0"

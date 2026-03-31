@@ -56,3 +56,65 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Testes E2E com Cypress
+
+O projeto agora inclui Cypress para testes end-to-end da interface.
+
+### Comandos
+
+- `npm run cypress:open`: abre o Cypress interativo (com servidores ja rodando).
+- `npm run cypress:run`: executa Cypress em modo headless (com servidores ja rodando).
+- `npm run e2e:reset-db`: recria o banco E2E do zero.
+- `npm run e2e:open`: sobe Laravel + Vite automaticamente e abre o Cypress.
+- `npm run e2e:run`: sobe Laravel + Vite automaticamente e executa os testes headless.
+
+Os scripts `e2e:*` usam portas dedicadas para evitar conflito com seu ambiente local:
+
+- App Laravel: `http://127.0.0.1:8010`
+- Vite dev server: `http://127.0.0.1:5180`
+
+Os scripts E2E tambem usam banco dedicado (`database/e2e.sqlite`) e executam
+`migrate:fresh` antes de rodar, evitando acumulo de dados de teste.
+
+### Estrutura
+
+- Specs: `cypress/e2e/**/*.cy.ts`
+- Support: `cypress/support/e2e.ts`
+- Configuracao: `cypress.config.ts`
+
+Specs atuais incluidas:
+
+- `cypress/e2e/auth-smoke.cy.ts`
+- `cypress/e2e/products-flow.cy.ts`
+- `cypress/e2e/purchases-flow.cy.ts`
+- `cypress/e2e/nfce-import-flow.cy.ts`
+- `cypress/e2e/stock-withdraw-flow.cy.ts`
+- `cypress/e2e/financial-flow.cy.ts`
+
+Comandos customizados (em `cypress/support/commands.ts`):
+
+- `cy.registerAndLogin()` para criar usuario/casa e autenticar pela UI.
+- `cy.loginByUi({ email, password })` para autenticar via tela de login.
+
+## CI
+
+O workflow de CI em `.github/workflows/ci.yml` executa:
+
+- Build frontend (`npm run build`)
+- Testes backend com cobertura minima (`php artisan test --coverage-clover=coverage.xml --min=50`)
+- Testes E2E (`npm run cypress:run`, com Laravel + Vite iniciados automaticamente)
+
+## Cobertura backend
+
+Para rodar cobertura local do backend com gate minimo:
+
+```bash
+composer test:coverage
+```
+
+### Primeira execucao sugerida
+
+```bash
+npm run e2e:run
+```

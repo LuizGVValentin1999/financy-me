@@ -16,6 +16,10 @@
 /public/build
 /public/hot
 /public/storage
+/cypress/videos
+/cypress/screenshots
+/cypress/downloads
+/database/e2e.sqlite
 /storage/*.key
 /storage/pail
 /vendor

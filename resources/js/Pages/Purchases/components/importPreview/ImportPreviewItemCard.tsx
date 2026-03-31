@@ -230,7 +230,7 @@ export default function ImportPreviewItemCard({
                         <input
                             id={`items.${index}.quantity`}
                             type="number"
-                            min="0.001"
+                            min={item.is_discount ? '0' : '0.001'}
                             step="0.001"
                             value={itemState.quantity}
                             onChange={(event) =>
