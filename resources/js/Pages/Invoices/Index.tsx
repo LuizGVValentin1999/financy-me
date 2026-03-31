@@ -2,7 +2,7 @@ import SectionCard from '@/Components/SectionCard';
 import StatCard from '@/Components/StatCard';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 
 interface InvoicesPageProps {
     stats: {
@@ -39,6 +39,16 @@ interface InvoicesPageProps {
 }
 
 export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
+    const deleteInvoice = (invoiceId: number) => {
+        if (!confirm('Excluir esta nota fiscal? Isso vai remover tambem as compras e os lancamentos financeiros gerados por ela.')) {
+            return;
+        }
+
+        router.delete(route('invoices.destroy', invoiceId), {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -170,6 +180,16 @@ export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
                                     </summary>
 
                                     <div className="border-t border-slate-100 px-5 py-5">
+                                        <div className="mb-4 flex justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => deleteInvoice(invoice.id)}
+                                                className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-700 transition hover:bg-red-100"
+                                            >
+                                                Excluir nota
+                                            </button>
+                                        </div>
+
                                         {invoice.access_key && (
                                             <div className="mb-4 rounded-[22px] bg-slate-50 px-4 py-4">
                                                 <p className="text-xs uppercase tracking-[0.18em] text-slate-400">

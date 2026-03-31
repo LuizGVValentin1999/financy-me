@@ -28,7 +28,7 @@ class StoreAccountRequest extends FormRequest
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('accounts'),
+                Rule::unique('accounts')->where('user_id', $this->user()?->id),
             ],
             'name' => ['required', 'string', 'max:255'],
             'initial_balance' => ['required', 'numeric', 'min:0'],

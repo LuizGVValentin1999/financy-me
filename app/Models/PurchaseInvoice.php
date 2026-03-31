@@ -46,4 +46,9 @@ class PurchaseInvoice extends Model
     {
         return $this->hasMany(PurchaseEntry::class);
     }
+
+    public function financialEntries(): HasMany
+    {
+        return $this->hasMany(FinancialEntry::class);
+    }
 }

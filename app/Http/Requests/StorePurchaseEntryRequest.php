@@ -43,7 +43,7 @@ class StorePurchaseEntryRequest extends FormRequest
             'quantity' => ['required', 'numeric', 'gt:0'],
             'unit_price' => ['required', 'numeric', 'min:0'],
             'purchased_at' => ['required', 'date'],
-            'source' => ['required', Rule::in(['manual', 'nota_fiscal'])],
+            'source' => ['required', Rule::in(['manual', 'invoice'])],
             'invoice_reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];

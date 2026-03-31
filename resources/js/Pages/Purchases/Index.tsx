@@ -14,7 +14,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { Button, Input, Select, Space, Table, Tag } from 'antd';
 import axios from 'axios';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
-import { FormEvent, Key, useEffect, useState } from 'react';
+import { FormEvent, Key, useEffect, useMemo, useState } from 'react';
 
 interface PurchasesPageProps {
     products: Array<{
@@ -109,6 +109,36 @@ function ImportPreviewSection({
     importUnits: PurchasesPageProps['importUnits'];
     accounts: PurchasesPageProps['accounts'];
 }) {
+    const firstAccountId = accounts[0] ? String(accounts[0].id) : '';
+
+    const meaningfulPaymentMethods = useMemo(
+        () =>
+            preview.payment_methods.filter((payment) => {
+                const normalizedMethod = payment.method
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .trim();
+
+                if (payment.amount <= 0) {
+                    return false;
+                }
+
+                if (!normalizedMethod) {
+                    return false;
+                }
+
+                return ![
+                    'forma de pagamento',
+                    'informacao dos tributos',
+                    'tributos totais incidentes',
+                    'lei federal',
+                    'valor aproximado dos tributos',
+                ].some((fragment) => normalizedMethod.includes(fragment));
+            }),
+        [preview.payment_methods],
+    );
+
     const {
         data,
         setData,
@@ -128,9 +158,21 @@ function ImportPreviewSection({
                 ? String(item.suggested_category_id)
                 : '',
             unit: item.suggested_unit,
-            type: item.is_discount ? 'discount' : 'stock',
-            account_id: '',
+            type: item.is_discount ? 'non_stockable' : 'stockable',
         })),
+        payments: [
+            {
+                account_id: firstAccountId,
+                type: 'cash',
+                principal_amount: String(preview.amount_paid || 0),
+                first_due_date:
+                    preview.issued_at ?? new Date().toISOString().slice(0, 10),
+                installments: '12',
+                interest_type: 'rate',
+                interest_rate: '1',
+                installment_amount: '',
+            },
+        ],
     });
 
     const updateItem = (
@@ -142,8 +184,7 @@ function ImportPreviewSection({
             | 'quantity'
             | 'category_id'
             | 'unit'
-            | 'type'
-            | 'account_id',
+            | 'type',
         value: boolean | string,
     ) => {
         setData(
@@ -154,11 +195,89 @@ function ImportPreviewSection({
         );
     };
 
+    const updatePayment = (
+        index: number,
+        key:
+            | 'account_id'
+            | 'type'
+            | 'principal_amount'
+            | 'first_due_date'
+            | 'installments'
+            | 'interest_type'
+            | 'interest_rate'
+            | 'installment_amount',
+        value: string,
+    ) => {
+        setData(
+            'payments',
+            data.payments.map((payment, paymentIndex) =>
+                paymentIndex === index ? { ...payment, [key]: value } : payment,
+            ),
+        );
+    };
+
+    const addPayment = () => {
+        setData('payments', [
+            ...data.payments,
+            {
+                account_id: firstAccountId,
+                type: 'cash',
+                principal_amount: '0',
+                first_due_date:
+                    preview.issued_at ?? new Date().toISOString().slice(0, 10),
+                installments: '12',
+                interest_type: 'rate',
+                interest_rate: '1',
+                installment_amount: '',
+            },
+        ]);
+    };
+
+    const removePayment = (index: number) => {
+        if (data.payments.length <= 1) {
+            return;
+        }
+
+        setData(
+            'payments',
+            data.payments.filter((_, paymentIndex) => paymentIndex !== index),
+        );
+    };
+
     const includedItems = preview.items.filter((_, index) => data.items[index]?.include);
     const includedTotal = includedItems.reduce(
         (total, item) => total + item.total_amount,
         0,
     );
+
+    const paymentsPrincipalTotal = data.payments.reduce(
+        (total, payment) => total + (Number(payment.principal_amount) || 0),
+        0,
+    );
+
+    const estimatedFinancialTotal = data.payments.reduce((total, payment) => {
+        const principalAmount = Number(payment.principal_amount) || 0;
+
+        if (payment.type === 'cash') {
+            return total + principalAmount;
+        }
+
+        const installments = Math.max(2, Number(payment.installments) || 2);
+
+        if (payment.interest_type === 'fixed_installment') {
+            return total + (Number(payment.installment_amount) || 0) * installments;
+        }
+
+        const rate = (Number(payment.interest_rate) || 0) / 100;
+        if (rate <= 0) {
+            return total + principalAmount;
+        }
+
+        const factor = Math.pow(1 + rate, installments);
+        const installmentAmount = principalAmount * ((rate * factor) / (factor - 1));
+
+        return total + installmentAmount * installments;
+    }, 0);
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -250,28 +369,296 @@ function ImportPreviewSection({
                     {preview.payment_methods.length > 0 && (
                         <div>
                             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                                Pagamentos
+                                Pagamentos identificados no cupom
                             </p>
-                            <div className="mt-3 space-y-2">
-                                {preview.payment_methods.map((payment) => (
-                                    <div
-                                        key={`${payment.method}-${payment.amount}`}
-                                        className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm"
-                                    >
-                                        <span className="text-slate-600">
-                                            {payment.method}
-                                        </span>
-                                        <span className="font-semibold text-slate-900">
-                                            {formatCurrency(payment.amount)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+                            {meaningfulPaymentMethods.length > 0 ? (
+                                <div className="mt-3 space-y-2">
+                                    {meaningfulPaymentMethods.map((payment) => (
+                                        <div
+                                            key={`${payment.method}-${payment.amount}`}
+                                            className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm"
+                                        >
+                                            <span className="text-slate-600">
+                                                {payment.method}
+                                            </span>
+                                            <span className="font-semibold text-slate-900">
+                                                {formatCurrency(payment.amount)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm text-slate-500">
+                                    O cupom nao trouxe formas de pagamento claras. Use a secao "Pagamento da nota" ao lado para registrar corretamente.
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
+                    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                                    Pagamento da nota
+                                </p>
+                                <p className="mt-2 text-lg font-semibold text-slate-900">
+                                    Escolha como essa compra foi paga por conta.
+                                </p>
+                            </div>
+
+                            <SecondaryButton
+                                type="button"
+                                className="px-4 py-2 text-xs"
+                                onClick={addPayment}
+                            >
+                                Adicionar conta
+                            </SecondaryButton>
+                        </div>
+
+                        <div className="mt-4 space-y-4">
+                            {data.payments.map((payment, paymentIndex) => (
+                                <div
+                                    key={`payment-${paymentIndex}`}
+                                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                >
+                                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                        <div>
+                                            <InputLabel
+                                                htmlFor={`payments.${paymentIndex}.account_id`}
+                                                value="Conta"
+                                            />
+                                            <Select
+                                                id={`payments.${paymentIndex}.account_id`}
+                                                value={payment.account_id || undefined}
+                                                onChange={(value) =>
+                                                    updatePayment(
+                                                        paymentIndex,
+                                                        'account_id',
+                                                        value ?? '',
+                                                    )
+                                                }
+                                                className="mt-2 w-full"
+                                                size="large"
+                                                options={accounts.map((account) => ({
+                                                    value: String(account.id),
+                                                    label: `${account.code} - ${account.name}`,
+                                                }))}
+                                            />
+                                            <InputError
+                                                message={errors[`payments.${paymentIndex}.account_id`]}
+                                                className="mt-2"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel
+                                                htmlFor={`payments.${paymentIndex}.principal_amount`}
+                                                value="Valor base"
+                                            />
+                                            <input
+                                                id={`payments.${paymentIndex}.principal_amount`}
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                value={payment.principal_amount}
+                                                onChange={(event) =>
+                                                    updatePayment(
+                                                        paymentIndex,
+                                                        'principal_amount',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                            />
+                                            <InputError
+                                                message={errors[`payments.${paymentIndex}.principal_amount`]}
+                                                className="mt-2"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel
+                                                htmlFor={`payments.${paymentIndex}.type`}
+                                                value="Forma"
+                                            />
+                                            <Select
+                                                id={`payments.${paymentIndex}.type`}
+                                                value={payment.type}
+                                                onChange={(value) =>
+                                                    updatePayment(
+                                                        paymentIndex,
+                                                        'type',
+                                                        value,
+                                                    )
+                                                }
+                                                className="mt-2 w-full"
+                                                size="large"
+                                                options={[
+                                                    { value: 'cash', label: 'À vista' },
+                                                    { value: 'installment', label: 'Parcelado' },
+                                                ]}
+                                            />
+                                            <InputError
+                                                message={errors[`payments.${paymentIndex}.type`]}
+                                                className="mt-2"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <InputLabel
+                                                htmlFor={`payments.${paymentIndex}.first_due_date`}
+                                                value="1º vencimento"
+                                            />
+                                            <input
+                                                id={`payments.${paymentIndex}.first_due_date`}
+                                                type="date"
+                                                value={payment.first_due_date}
+                                                onChange={(event) =>
+                                                    updatePayment(
+                                                        paymentIndex,
+                                                        'first_due_date',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                            />
+                                            <InputError
+                                                message={errors[`payments.${paymentIndex}.first_due_date`]}
+                                                className="mt-2"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {payment.type === 'installment' && (
+                                        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                            <div>
+                                                <InputLabel
+                                                    htmlFor={`payments.${paymentIndex}.installments`}
+                                                    value="Parcelas"
+                                                />
+                                                <input
+                                                    id={`payments.${paymentIndex}.installments`}
+                                                    type="number"
+                                                    min="2"
+                                                    step="1"
+                                                    value={payment.installments}
+                                                    onChange={(event) =>
+                                                        updatePayment(
+                                                            paymentIndex,
+                                                            'installments',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                />
+                                                <InputError
+                                                    message={errors[`payments.${paymentIndex}.installments`]}
+                                                    className="mt-2"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <InputLabel
+                                                    htmlFor={`payments.${paymentIndex}.interest_type`}
+                                                    value="Juros por"
+                                                />
+                                                <Select
+                                                    id={`payments.${paymentIndex}.interest_type`}
+                                                    value={payment.interest_type}
+                                                    onChange={(value) =>
+                                                        updatePayment(
+                                                            paymentIndex,
+                                                            'interest_type',
+                                                            value,
+                                                        )
+                                                    }
+                                                    className="mt-2 w-full"
+                                                    size="large"
+                                                    options={[
+                                                        { value: 'rate', label: '% ao mês' },
+                                                        { value: 'fixed_installment', label: 'Valor da parcela' },
+                                                    ]}
+                                                />
+                                                <InputError
+                                                    message={errors[`payments.${paymentIndex}.interest_type`]}
+                                                    className="mt-2"
+                                                />
+                                            </div>
+
+                                            {payment.interest_type === 'rate' ? (
+                                                <div>
+                                                    <InputLabel
+                                                        htmlFor={`payments.${paymentIndex}.interest_rate`}
+                                                        value="Juros (%)"
+                                                    />
+                                                    <input
+                                                        id={`payments.${paymentIndex}.interest_rate`}
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={payment.interest_rate}
+                                                        onChange={(event) =>
+                                                            updatePayment(
+                                                                paymentIndex,
+                                                                'interest_rate',
+                                                                event.target.value,
+                                                            )
+                                                        }
+                                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                    />
+                                                    <InputError
+                                                        message={errors[`payments.${paymentIndex}.interest_rate`]}
+                                                        className="mt-2"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <InputLabel
+                                                        htmlFor={`payments.${paymentIndex}.installment_amount`}
+                                                        value="Valor da parcela"
+                                                    />
+                                                    <input
+                                                        id={`payments.${paymentIndex}.installment_amount`}
+                                                        type="number"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        value={payment.installment_amount}
+                                                        onChange={(event) =>
+                                                            updatePayment(
+                                                                paymentIndex,
+                                                                'installment_amount',
+                                                                event.target.value,
+                                                            )
+                                                        }
+                                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                    />
+                                                    <InputError
+                                                        message={errors[`payments.${paymentIndex}.installment_amount`]}
+                                                        className="mt-2"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-end justify-end">
+                                                <DangerButton
+                                                    type="button"
+                                                    onClick={() => removePayment(paymentIndex)}
+                                                    className="px-4 py-2 text-xs"
+                                                >
+                                                    Remover conta
+                                                </DangerButton>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        <InputError message={errors.payments} className="mt-3" />
+                    </div>
+
                     {preview.items.map((item, index) => {
                         const isIncluded = data.items[index].include;
                         const hasExistingProduct = Boolean(data.items[index].product_id);
@@ -522,41 +909,6 @@ function ImportPreviewSection({
 
                                 <div>
                                     <InputLabel
-                                        htmlFor={`items.${index}.account_id`}
-                                        value="Conta"
-                                    />
-                                    <Select
-                                        id={`items.${index}.account_id`}
-                                        value={data.items[index].account_id || undefined}
-                                        disabled={!isIncluded}
-                                        onChange={(value) =>
-                                            updateItem(
-                                                index,
-                                                'account_id',
-                                                value ?? '',
-                                            )
-                                        }
-                                        className="mt-2 w-full"
-                                        size="large"
-                                        allowClear
-                                        placeholder="Sem conta"
-                                        options={accounts.map((account) => ({
-                                            value: String(account.id),
-                                            label: `${account.code} - ${account.name}`,
-                                        }))}
-                                    />
-                                    <InputError
-                                        message={
-                                            errors[
-                                                `items.${index}.account_id`
-                                            ]
-                                        }
-                                        className="mt-2"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
                                         htmlFor={`items.${index}.type`}
                                         value="Tipo do novo produto"
                                     />
@@ -574,9 +926,8 @@ function ImportPreviewSection({
                                         className="mt-2 w-full"
                                         size="large"
                                         options={[
-                                            { value: 'stock', label: 'Estoque' },
-                                            { value: 'service', label: 'Serviço' },
-                                            { value: 'discount', label: 'Desconto' },
+                                            { value: 'stockable', label: 'Estocável' },
+                                            { value: 'non_stockable', label: 'Não estocável' },
                                         ]}
                                     />
                                     <p className="mt-2 text-xs text-slate-500">
@@ -639,6 +990,12 @@ function ImportPreviewSection({
                             </p>
                             <p className="mt-1 text-sm text-slate-500">
                                 {includedItems.length} de {preview.items.length} itens selecionados
+                            </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Soma base das contas: {formatCurrency(paymentsPrincipalTotal)}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Total financeiro previsto: {formatCurrency(estimatedFinancialTotal)}
                             </p>
                         </div>
 
@@ -830,7 +1187,7 @@ function PurchaseHistoryTable({
                               groupBy === 'product'
                                   ? entry.product ?? 'Produto removido'
                                   : groupBy === 'source'
-                                    ? entry.source === 'nota_fiscal'
+                                    ? entry.source === 'invoice'
                                         ? 'Nota fiscal'
                                         : 'Manual'
                                     : groupBy === 'invoice_reference'
@@ -867,7 +1224,7 @@ function PurchaseHistoryTable({
                   ),
                   source:
                       groupBy === 'source' && label === 'Nota fiscal'
-                          ? 'nota_fiscal'
+                          ? 'invoice'
                           : groupBy === 'source' && label === 'Manual'
                             ? 'manual'
                             : '',
@@ -969,7 +1326,7 @@ function PurchaseHistoryTable({
                     '--'
                 ) : (
                     <Tag color="cyan">
-                        {record.source === 'nota_fiscal'
+                        {record.source === 'invoice'
                             ? 'Nota fiscal'
                             : record.source === 'manual'
                               ? 'Manual'
@@ -1252,7 +1609,7 @@ function PurchaseFormModal({
         name: '',
         category_id: '',
         unit: 'un',
-        type: 'stock',
+        type: 'stockable',
     });
 
     const openQuickProductModal = () => {
@@ -1638,9 +1995,8 @@ function PurchaseFormModal({
                                 className="mt-2 w-full"
                                 size="large"
                                 options={[
-                                    { value: 'stock', label: 'Estoque' },
-                                    { value: 'service', label: 'Serviço' },
-                                    { value: 'discount', label: 'Desconto' },
+                                    { value: 'stockable', label: 'Estocável' },
+                                    { value: 'non_stockable', label: 'Não estocável' },
                                 ]}
                             />
                             <InputError message={quickProductErrors.type} className="mt-2" />

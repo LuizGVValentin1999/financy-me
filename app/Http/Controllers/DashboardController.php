@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FinancialEntry;
 use App\Models\Product;
 use App\Models\PurchaseEntry;
 use Carbon\Carbon;
@@ -79,6 +80,27 @@ class DashboardController extends Controller
             ->whereBelongsTo($user)
             ->whereBetween('purchased_at', [$startDate, $endDate]);
 
+        $periodFinancialEntries = FinancialEntry::query()
+            ->whereBelongsTo($user)
+            ->whereBetween('moved_at', [$startDate, $endDate]);
+
+        $periodIncome = (float) (clone $periodFinancialEntries)
+            ->where('direction', 'inflow')
+            ->sum('amount');
+
+        $periodExpense = (float) (clone $periodFinancialEntries)
+            ->where('direction', 'outflow')
+            ->sum('amount');
+
+        $accountsBalance = $user->accounts()
+            ->get()
+            ->sum(function ($account) {
+                $income = (float) $account->financialEntries()->where('direction', 'inflow')->sum('amount');
+                $expense = (float) $account->financialEntries()->where('direction', 'outflow')->sum('amount');
+
+                return (float) $account->initial_balance + $income - $expense;
+            });
+
         return Inertia::render('Dashboard', [
             'filters' => [
                 'start_date' => $startDate,
@@ -96,6 +118,9 @@ class DashboardController extends Controller
                 'current_stock' => (float) $user->products()->sum('current_stock'),
                 'period_quantity' => (float) $periodEntries->sum('quantity'),
                 'period_spent' => (float) $periodEntries->sum('total_amount'),
+                'period_income' => $periodIncome,
+                'period_expense' => $periodExpense,
+                'accounts_balance' => (float) $accountsBalance,
             ],
             'products' => $products,
             'recentEntries' => $recentEntries,
@@ -108,7 +133,8 @@ class DashboardController extends Controller
                     'name' => $account->name,
                     'initial_balance' => (float) $account->initial_balance,
                     'initial_balance_date' => $account->initial_balance_date,
-                    'purchases_sum' => (float) $account->purchaseEntries()->sum('total_amount'),
+                    'income_sum' => (float) $account->financialEntries()->where('direction', 'inflow')->sum('amount'),
+                    'expense_sum' => (float) $account->financialEntries()->where('direction', 'outflow')->sum('amount'),
                 ]),
             'categoryBreakdown' => $user->categories()
                 ->withCount('products')

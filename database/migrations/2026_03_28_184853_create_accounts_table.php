@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('code', 50)->unique();
+            $table->string('code', 50);
             $table->string('name');
             $table->decimal('initial_balance', 12, 2)->default(0);
             $table->date('initial_balance_date');

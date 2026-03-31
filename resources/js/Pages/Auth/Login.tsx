@@ -42,6 +42,10 @@ export default function Login({
                 <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
                     Use seu email para acessar o painel de estoque e financas.
                 </p>
+
+                <div className="mt-5 rounded-2xl border border-slate-200 bg-[#f8f4ec] px-4 py-3 text-sm text-slate-600">
+                    Estoque, compras e financeiro no mesmo lugar.
+                </div>
             </div>
 
             {status && (
@@ -114,6 +118,17 @@ export default function Login({
                         Entrar
                     </PrimaryButton>
                 </div>
+
+                {route().has('register') && (
+                    <div className="pt-2">
+                        <Link
+                            href={route('register')}
+                            className="inline-flex w-full items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400"
+                        >
+                            Criar conta
+                        </Link>
+                    </div>
+                )}
             </form>
         </GuestLayout>
     );

@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FinancialEntry;
 use App\Models\PurchaseInvoice;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,5 +60,45 @@ class PurchaseInvoiceController extends Controller
                 'paid_amount' => round($invoices->sum('paid_amount'), 2),
             ],
         ]);
+    }
+
+    public function destroy(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse
+    {
+        abort_unless($purchaseInvoice->user_id === $request->user()->id, 404);
+
+        DB::transaction(function () use ($purchaseInvoice) {
+            $entries = $purchaseInvoice->purchaseEntries()
+                ->with('product:id,type,current_stock')
+                ->get();
+
+            foreach ($entries as $entry) {
+                $product = $entry->product;
+
+                if (! $product || $product->type !== 'stockable') {
+                    continue;
+                }
+
+                $product->update([
+                    'current_stock' => max(
+                        0,
+                        (float) $product->current_stock - (float) $entry->quantity,
+                    ),
+                ]);
+            }
+
+            $entryIds = $entries->pluck('id')->all();
+
+            if ($entryIds !== []) {
+                FinancialEntry::query()
+                    ->whereIn('purchase_entry_id', $entryIds)
+                    ->delete();
+            }
+
+            $purchaseInvoice->purchaseEntries()->delete();
+            $purchaseInvoice->financialEntries()->delete();
+            $purchaseInvoice->delete();
+        });
+
+        return back()->with('success', 'Nota fiscal excluida com sucesso.');
     }
 }

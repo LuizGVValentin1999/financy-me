@@ -132,9 +132,8 @@ export default function ProductFormFields({
                         className="mt-2 w-full"
                         size="large"
                         options={[
-                            { value: 'stock', label: 'Estoque' },
-                            { value: 'service', label: 'Serviço' },
-                            { value: 'discount', label: 'Desconto' },
+                            { value: 'stockable', label: 'Estocável' },
+                            { value: 'non_stockable', label: 'Não estocável' },
                         ]}
                     />
                     <InputError message={errors.type} className="mt-2" />

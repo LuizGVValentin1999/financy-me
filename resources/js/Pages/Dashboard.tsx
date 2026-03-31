@@ -13,10 +13,14 @@ interface DashboardProps {
     };
     stats: {
         categories: number;
+        accounts: number;
         products: number;
         current_stock: number;
         period_quantity: number;
         period_spent: number;
+        period_income: number;
+        period_expense: number;
+        accounts_balance: number;
     };
     products: Array<{
         id: number;
@@ -42,7 +46,6 @@ interface DashboardProps {
     categoryBreakdown: Array<{
         id: number;
         name: string;
-        kind: string;
         color: string;
         products_count: number;
     }>;
@@ -111,11 +114,16 @@ export default function Dashboard({
             <Head title="Dashboard" />
 
             <div className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
                     <StatCard
                         label="Categorias"
                         value={String(stats.categories)}
-                        hint="Tipos de produto e servico cadastrados."
+                        hint="Tipos de produto cadastrados."
+                    />
+                    <StatCard
+                        label="Contas"
+                        value={String(stats.accounts)}
+                        hint="Contas para registrar entradas e saídas."
                     />
                     <StatCard
                         label="Produtos"
@@ -140,6 +148,24 @@ export default function Dashboard({
                         value={formatCurrency(stats.period_spent)}
                         hint={filters.range_label}
                         tone="bg-[#eaf1fb]"
+                    />
+                    <StatCard
+                        label="Entradas no período"
+                        value={formatCurrency(stats.period_income)}
+                        hint={filters.range_label}
+                        tone="bg-[#e6f7ef]"
+                    />
+                    <StatCard
+                        label="Saídas no período"
+                        value={formatCurrency(stats.period_expense)}
+                        hint={filters.range_label}
+                        tone="bg-[#fff0ed]"
+                    />
+                    <StatCard
+                        label="Saldo das contas"
+                        value={formatCurrency(stats.accounts_balance)}
+                        hint="Saldo acumulado"
+                        tone="bg-[#edf3ff]"
                     />
                 </div>
 
@@ -297,7 +323,7 @@ export default function Dashboard({
                                                 )}
                                             </p>
                                             <p className="text-sm text-slate-500">
-                                                {entry.source === 'nota_fiscal'
+                                                {entry.source === 'invoice'
                                                     ? 'Nota fiscal'
                                                     : 'Manual'}
                                                 {entry.invoice_reference
@@ -337,9 +363,6 @@ export default function Dashboard({
                                             <div>
                                                 <p className="font-semibold text-slate-900">
                                                     {category.name}
-                                                </p>
-                                                <p className="text-sm text-slate-500">
-                                                    {category.kind}
                                                 </p>
                                             </div>
                                         </div>

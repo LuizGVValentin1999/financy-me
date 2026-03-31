@@ -29,7 +29,7 @@ interface ProductsPageProps {
         brand: string | null;
         sku: string | null;
         unit: string;
-        type: 'stock' | 'service' | 'discount';
+        type: 'stockable' | 'non_stockable';
         minimum_stock: number;
         current_stock: number;
         is_active: boolean;
@@ -57,7 +57,7 @@ export default function ProductsIndex({
         brand: '',
         sku: '',
         unit: units[0]?.value ?? 'un',
-        type: 'stock',
+        type: 'stockable',
         minimum_stock: '0',
         notes: '',
     });
@@ -75,7 +75,7 @@ export default function ProductsIndex({
         brand: '',
         sku: '',
         unit: units[0]?.value ?? 'un',
-        type: 'stock',
+        type: 'stockable',
         minimum_stock: '0',
         notes: '',
     });
@@ -297,23 +297,20 @@ export default function ProductsIndex({
             sorter: (a, b) => a.type.localeCompare(b.type),
             render: (value: ProductTableRecord['type']) => {
                 const labels: Record<ProductTableRecord['type'], string> = {
-                    stock: 'Estoque',
-                    service: 'Serviço',
-                    discount: 'Desconto',
+                    stockable: 'Estocável',
+                    non_stockable: 'Não estocável',
                 };
 
                 const colors: Record<ProductTableRecord['type'], string> = {
-                    stock: 'blue',
-                    service: 'green',
-                    discount: 'orange',
+                    stockable: 'blue',
+                    non_stockable: 'orange',
                 };
 
                 return <Tag color={colors[value]}>{labels[value]}</Tag>;
             },
             filters: [
-                { text: 'Estoque', value: 'stock' },
-                { text: 'Serviço', value: 'service' },
-                { text: 'Desconto', value: 'discount' },
+                { text: 'Estocável', value: 'stockable' },
+                { text: 'Não estocável', value: 'non_stockable' },
             ],
             onFilter: (value: Key | boolean, record: ProductTableRecord) =>
                 record.type === String(value),

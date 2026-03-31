@@ -29,6 +29,7 @@ class UpdateAccountRequest extends FormRequest
                 'string',
                 'max:50',
                 Rule::unique('accounts')
+                    ->where('user_id', $this->user()?->id)
                     ->ignore($this->route('account')),
             ],
             'name' => ['required', 'string', 'max:255'],

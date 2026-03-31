@@ -152,9 +152,15 @@ class ParanaNfceImporter
             $amount = $this->text($xpath, './/span', $paymentRow);
 
             if ($method !== null && $amount !== null) {
+                $parsedAmount = $this->parseBrazilianNumber($amount);
+
+                if (! $this->shouldIncludePaymentMethod($method, $parsedAmount)) {
+                    continue;
+                }
+
                 $paymentMethods[] = [
                     'method' => $method,
-                    'amount' => $this->parseBrazilianNumber($amount),
+                    'amount' => $parsedAmount,
                 ];
             }
         }
@@ -275,5 +281,38 @@ class ParanaNfceImporter
         $digits = preg_replace('/\D+/', '', $value);
 
         return $digits !== '' ? $digits : null;
+    }
+
+    private function shouldIncludePaymentMethod(string $method, float $amount): bool
+    {
+        if ($amount <= 0) {
+            return false;
+        }
+
+        $normalizedMethod = Str::of($method)
+            ->ascii()
+            ->lower()
+            ->squish()
+            ->toString();
+
+        if ($normalizedMethod === '') {
+            return false;
+        }
+
+        $blockedFragments = [
+            'forma de pagamento',
+            'informacao dos tributos',
+            'tributos totais incidentes',
+            'lei federal',
+            'valor aproximado dos tributos',
+        ];
+
+        foreach ($blockedFragments as $fragment) {
+            if (str_contains($normalizedMethod, $fragment)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

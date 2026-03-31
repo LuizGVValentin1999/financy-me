@@ -85,7 +85,7 @@ class ProductController extends Controller
                 Rule::unique('products')->where('user_id', $request->user()->id),
             ],
             'unit' => ['required', Rule::in(['un', 'kg', 'g', 'l', 'ml', 'cx'])],
-            'type' => ['required', Rule::in(['stock', 'service', 'discount'])],
+            'type' => ['required', Rule::in(['stockable', 'non_stockable'])],
         ]);
 
         $product = $request->user()->products()->create([

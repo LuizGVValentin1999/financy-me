@@ -4,6 +4,7 @@ import { Button, Drawer, Menu, type MenuProps, Alert } from 'antd';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Boxes,
+    CircleDollarSign,
     LayoutDashboard,
     LogOut,
     Menu as MenuIcon,
@@ -114,6 +115,13 @@ export default function AuthenticatedLayout({
             icon: Wallet,
         },
         {
+            key: 'financial',
+            label: 'Financeiro',
+            href: route('financial.index'),
+            active: route().current('financial.*'),
+            icon: CircleDollarSign,
+        },
+        {
             key: 'categories',
             label: 'Categorias',
             href: route('categories.index'),
@@ -125,6 +133,13 @@ export default function AuthenticatedLayout({
             label: 'Produtos',
             href: route('products.index'),
             active: route().current('products.*'),
+            icon: Boxes,
+        },
+        {
+            key: 'stock',
+            label: 'Estoque',
+            href: route('stock.index'),
+            active: route().current('stock.*'),
             icon: Boxes,
         },
         {

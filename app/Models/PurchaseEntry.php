@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
@@ -52,5 +53,10 @@ class PurchaseEntry extends Model
     public function purchaseInvoice(): BelongsTo
     {
         return $this->belongsTo(PurchaseInvoice::class);
+    }
+
+    public function financialEntries(): HasMany
+    {
+        return $this->hasMany(FinancialEntry::class);
     }
 }

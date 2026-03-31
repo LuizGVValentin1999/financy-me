@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('brand')->nullable();
             $table->string('sku')->nullable();
             $table->string('unit', 20)->default('un');
+            $table->enum('type', ['stockable', 'non_stockable'])->default('stockable');
             $table->decimal('minimum_stock', 12, 3)->default(0);
             $table->decimal('current_stock', 12, 3)->default(0);
             $table->boolean('is_active')->default(true);

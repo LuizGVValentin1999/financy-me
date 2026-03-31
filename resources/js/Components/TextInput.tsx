@@ -36,7 +36,7 @@ export default forwardRef(function TextInput(
             <Input.Password
                 {...props}
                 ref={antInputRef}
-                className={`h-12 rounded-2xl ${className}`}
+                className={`!inline-flex !w-full !items-center h-12 rounded-2xl [&_.ant-input]:!h-auto [&_.ant-input]:!py-0 [&_.ant-input]:!leading-normal [&_.ant-input-suffix]:!flex [&_.ant-input-suffix]:!items-center ${className}`}
             />
         );
     }

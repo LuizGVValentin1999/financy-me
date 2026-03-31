@@ -7,8 +7,8 @@ test('authenticated user can create category product and purchase entries', func
 
     $this->actingAs($user)
         ->post(route('categories.store'), [
+            'code' => 'CAT-MERCADO',
             'name' => 'Mercado',
-            'kind' => 'produto',
             'color' => '#1F7A8C',
             'description' => 'Itens do mercado',
         ])
@@ -23,6 +23,7 @@ test('authenticated user can create category product and purchase entries', func
             'brand' => 'Bom Grao',
             'sku' => 'ARZ-01',
             'unit' => 'kg',
+            'type' => 'stockable',
             'minimum_stock' => 1,
             'notes' => 'Pacote tradicional',
         ])
@@ -52,8 +53,8 @@ test('dashboard shows registered inventory information', function () {
     $user = User::factory()->create();
 
     $category = $user->categories()->create([
+        'code' => 'CAT-LIMPEZA',
         'name' => 'Limpeza',
-        'kind' => 'produto',
         'color' => '#E07A5F',
         'description' => 'Itens de limpeza',
     ]);
@@ -64,6 +65,7 @@ test('dashboard shows registered inventory information', function () {
         'brand' => 'Casa',
         'sku' => 'DET-01',
         'unit' => 'un',
+        'type' => 'stockable',
         'minimum_stock' => 2,
         'current_stock' => 3,
         'notes' => 'Uso diario',

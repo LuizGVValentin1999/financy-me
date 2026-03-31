@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\PurchaseEntry;
 use App\Models\PurchaseInvoice;
 use App\Services\ParanaNfceImporter;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,16 +53,13 @@ class PurchaseEntryController extends Controller
             'accounts' => $accounts,
             'sources' => [
                 ['value' => 'manual', 'label' => 'Manual'],
-                ['value' => 'nota_fiscal', 'label' => 'Nota fiscal'],
+                ['value' => 'invoice', 'label' => 'Nota fiscal'],
             ],
             'importUnits' => [
                 ['value' => 'un', 'label' => 'UN'],
                 ['value' => 'kg', 'label' => 'KG'],
             ],
-            'importPreview' => $this->previewFromSession(
-                $request,
-                $products,
-            ),
+            'importPreview' => $this->previewFromSession($request, $products),
             'entries' => $user->purchaseEntries()
                 ->with('product:id,name,unit', 'account:id,code,name')
                 ->latest('purchased_at')
@@ -104,13 +102,14 @@ class PurchaseEntryController extends Controller
                 2,
             );
 
-            $request->user()->purchaseEntries()->create([
+            $purchaseEntry = $request->user()->purchaseEntries()->create([
                 ...$validated,
                 'total_amount' => $totalAmount,
             ]);
 
-            // Only update stock if the product is not a service or discount
-            if ($product->type !== 'service' && $product->type !== 'discount') {
+            $this->syncPurchaseFinancialEntry($request->user()->id, $purchaseEntry);
+
+            if ($product->type === 'stockable') {
                 $product->update([
                     'current_stock' => (float) $product->current_stock + (float) $validated['quantity'],
                 ]);
@@ -134,9 +133,7 @@ class PurchaseEntryController extends Controller
                 ->products()
                 ->findOrFail($validated['product_id']);
 
-                // Reverse previous stock adjustment
-                if ($previousProduct && $previousProduct->type !== 'service' && $previousProduct->type !== 'discount') {
-
+            if ($previousProduct && $previousProduct->type === 'stockable') {
                 $previousProduct->update([
                     'current_stock' => max(
                         0,
@@ -155,8 +152,9 @@ class PurchaseEntryController extends Controller
                 'total_amount' => $totalAmount,
             ]);
 
-            // Only update stock if the new product is not a service or discount
-            if ($nextProduct->type !== 'service' && $nextProduct->type !== 'discount') {
+            $this->syncPurchaseFinancialEntry($request->user()->id, $purchaseEntry);
+
+            if ($nextProduct->type === 'stockable') {
                 $nextProduct->update([
                     'current_stock' => (float) $nextProduct->current_stock + (float) $validated['quantity'],
                 ]);
@@ -229,13 +227,83 @@ class PurchaseEntryController extends Controller
                 Rule::exists('categories', 'id')->where('user_id', $user->id),
             ],
             'items.*.unit' => ['nullable', Rule::in(['un', 'kg'])],
-            'items.*.type' => ['nullable', Rule::in(['stock', 'service', 'discount'])],
+            'items.*.type' => ['nullable', Rule::in(['stockable', 'non_stockable'])],
+            'payments' => ['required', 'array', 'min:1'],
+            'payments.*.account_id' => [
+                'required',
+                'integer',
+                Rule::exists('accounts', 'id')->where('user_id', $user->id),
+            ],
+            'payments.*.type' => ['required', Rule::in(['cash', 'installment'])],
+            'payments.*.principal_amount' => ['required', 'numeric', 'gt:0'],
+            'payments.*.first_due_date' => ['nullable', 'date'],
+            'payments.*.installments' => ['nullable', 'integer', 'min:2', 'max:120'],
+            'payments.*.interest_type' => ['nullable', Rule::in(['rate', 'fixed_installment'])],
+            'payments.*.interest_rate' => ['nullable', 'numeric', 'min:0'],
+            'payments.*.installment_amount' => ['nullable', 'numeric', 'gt:0'],
         ])->after(function ($validator) use ($request, $preview) {
             if ($request->string('token')->toString() !== $preview['token']) {
                 $validator->errors()->add('token', 'A revisao dessa importacao ficou desatualizada.');
             }
 
             $includedItems = 0;
+
+            foreach ((array) $request->input('payments', []) as $paymentIndex => $payment) {
+                $type = $payment['type'] ?? null;
+                $interestType = $payment['interest_type'] ?? null;
+
+                if ($type !== 'installment') {
+                    continue;
+                }
+
+                if (
+                    blank($payment['installments'] ?? null)
+                    || ! is_numeric($payment['installments'])
+                    || (int) $payment['installments'] < 2
+                ) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.installments",
+                        'Informe no minimo 2 parcelas.',
+                    );
+                }
+
+                if (blank($interestType)) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.interest_type",
+                        'Escolha como informar os juros do parcelamento.',
+                    );
+                    continue;
+                }
+
+                if ($interestType === 'rate' && blank($payment['interest_rate'] ?? null)) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.interest_rate",
+                        'Informe o percentual de juros.',
+                    );
+                }
+
+                if ($interestType === 'fixed_installment' && blank($payment['installment_amount'] ?? null)) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.installment_amount",
+                        'Informe o valor da parcela.',
+                    );
+                }
+            }
+
+            $principalTotal = collect((array) $request->input('payments', []))
+                ->sum(fn ($payment) => (float) ($payment['principal_amount'] ?? 0));
+            $invoicePaidAmount = round((float) ($preview['amount_paid'] ?? 0), 2);
+
+            if (abs(round($principalTotal, 2) - $invoicePaidAmount) > 0.01) {
+                $validator->errors()->add(
+                    'payments',
+                    sprintf(
+                        'A soma dos valores por conta (%s) deve ser igual ao valor pago da nota (%s).',
+                        number_format($principalTotal, 2, ',', '.'),
+                        number_format($invoicePaidAmount, 2, ',', '.'),
+                    ),
+                );
+            }
 
             foreach ((array) $request->input('items', []) as $index => $item) {
                 if (! ($item['include'] ?? true)) {
@@ -263,7 +331,7 @@ class PurchaseEntryController extends Controller
                     );
                 }
 
-                if (blank($item['product_id'] ?? null) && blank($item['product_name'] ?? null)) {
+                if (! $isDiscountItem && blank($item['product_id'] ?? null) && blank($item['product_name'] ?? null)) {
                     $validator->errors()->add(
                         "items.$index.product_name",
                         'Escolha um produto existente ou informe um nome.',
@@ -301,60 +369,60 @@ class PurchaseEntryController extends Controller
 
                 $isDiscountItem = (bool) ($previewItem['is_discount'] ?? false);
                 $selectedType = $isDiscountItem
-                    ? 'discount'
-                    : (($payload['type'] ?? null) ?: 'stock');
+                    ? 'non_stockable'
+                    : (($payload['type'] ?? null) ?: 'stockable');
                 $unit = $isDiscountItem
                     ? 'un'
                     : (($payload['unit'] ?? null) ?: $importer->normalizeUnit($previewItem['unit'] ?? null));
-
-                $product = ! empty($payload['product_id'])
-                    ? $user->products()->findOrFail($payload['product_id'])
-                    : $this->firstOrCreateImportedProduct(
-                        $user,
-                        trim($payload['product_name']),
-                        $isDiscountItem ? null : ($payload['category_id'] ?? null),
-                        $previewItem['code'] ?? null,
-                        $unit,
-                        $selectedType,
-                    );
-
-                if (
-                    ! $isDiscountItem
-                    && ! empty($payload['category_id'])
-                    && $product->category_id !== (int) $payload['category_id']
-                ) {
-                    $product->update([
-                        'category_id' => $payload['category_id'],
-                    ]);
-
-                }
-
-                if (! $isDiscountItem && $product->unit !== $unit) {
-                    $product->update([
-                        'unit' => $unit,
-                    ]);
-                }
 
                 $totalAmount = round(
                     (float) ($previewItem['total_amount']
                         ?? ((float) $previewItem['quantity'] * (float) $previewItem['unit_price'])),
                     2,
                 );
-                $quantity = $isDiscountItem
-                    ? 0.0
-                    : round((float) $payload['quantity'], 3);
-                $unitPrice = $isDiscountItem
-                    ? $totalAmount
-                    : ($quantity > 0 ? round($totalAmount / $quantity, 2) : 0.0);
 
-                $user->purchaseEntries()->create([
+                if ($isDiscountItem) {
+                    continue;
+                }
+
+                $product = ! empty($payload['product_id'])
+                    ? $user->products()->findOrFail($payload['product_id'])
+                    : $this->firstOrCreateImportedProduct(
+                        $user,
+                        trim($payload['product_name']),
+                        $payload['category_id'] ?? null,
+                        $previewItem['code'] ?? null,
+                        $unit,
+                        $selectedType,
+                    );
+
+                if (
+                    ! empty($payload['category_id'])
+                    && $product->category_id !== (int) $payload['category_id']
+                ) {
+                    $product->update([
+                        'category_id' => $payload['category_id'],
+                    ]);
+                }
+
+                if ($product->unit !== $unit) {
+                    $product->update([
+                        'unit' => $unit,
+                    ]);
+                }
+
+                $quantity = round((float) $payload['quantity'], 3);
+                $unitPrice = $quantity > 0 ? round($totalAmount / $quantity, 2) : 0.0;
+
+                $purchaseEntry = $user->purchaseEntries()->create([
                     'product_id' => $product->id,
                     'purchase_invoice_id' => $invoice->id,
+                    'account_id' => null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total_amount' => $totalAmount,
                     'purchased_at' => $preview['issued_at'] ?? now()->toDateString(),
-                    'source' => 'nota_fiscal',
+                    'source' => 'invoice',
                     'invoice_reference' => $preview['access_key'] ?? $preview['invoice_number'],
                     'notes' => sprintf(
                         'Importado via NFC-e de %s. Item: %s%s',
@@ -364,13 +432,18 @@ class PurchaseEntryController extends Controller
                     ),
                 ]);
 
-                // Only update stock if not a discount item and the product type is stock
-                if (! $isDiscountItem && $product->type === 'stock') {
+                if ($product->type === 'stockable') {
                     $product->update([
-                        'current_stock' => (float) $product->current_stock + $quantity,
+                        'current_stock' => (float) $product->current_stock + (float) $purchaseEntry->quantity,
                     ]);
                 }
             }
+
+            $this->syncImportedInvoiceFinancialEntry(
+                $user->id,
+                $invoice,
+                $validated['payments'],
+            );
         });
 
         $request->session()->forget(self::IMPORT_SESSION_KEY);
@@ -394,8 +467,7 @@ class PurchaseEntryController extends Controller
         DB::transaction(function () use ($purchaseEntry) {
             $product = $purchaseEntry->product;
 
-            // Only reverse stock if the product is not a service or discount
-            if ($product && $product->type !== 'service' && $product->type !== 'discount') {
+            if ($product && $product->type === 'stockable') {
                 $product->update([
                     'current_stock' => max(
                         0,
@@ -403,6 +475,8 @@ class PurchaseEntryController extends Controller
                     ),
                 ]);
             }
+
+            $purchaseEntry->financialEntries()->delete();
 
             $purchaseEntry->delete();
         });
@@ -434,8 +508,7 @@ class PurchaseEntryController extends Controller
             foreach ($entries as $entry) {
                 $product = $entry->product;
 
-                // Only reverse stock if the product is not a service or discount
-                if ($product && $product->type !== 'service' && $product->type !== 'discount') {
+                if ($product && $product->type === 'stockable') {
                     $product->update([
                         'current_stock' => max(
                             0,
@@ -443,6 +516,8 @@ class PurchaseEntryController extends Controller
                         ),
                     ]);
                 }
+
+                $entry->financialEntries()->delete();
 
                 $entry->delete();
             }
@@ -532,23 +607,13 @@ class PurchaseEntryController extends Controller
         ?int $categoryId,
         ?string $sku,
         string $unit,
-        string $type = 'stock',
+        string $type = 'stockable',
     ): Product {
         $existingProduct = $user->products()
             ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
             ->first();
 
         if ($existingProduct) {
-            if (
-                $type === 'discount'
-                && $existingProduct->name === self::IMPORT_DISCOUNT_PRODUCT_NAME
-                && $existingProduct->type !== 'discount'
-            ) {
-                $existingProduct->update([
-                    'type' => 'discount',
-                ]);
-            }
-
             return $existingProduct;
         }
 
@@ -601,6 +666,136 @@ class PurchaseEntryController extends Controller
         return $items;
     }
 
+    private function syncPurchaseFinancialEntry(
+        int $userId,
+        PurchaseEntry $purchaseEntry,
+        string $origin = 'manual_purchase',
+    ): void {
+        $existingEntry = $purchaseEntry->financialEntries()->first();
+
+        if (! $purchaseEntry->account_id) {
+            $existingEntry?->delete();
+
+            return;
+        }
+
+        $payload = [
+            'user_id' => $userId,
+            'account_id' => $purchaseEntry->account_id,
+            'category_id' => $purchaseEntry->product?->category_id,
+            'purchase_invoice_id' => $purchaseEntry->purchase_invoice_id,
+            'direction' => 'outflow',
+            'origin' => $origin,
+            'amount' => round((float) $purchaseEntry->total_amount, 2),
+            'moved_at' => $purchaseEntry->purchased_at?->toDateString() ?? now()->toDateString(),
+            'description' => $purchaseEntry->notes ?: sprintf(
+                'Compra: %s',
+                $purchaseEntry->product?->name ?? 'Item removido',
+            ),
+        ];
+
+        if ($existingEntry) {
+            $existingEntry->update($payload);
+
+            return;
+        }
+
+        $purchaseEntry->financialEntries()->create($payload);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $payments
+     */
+    private function syncImportedInvoiceFinancialEntry(
+        int $userId,
+        PurchaseInvoice $invoice,
+        array $payments,
+    ): void {
+        $invoice->financialEntries()
+            ->where('origin', 'invoice_purchase')
+            ->delete();
+
+        foreach ($payments as $payment) {
+            $accountId = (int) $payment['account_id'];
+            $paymentType = (string) $payment['type'];
+            $principalAmount = round((float) $payment['principal_amount'], 2);
+            $firstDueDate = $payment['first_due_date']
+                ?: ($invoice->issued_at?->toDateString() ?? now()->toDateString());
+
+            if ($paymentType === 'cash') {
+                $invoice->financialEntries()->create([
+                    'user_id' => $userId,
+                    'account_id' => $accountId,
+                    'purchase_invoice_id' => $invoice->id,
+                    'direction' => 'outflow',
+                    'origin' => 'invoice_purchase',
+                    'amount' => $principalAmount,
+                    'moved_at' => $firstDueDate,
+                    'description' => sprintf(
+                        'Compra da nota fiscal%s - pagamento a vista',
+                        $invoice->store_name ? ' - '.$invoice->store_name : '',
+                    ),
+                ]);
+
+                continue;
+            }
+
+            $installments = max(2, (int) ($payment['installments'] ?? 2));
+            $interestType = (string) ($payment['interest_type'] ?? 'rate');
+            $interestRate = (float) ($payment['interest_rate'] ?? 0);
+            $installmentAmount = $interestType === 'fixed_installment'
+                ? round((float) ($payment['installment_amount'] ?? 0), 2)
+                : $this->calculateInstallmentAmount(
+                    $principalAmount,
+                    $interestRate,
+                    $installments,
+                );
+
+            for ($installment = 1; $installment <= $installments; $installment++) {
+                $invoice->financialEntries()->create([
+                    'user_id' => $userId,
+                    'account_id' => $accountId,
+                    'purchase_invoice_id' => $invoice->id,
+                    'direction' => 'outflow',
+                    'origin' => 'invoice_purchase',
+                    'amount' => $installmentAmount,
+                    'moved_at' => Carbon::parse($firstDueDate)
+                        ->addMonthsNoOverflow($installment - 1)
+                        ->toDateString(),
+                    'description' => sprintf(
+                        'Compra da nota fiscal%s - parcela %d/%d',
+                        $invoice->store_name ? ' - '.$invoice->store_name : '',
+                        $installment,
+                        $installments,
+                    ),
+                ]);
+            }
+        }
+    }
+
+    private function calculateInstallmentAmount(
+        float $principalAmount,
+        float $interestRatePercent,
+        int $installments,
+    ): float {
+        $principal = max(0, $principalAmount);
+
+        if ($principal <= 0 || $installments <= 0) {
+            return 0.0;
+        }
+
+        $rate = max(0, $interestRatePercent) / 100;
+
+        if ($rate <= 0) {
+            return round($principal / $installments, 2);
+        }
+
+        $factor = pow(1 + $rate, $installments);
+        $amount = $principal * (($rate * $factor) / ($factor - 1));
+
+        return round($amount, 2);
+    }
+
     /**
      * @param  array<string, mixed>  $preview
      */
@@ -632,8 +827,7 @@ class PurchaseEntryController extends Controller
         $products,
         string $itemName,
         ?string $itemCode = null,
-    ): ?array
-    {
+    ): ?array {
         $normalizedItemCode = $this->normalizeSkuOrCode($itemCode);
 
         if ($normalizedItemCode !== '') {
