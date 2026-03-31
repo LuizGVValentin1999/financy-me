@@ -1,43 +1,28 @@
 import DangerButton from '@/Components/DangerButton';
-import FormModalActions from '@/Components/FormModalActions';
-import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import CategoryFormFields from '@/Components/Categories/CategoryFormFields';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import CategoryModal from '@/Pages/Categories/components/CategoryModal';
+import type { CategoriesPageProps, CategoryRow, CategoryTableRecord } from '@/Pages/Categories/types';
 import { formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Modal as AntdModal, Table, Tag, message } from 'antd';
+import { Modal as AntdModal, Table, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
-interface CategoriesPageProps {
-    categories: Array<{
-        id: number;
-        code: string;
-        name: string;
-        color: string;
-        description: string | null;
-        created_at: string;
-    }>;
-}
-
-type CategoryRow = CategoriesPageProps['categories'][number];
-type CategoryTableRecord = CategoryRow & { key: string };
-
-export default function CategoriesIndex({
-    categories,
-}: CategoriesPageProps) {
+export default function CategoriesIndex({ categories }: CategoriesPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         code: '',
         name: '',
         color: '#1F7A8C',
         description: '',
     });
+
     const {
         data: editData,
         setData: setEditData,
@@ -71,13 +56,6 @@ export default function CategoriesIndex({
             },
             onError: () => message.error('Erro ao criar categoria'),
         });
-    };
-
-    const handleCreateFieldChange = (
-        field: keyof typeof data,
-        value: string,
-    ) => {
-        setData(field as keyof typeof data, value as never);
     };
 
     const closeEditModal = () => {
@@ -114,13 +92,6 @@ export default function CategoriesIndex({
         });
     };
 
-    const handleEditFieldChange = (
-        field: keyof typeof editData,
-        value: string,
-    ) => {
-        setEditData(field as keyof typeof editData, value as never);
-    };
-
     const deleteEditingCategory = () => {
         if (!editingCategory) {
             return;
@@ -153,16 +124,12 @@ export default function CategoriesIndex({
 
         AntdModal.confirm({
             title: 'Confirmar exclusão',
-            content: total === 1
-                ? 'Excluir 1 categoria selecionada?'
-                : `Excluir ${total} categorias selecionadas?`,
+            content: total === 1 ? 'Excluir 1 categoria selecionada?' : `Excluir ${total} categorias selecionadas?`,
             okText: 'Sim',
             cancelText: 'Não',
             onOk: () => {
                 router.delete(route('categories.destroy-many'), {
-                    data: {
-                        ids: selectedRowKeys.map((key) => Number(key)),
-                    },
+                    data: { ids: selectedRowKeys.map((key) => Number(key)) },
                     preserveScroll: true,
                     onSuccess: () => {
                         message.info(`${selectedRowKeys.length} categorias excluídas com sucesso!`);
@@ -178,12 +145,7 @@ export default function CategoriesIndex({
         dataIndex: keyof CategoryRow,
         placeholder: string,
     ): ColumnsType<CategoryTableRecord>[number] => ({
-        filterDropdown: ({
-            selectedKeys,
-            setSelectedKeys,
-            confirm,
-            clearFilters,
-        }: FilterDropdownProps) => (
+        filterDropdown: ({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
             <TableTextFilterDropdown
                 selectedKeys={selectedKeys}
                 setSelectedKeys={setSelectedKeys}
@@ -210,11 +172,7 @@ export default function CategoriesIndex({
             key: 'code',
             width: 120,
             sorter: (a, b) => a.code.localeCompare(b.code),
-            render: (value: string) => (
-                <span className="font-mono text-sm font-semibold text-slate-600">
-                    {value}
-                </span>
-            ),
+            render: (value: string) => <span className="font-mono text-sm font-semibold text-slate-600">{value}</span>,
             ...getTextFilter('code', 'Filtrar por código'),
         },
         {
@@ -224,10 +182,7 @@ export default function CategoriesIndex({
             sorter: (a, b) => a.name.localeCompare(b.name),
             render: (_: unknown, record) => (
                 <div className="flex items-center gap-3">
-                    <div
-                        className="h-6 w-6 rounded-md border border-slate-200"
-                        style={{ backgroundColor: record.color }}
-                    />
+                    <div className="h-6 w-6 rounded-md border border-slate-200" style={{ backgroundColor: record.color }} />
                     <p className="font-semibold text-slate-900">{record.name}</p>
                 </div>
             ),
@@ -245,10 +200,7 @@ export default function CategoriesIndex({
             title: 'Criado em',
             dataIndex: 'created_at',
             key: 'created_at',
-            sorter: (a, b) =>
-                String(a.created_at ?? '').localeCompare(
-                    String(b.created_at ?? ''),
-                ),
+            sorter: (a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')),
             render: (value: string) => formatDate(value),
         },
     ];
@@ -258,18 +210,10 @@ export default function CategoriesIndex({
             header={
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
-                            Categorias
-                        </p>
-                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                            Organize seus produtos em categorias.
-                        </h1>
+                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Categorias</p>
+                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">Organize seus produtos em categorias.</h1>
                     </div>
-
-                    <PrimaryButton
-                        type="button"
-                        onClick={() => setIsCreateModalOpen(true)}
-                    >
+                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>
                         Nova categoria
                     </PrimaryButton>
                 </div>
@@ -277,130 +221,80 @@ export default function CategoriesIndex({
         >
             <Head title="Categorias" />
 
-            <div className="space-y-6">
-                <SectionCard
-                    title="Categorias cadastradas"
-                    description={`${categories.length} categorias no sistema.`}
-                    actions={
-                        selectedRowKeys.length > 0 ? (
-                            <DangerButton
-                                type="button"
-                                onClick={deleteSelectedCategories}
-                            >
-                                Excluir selecionadas ({selectedRowKeys.length})
-                            </DangerButton>
-                        ) : null
-                    }
-                >
-                    <div className="purchase-ant-table">
-                        <Table<CategoryTableRecord>
-                            rowKey="key"
-                            columns={columns}
-                            dataSource={dataSource}
-                            rowSelection={{
-                                selectedRowKeys,
-                                onChange: (keys) => setSelectedRowKeys(keys),
-                                preserveSelectedRowKeys: true,
-                            }}
-                            pagination={{
-                                pageSize: 12,
-                                showSizeChanger: true,
-                                pageSizeOptions: [12, 24, 48],
-                                showTotal: (total, range) =>
-                                    `${range[0]}-${range[1]} de ${total} categorias`,
-                            }}
-                            size="middle"
-                            scroll={{ x: 1200 }}
-                            rowClassName={() => 'cursor-pointer'}
-                            onRow={(record) => ({
-                                onClick: (event) => {
-                                    const target = event.target as HTMLElement;
+            <SectionCard
+                title="Categorias cadastradas"
+                description={`${categories.length} categorias no sistema.`}
+                actions={
+                    selectedRowKeys.length > 0 ? (
+                        <DangerButton type="button" onClick={deleteSelectedCategories}>
+                            Excluir selecionadas ({selectedRowKeys.length})
+                        </DangerButton>
+                    ) : null
+                }
+            >
+                <div className="purchase-ant-table">
+                    <Table<CategoryTableRecord>
+                        rowKey="key"
+                        columns={columns}
+                        dataSource={dataSource}
+                        rowSelection={{
+                            selectedRowKeys,
+                            onChange: (keys) => setSelectedRowKeys(keys),
+                            preserveSelectedRowKeys: true,
+                        }}
+                        pagination={{
+                            pageSize: 12,
+                            showSizeChanger: true,
+                            pageSizeOptions: [12, 24, 48],
+                            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} categorias`,
+                        }}
+                        size="middle"
+                        scroll={{ x: 1200 }}
+                        rowClassName={() => 'cursor-pointer'}
+                        onRow={(record) => ({
+                            onClick: (event) => {
+                                const target = event.target as HTMLElement;
+                                if (
+                                    target.closest(
+                                        'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                                    )
+                                ) {
+                                    return;
+                                }
+                                openEditModal(record);
+                            },
+                        })}
+                    />
+                </div>
+            </SectionCard>
 
-                                    if (
-                                        target.closest(
-                                            'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
-                                        )
-                                    ) {
-                                        return;
-                                    }
-
-                                    openEditModal(record);
-                                },
-                            })}
-                        />
-                    </div>
-                </SectionCard>
-            </div>
-
-            <Modal
-                show={Boolean(editingCategory)}
+            <CategoryModal
+                isOpen={Boolean(editingCategory)}
                 onClose={closeEditModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Categorias
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Editar categoria
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Ajuste os dados da categoria.
-                        </p>
-                    </div>
+                onSubmit={submitEdit}
+                processing={editProcessing}
+                data={editData}
+                errors={editErrors}
+                onFieldChange={(field, value) => setEditData(field as keyof typeof editData, value as never)}
+                title="Editar categoria"
+                description="Ajuste os dados da categoria."
+                saveLabel="Salvar alterações"
+                onDelete={deleteEditingCategory}
+                idPrefix="edit"
+            />
 
-                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
-                        <CategoryFormFields
-                            data={editData}
-                            errors={editErrors}
-                            idPrefix="edit"
-                            onFieldChange={handleEditFieldChange}
-                        />
-
-                        <FormModalActions
-                            onCancel={closeEditModal}
-                            onDelete={deleteEditingCategory}
-                            saveLabel="Salvar alterações"
-                            saveDisabled={editProcessing}
-                        />
-                    </form>
-                </div>
-            </Modal>
-
-            <Modal
-                show={isCreateModalOpen}
+            <CategoryModal
+                isOpen={isCreateModalOpen}
                 onClose={closeCreateModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Categorias
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Nova categoria
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Crie categorias para organizar seus produtos.
-                        </p>
-                    </div>
-
-                    <form onSubmit={submit} className="mt-6 space-y-5">
-                        <CategoryFormFields
-                            data={data}
-                            errors={errors}
-                            onFieldChange={handleCreateFieldChange}
-                        />
-
-                        <FormModalActions
-                            onCancel={closeCreateModal}
-                            saveLabel="Criar categoria"
-                            saveDisabled={processing}
-                        />
-                    </form>
-                </div>
-            </Modal>
+                onSubmit={submit}
+                processing={processing}
+                data={data}
+                errors={errors}
+                onFieldChange={(field, value) => setData(field as keyof typeof data, value as never)}
+                title="Nova categoria"
+                description="Crie categorias para organizar seus produtos."
+                saveLabel="Criar categoria"
+            />
         </AuthenticatedLayout>
     );
 }

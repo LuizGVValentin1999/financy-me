@@ -1,43 +1,28 @@
 import DangerButton from '@/Components/DangerButton';
-import FormModalActions from '@/Components/FormModalActions';
-import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import AccountFormFields from '@/Components/Accounts/AccountFormFields';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AccountModal from '@/Pages/Accounts/components/AccountModal';
+import type { AccountRow, AccountsPageProps, AccountTableRecord } from '@/Pages/Accounts/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Modal as AntdModal, Table, Tag, message } from 'antd';
+import { Modal as AntdModal, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
-interface AccountsPageProps {
-    accounts: Array<{
-        id: number;
-        code: string;
-        name: string;
-        initial_balance: number;
-        initial_balance_date: string;
-        created_at: string;
-    }>;
-}
-
-type AccountRow = AccountsPageProps['accounts'][number];
-type AccountTableRecord = AccountRow & { key: string };
-
-export default function AccountsIndex({
-    accounts,
-}: AccountsPageProps) {
+export default function AccountsIndex({ accounts }: AccountsPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         code: '',
         name: '',
         initial_balance: '0',
         initial_balance_date: new Date().toISOString().split('T')[0],
     });
+
     const {
         data: editData,
         setData: setEditData,
@@ -71,13 +56,6 @@ export default function AccountsIndex({
             },
             onError: () => message.error('Erro ao criar conta'),
         });
-    };
-
-    const handleCreateFieldChange = (
-        field: keyof typeof data,
-        value: string,
-    ) => {
-        setData(field as keyof typeof data, value as never);
     };
 
     const closeEditModal = () => {
@@ -114,13 +92,6 @@ export default function AccountsIndex({
         });
     };
 
-    const handleEditFieldChange = (
-        field: keyof typeof editData,
-        value: string,
-    ) => {
-        setEditData(field as keyof typeof editData, value as never);
-    };
-
     const deleteEditingAccount = () => {
         if (!editingAccount) {
             return;
@@ -153,16 +124,12 @@ export default function AccountsIndex({
 
         AntdModal.confirm({
             title: 'Confirmar exclusão',
-            content: total === 1
-                ? 'Excluir 1 conta selecionada?'
-                : `Excluir ${total} contas selecionadas?`,
+            content: total === 1 ? 'Excluir 1 conta selecionada?' : `Excluir ${total} contas selecionadas?`,
             okText: 'Sim',
             cancelText: 'Não',
             onOk: () => {
                 router.delete(route('accounts.destroy-many'), {
-                    data: {
-                        ids: selectedRowKeys.map((key) => Number(key)),
-                    },
+                    data: { ids: selectedRowKeys.map((key) => Number(key)) },
                     preserveScroll: true,
                     onSuccess: () => {
                         message.info(`${selectedRowKeys.length} contas excluídas com sucesso!`);
@@ -178,12 +145,7 @@ export default function AccountsIndex({
         dataIndex: keyof AccountRow,
         placeholder: string,
     ): ColumnsType<AccountTableRecord>[number] => ({
-        filterDropdown: ({
-            selectedKeys,
-            setSelectedKeys,
-            confirm,
-            clearFilters,
-        }: FilterDropdownProps) => (
+        filterDropdown: ({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
             <TableTextFilterDropdown
                 selectedKeys={selectedKeys}
                 setSelectedKeys={setSelectedKeys}
@@ -210,11 +172,7 @@ export default function AccountsIndex({
             key: 'code',
             width: 120,
             sorter: (a, b) => a.code.localeCompare(b.code),
-            render: (value: string) => (
-                <span className="font-mono text-sm font-semibold text-slate-600">
-                    {value}
-                </span>
-            ),
+            render: (value: string) => <span className="font-mono text-sm font-semibold text-slate-600">{value}</span>,
             ...getTextFilter('code', 'Filtrar por código'),
         },
         {
@@ -222,9 +180,7 @@ export default function AccountsIndex({
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => a.name.localeCompare(b.name),
-            render: (_: unknown, record) => (
-                <p className="font-semibold text-slate-900">{record.name}</p>
-            ),
+            render: (_: unknown, record) => <p className="font-semibold text-slate-900">{record.name}</p>,
             ...getTextFilter('name', 'Filtrar por conta'),
         },
         {
@@ -233,30 +189,20 @@ export default function AccountsIndex({
             key: 'initial_balance',
             align: 'right',
             sorter: (a, b) => a.initial_balance - b.initial_balance,
-            render: (value: number) => (
-                <span className="font-semibold text-slate-900">
-                    {formatCurrency(value)}
-                </span>
-            ),
+            render: (value: number) => <span className="font-semibold text-slate-900">{formatCurrency(value)}</span>,
         },
         {
             title: 'Data do Saldo',
             dataIndex: 'initial_balance_date',
             key: 'initial_balance_date',
-            sorter: (a, b) =>
-                String(a.initial_balance_date ?? '').localeCompare(
-                    String(b.initial_balance_date ?? ''),
-                ),
+            sorter: (a, b) => String(a.initial_balance_date ?? '').localeCompare(String(b.initial_balance_date ?? '')),
             render: (value: string) => formatDate(value),
         },
         {
             title: 'Criado em',
             dataIndex: 'created_at',
             key: 'created_at',
-            sorter: (a, b) =>
-                String(a.created_at ?? '').localeCompare(
-                    String(b.created_at ?? ''),
-                ),
+            sorter: (a, b) => String(a.created_at ?? '').localeCompare(String(b.created_at ?? '')),
             render: (value: string) => formatDate(value),
         },
     ];
@@ -266,18 +212,10 @@ export default function AccountsIndex({
             header={
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
-                            Contas
-                        </p>
-                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                            Gerencie suas contas bancárias e cartões.
-                        </h1>
+                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Contas</p>
+                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">Gerencie suas contas bancárias e cartões.</h1>
                     </div>
-
-                    <PrimaryButton
-                        type="button"
-                        onClick={() => setIsCreateModalOpen(true)}
-                    >
+                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>
                         Nova conta
                     </PrimaryButton>
                 </div>
@@ -285,131 +223,80 @@ export default function AccountsIndex({
         >
             <Head title="Contas" />
 
-            <div className="space-y-6">
-                <SectionCard
-                    title="Contas cadastradas"
-                    description={`${accounts.length} contas no sistema.`}
-                    actions={
-                        selectedRowKeys.length > 0 ? (
-                            <DangerButton
-                                type="button"
-                                onClick={deleteSelectedAccounts}
-                            >
-                                Excluir selecionadas ({selectedRowKeys.length})
-                            </DangerButton>
-                        ) : null
-                    }
-                >
-                    <div className="purchase-ant-table">
-                        <Table<AccountTableRecord>
-                            rowKey="key"
-                            columns={columns}
-                            dataSource={dataSource}
-                            rowSelection={{
-                                selectedRowKeys,
-                                onChange: (keys) => setSelectedRowKeys(keys),
-                                preserveSelectedRowKeys: true,
-                            }}
-                            pagination={{
-                                pageSize: 12,
-                                showSizeChanger: true,
-                                pageSizeOptions: [12, 24, 48],
-                                showTotal: (total, range) =>
-                                    `${range[0]}-${range[1]} de ${total} contas`,
-                            }}
-                            size="middle"
-                            scroll={{ x: 1200 }}
-                            rowClassName={() => 'cursor-pointer'}
-                            onRow={(record) => ({
-                                onClick: (event) => {
-                                    const target = event.target as HTMLElement;
+            <SectionCard
+                title="Contas cadastradas"
+                description={`${accounts.length} contas no sistema.`}
+                actions={
+                    selectedRowKeys.length > 0 ? (
+                        <DangerButton type="button" onClick={deleteSelectedAccounts}>
+                            Excluir selecionadas ({selectedRowKeys.length})
+                        </DangerButton>
+                    ) : null
+                }
+            >
+                <div className="purchase-ant-table">
+                    <Table<AccountTableRecord>
+                        rowKey="key"
+                        columns={columns}
+                        dataSource={dataSource}
+                        rowSelection={{
+                            selectedRowKeys,
+                            onChange: (keys) => setSelectedRowKeys(keys),
+                            preserveSelectedRowKeys: true,
+                        }}
+                        pagination={{
+                            pageSize: 12,
+                            showSizeChanger: true,
+                            pageSizeOptions: [12, 24, 48],
+                            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} contas`,
+                        }}
+                        size="middle"
+                        scroll={{ x: 1200 }}
+                        rowClassName={() => 'cursor-pointer'}
+                        onRow={(record) => ({
+                            onClick: (event) => {
+                                const target = event.target as HTMLElement;
+                                if (
+                                    target.closest(
+                                        'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                                    )
+                                ) {
+                                    return;
+                                }
+                                openEditModal(record);
+                            },
+                        })}
+                    />
+                </div>
+            </SectionCard>
 
-                                    if (
-                                        target.closest(
-                                            'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
-                                        )
-                                    ) {
-                                        return;
-                                    }
-
-                                    openEditModal(record);
-                                },
-                            })}
-                        />
-                    </div>
-                </SectionCard>
-            </div>
-
-            <Modal
-                show={Boolean(editingAccount)}
+            <AccountModal
+                isOpen={Boolean(editingAccount)}
                 onClose={closeEditModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Contas
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Editar conta
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Ajuste os dados da conta.
-                        </p>
-                    </div>
+                onSubmit={submitEdit}
+                processing={editProcessing}
+                data={editData}
+                errors={editErrors}
+                onFieldChange={(field, value) => setEditData(field as keyof typeof editData, value as never)}
+                title="Editar conta"
+                description="Ajuste os dados da conta."
+                saveLabel="Salvar alterações"
+                onDelete={deleteEditingAccount}
+                idPrefix="edit"
+            />
 
-                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
-                        <AccountFormFields
-                            data={editData}
-                            errors={editErrors}
-                            idPrefix="edit"
-                            onFieldChange={handleEditFieldChange}
-                        />
-
-                        <FormModalActions
-                            onCancel={closeEditModal}
-                            onDelete={deleteEditingAccount}
-                            saveLabel="Salvar alterações"
-                            saveDisabled={editProcessing}
-                        />
-                    </form>
-                </div>
-            </Modal>
-
-            <Modal
-                show={isCreateModalOpen}
+            <AccountModal
+                isOpen={isCreateModalOpen}
                 onClose={closeCreateModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Contas
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Nova conta
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Crie contas para rastrear seus saldos e futuro fluxo
-                            de caixa.
-                        </p>
-                    </div>
-
-                    <form onSubmit={submit} className="mt-6 space-y-5">
-                        <AccountFormFields
-                            data={data}
-                            errors={errors}
-                            onFieldChange={handleCreateFieldChange}
-                        />
-
-                        <FormModalActions
-                            onCancel={closeCreateModal}
-                            saveLabel="Criar conta"
-                            saveDisabled={processing}
-                        />
-                    </form>
-                </div>
-            </Modal>
+                onSubmit={submit}
+                processing={processing}
+                data={data}
+                errors={errors}
+                onFieldChange={(field, value) => setData(field as keyof typeof data, value as never)}
+                title="Nova conta"
+                description="Crie contas para rastrear seus saldos e futuro fluxo de caixa."
+                saveLabel="Criar conta"
+            />
         </AuthenticatedLayout>
     );
 }

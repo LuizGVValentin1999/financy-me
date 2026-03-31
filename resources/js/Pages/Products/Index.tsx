@@ -1,56 +1,21 @@
 import DangerButton from '@/Components/DangerButton';
-import FormModalActions from '@/Components/FormModalActions';
-import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import ProductFormFields from '@/Components/Products/ProductFormFields';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ProductModal from '@/Pages/Products/components/ProductModal';
+import type { ProductRow, ProductsPageProps, ProductTableRecord } from '@/Pages/Products/types';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Button, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
-interface ProductsPageProps {
-    categories: Array<{
-        id: number;
-        name: string;
-        color: string;
-    }>;
-    units: Array<{
-        value: string;
-        label: string;
-    }>;
-    products: Array<{
-        id: number;
-        category_id: number | null;
-        name: string;
-        brand: string | null;
-        sku: string | null;
-        unit: string;
-        type: 'stockable' | 'non_stockable';
-        minimum_stock: number;
-        current_stock: number;
-        is_active: boolean;
-        notes: string | null;
-        category: { name: string; color: string } | null;
-        total_spent: number;
-        last_purchase_at: string | null;
-    }>;
-}
-
-type ProductRow = ProductsPageProps['products'][number];
-type ProductTableRecord = ProductRow & { key: string };
-
-export default function ProductsIndex({
-    categories,
-    units,
-    products,
-}: ProductsPageProps) {
+export default function ProductsIndex({ categories, units, products }: ProductsPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         category_id: '',
         name: '',
@@ -61,6 +26,7 @@ export default function ProductsIndex({
         minimum_stock: '0',
         notes: '',
     });
+
     const {
         data: editData,
         setData: setEditData,
@@ -98,13 +64,6 @@ export default function ProductsIndex({
             },
             onError: () => message.error('Erro ao criar produto'),
         });
-    };
-
-    const handleCreateFieldChange = (
-        field: keyof typeof data,
-        value: string,
-    ) => {
-        setData(field as keyof typeof data, value as never);
     };
 
     const closeEditModal = () => {
@@ -145,13 +104,6 @@ export default function ProductsIndex({
         });
     };
 
-    const handleEditFieldChange = (
-        field: keyof typeof editData,
-        value: string,
-    ) => {
-        setEditData(field as keyof typeof editData, value as never);
-    };
-
     const deleteEditingProduct = () => {
         if (!editingProduct) {
             return;
@@ -184,16 +136,12 @@ export default function ProductsIndex({
 
         AntdModal.confirm({
             title: 'Confirmar exclusão',
-            content: total === 1
-                ? 'Excluir 1 produto selecionado?'
-                : `Excluir ${total} produtos selecionados?`,
+            content: total === 1 ? 'Excluir 1 produto selecionado?' : `Excluir ${total} produtos selecionados?`,
             okText: 'Sim',
             cancelText: 'Não',
             onOk: () => {
                 router.delete(route('products.destroy-many'), {
-                    data: {
-                        ids: selectedRowKeys.map((key) => Number(key)),
-                    },
+                    data: { ids: selectedRowKeys.map((key) => Number(key)) },
                     preserveScroll: true,
                     onSuccess: () => {
                         message.info(`${selectedRowKeys.length} produtos excluídos com sucesso!`);
@@ -209,12 +157,7 @@ export default function ProductsIndex({
         dataIndex: keyof ProductRow,
         placeholder: string,
     ): ColumnsType<ProductTableRecord>[number] => ({
-        filterDropdown: ({
-            selectedKeys,
-            setSelectedKeys,
-            confirm,
-            clearFilters,
-        }: FilterDropdownProps) => (
+        filterDropdown: ({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
             <TableTextFilterDropdown
                 selectedKeys={selectedKeys}
                 setSelectedKeys={setSelectedKeys}
@@ -243,10 +186,7 @@ export default function ProductsIndex({
             render: (_: unknown, record) => (
                 <div>
                     <p className="font-semibold text-slate-900">{record.name}</p>
-                    <p className="mt-1 text-slate-500">
-                        {record.brand || 'Sem marca'}
-                        {record.sku ? ` • ${record.sku}` : ''}
-                    </p>
+                    <p className="mt-1 text-slate-500">{record.brand || 'Sem marca'}{record.sku ? ` • ${record.sku}` : ''}</p>
                 </div>
             ),
             ...getTextFilter('name', 'Filtrar por produto'),
@@ -255,37 +195,19 @@ export default function ProductsIndex({
             title: 'Categoria',
             dataIndex: 'category',
             key: 'category',
-            render: (_: unknown, record) =>
-                record.category ? (
-                    <Tag color="cyan">{record.category.name}</Tag>
-                ) : (
-                    '--'
-                ),
-            filterDropdown: ({
-                selectedKeys,
-                setSelectedKeys,
-                confirm,
-                clearFilters,
-            }: FilterDropdownProps) => (
+            render: (_: unknown, record) => (record.category ? <Tag color="cyan">{record.category.name}</Tag> : '--'),
+            filterDropdown: ({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
                 <div className="w-56 p-3">
                     <Select
                         value={String(selectedKeys[0] ?? '') || undefined}
                         placeholder="Filtrar categoria"
                         className="w-full"
-                        onChange={(value: string | undefined) =>
-                            setSelectedKeys(value ? [value] : [])
-                        }
-                        options={categories
-                            .map((category) => ({
-                                value: category.name,
-                                label: category.name,
-                            }))}
+                        onChange={(value: string | undefined) => setSelectedKeys(value ? [value] : [])}
+                        options={categories.map((category) => ({ value: category.name, label: category.name }))}
                         allowClear
                     />
                     <Space className="mt-3">
-                        <Button type="primary" size="small" onClick={() => confirm()}>
-                            Aplicar
-                        </Button>
+                        <Button type="primary" size="small" onClick={() => confirm()}>Aplicar</Button>
                         <Button
                             size="small"
                             onClick={() => {
@@ -298,8 +220,7 @@ export default function ProductsIndex({
                     </Space>
                 </div>
             ),
-            onFilter: (value: Key | boolean, record: ProductTableRecord) =>
-                String(record.category?.name ?? '') === String(value),
+            onFilter: (value: Key | boolean, record: ProductTableRecord) => String(record.category?.name ?? '') === String(value),
         },
         {
             title: 'Unidade',
@@ -318,20 +239,17 @@ export default function ProductsIndex({
                     stockable: 'Estocável',
                     non_stockable: 'Não estocável',
                 };
-
                 const colors: Record<ProductTableRecord['type'], string> = {
                     stockable: 'blue',
                     non_stockable: 'orange',
                 };
-
                 return <Tag color={colors[value]}>{labels[value]}</Tag>;
             },
             filters: [
                 { text: 'Estocável', value: 'stockable' },
                 { text: 'Não estocável', value: 'non_stockable' },
             ],
-            onFilter: (value: Key | boolean, record: ProductTableRecord) =>
-                record.type === String(value),
+            onFilter: (value: Key | boolean, record: ProductTableRecord) => record.type === String(value),
         },
         {
             title: 'Estoque',
@@ -340,13 +258,7 @@ export default function ProductsIndex({
             align: 'right',
             sorter: (a, b) => a.current_stock - b.current_stock,
             render: (_: unknown, record) => (
-                <span
-                    className={`font-semibold ${
-                        record.current_stock <= record.minimum_stock
-                            ? 'text-[#be3d2a]'
-                            : 'text-slate-900'
-                    }`}
-                >
+                <span className={`font-semibold ${record.current_stock <= record.minimum_stock ? 'text-[#be3d2a]' : 'text-slate-900'}`}>
                     {formatQuantity(record.current_stock)} {record.unit}
                 </span>
             ),
@@ -357,8 +269,7 @@ export default function ProductsIndex({
             key: 'minimum_stock',
             align: 'right',
             sorter: (a, b) => a.minimum_stock - b.minimum_stock,
-            render: (_: unknown, record) =>
-                `${formatQuantity(record.minimum_stock)} ${record.unit}`,
+            render: (_: unknown, record) => `${formatQuantity(record.minimum_stock)} ${record.unit}`,
         },
         {
             title: 'Total gasto',
@@ -372,10 +283,7 @@ export default function ProductsIndex({
             title: 'Ultima compra',
             dataIndex: 'last_purchase_at',
             key: 'last_purchase_at',
-            sorter: (a, b) =>
-                String(a.last_purchase_at ?? '').localeCompare(
-                    String(b.last_purchase_at ?? ''),
-                ),
+            sorter: (a, b) => String(a.last_purchase_at ?? '').localeCompare(String(b.last_purchase_at ?? '')),
             render: (value: string | null) => formatDate(value),
         },
         {
@@ -393,154 +301,93 @@ export default function ProductsIndex({
             header={
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">
-                            Produtos
-                        </p>
-                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                            Cadastre o que entra no estoque.
-                        </h1>
+                        <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Produtos</p>
+                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">Cadastre o que entra no estoque.</h1>
                     </div>
-
-                    <PrimaryButton
-                        type="button"
-                        onClick={() => setIsCreateModalOpen(true)}
-                    >
-                        Novo produto
-                    </PrimaryButton>
+                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>Novo produto</PrimaryButton>
                 </div>
             }
         >
             <Head title="Produtos" />
 
-            <div className="space-y-6">
-                <SectionCard
-                    title="Produtos cadastrados"
-                    description={`${products.length} itens no catalogo atual.`}
-                    actions={
-                        selectedRowKeys.length > 0 ? (
-                            <DangerButton
-                                type="button"
-                                onClick={deleteSelectedProducts}
-                            >
-                                Excluir selecionados ({selectedRowKeys.length})
-                            </DangerButton>
-                        ) : null
-                    }
-                >
-                    <div className="purchase-ant-table">
-                        <Table<ProductTableRecord>
-                            rowKey="key"
-                            columns={columns}
-                            dataSource={dataSource}
-                            rowSelection={{
-                                selectedRowKeys,
-                                onChange: (keys) => setSelectedRowKeys(keys),
-                                preserveSelectedRowKeys: true,
-                            }}
-                            pagination={{
-                                pageSize: 12,
-                                showSizeChanger: true,
-                                pageSizeOptions: [12, 24, 48],
-                                showTotal: (total, range) =>
-                                    `${range[0]}-${range[1]} de ${total} produtos`,
-                            }}
-                            size="middle"
-                            scroll={{ x: 1200 }}
-                            rowClassName={() => 'cursor-pointer'}
-                            onRow={(record) => ({
-                                onClick: (event) => {
-                                    const target = event.target as HTMLElement;
+            <SectionCard
+                title="Produtos cadastrados"
+                description={`${products.length} itens no catalogo atual.`}
+                actions={
+                    selectedRowKeys.length > 0 ? (
+                        <DangerButton type="button" onClick={deleteSelectedProducts}>
+                            Excluir selecionados ({selectedRowKeys.length})
+                        </DangerButton>
+                    ) : null
+                }
+            >
+                <div className="purchase-ant-table">
+                    <Table<ProductTableRecord>
+                        rowKey="key"
+                        columns={columns}
+                        dataSource={dataSource}
+                        rowSelection={{
+                            selectedRowKeys,
+                            onChange: (keys) => setSelectedRowKeys(keys),
+                            preserveSelectedRowKeys: true,
+                        }}
+                        pagination={{
+                            pageSize: 12,
+                            showSizeChanger: true,
+                            pageSizeOptions: [12, 24, 48],
+                            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} produtos`,
+                        }}
+                        size="middle"
+                        scroll={{ x: 1200 }}
+                        rowClassName={() => 'cursor-pointer'}
+                        onRow={(record) => ({
+                            onClick: (event) => {
+                                const target = event.target as HTMLElement;
+                                if (
+                                    target.closest(
+                                        'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                                    )
+                                ) {
+                                    return;
+                                }
+                                openEditModal(record);
+                            },
+                        })}
+                    />
+                </div>
+            </SectionCard>
 
-                                    if (
-                                        target.closest(
-                                            'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
-                                        )
-                                    ) {
-                                        return;
-                                    }
-
-                                    openEditModal(record);
-                                },
-                            })}
-                        />
-                    </div>
-                </SectionCard>
-            </div>
-
-            <Modal
-                show={Boolean(editingProduct)}
+            <ProductModal
+                isOpen={Boolean(editingProduct)}
                 onClose={closeEditModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Produtos
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Editar produto
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Ajuste os dados do produto sem perder o historico de compras.
-                        </p>
-                    </div>
+                onSubmit={submitEdit}
+                processing={editProcessing}
+                data={editData}
+                errors={editErrors}
+                onFieldChange={(field, value) => setEditData(field as keyof typeof editData, value as never)}
+                title="Editar produto"
+                description="Ajuste os dados do produto sem perder o historico de compras."
+                saveLabel="Salvar alteracoes"
+                categories={categories}
+                units={units}
+                onDelete={deleteEditingProduct}
+                idPrefix="edit"
+            />
 
-                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
-                        <ProductFormFields
-                            data={editData}
-                            errors={editErrors}
-                            categories={categories}
-                            units={units}
-                            idPrefix="edit"
-                            onFieldChange={handleEditFieldChange}
-                        />
-
-                        <FormModalActions
-                            onCancel={closeEditModal}
-                            onDelete={deleteEditingProduct}
-                            saveLabel="Salvar alteracoes"
-                            saveDisabled={editProcessing}
-                        />
-                    </form>
-                </div>
-            </Modal>
-
-            <Modal
-                show={isCreateModalOpen}
+            <ProductModal
+                isOpen={isCreateModalOpen}
                 onClose={closeCreateModal}
-                maxWidth="2xl"
-            >
-                <div className="p-5 sm:p-6">
-                    <div>
-                        <p className="text-sm uppercase tracking-[0.25em] text-slate-400">
-                            Produtos
-                        </p>
-                        <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-                            Novo produto
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Estoque inicial fica em zero e passa a crescer
-                            conforme voce registra compras.
-                        </p>
-                    </div>
-
-                    <form onSubmit={submit} className="mt-6 space-y-5">
-                        <ProductFormFields
-                            data={data}
-                            errors={errors}
-                            categories={categories}
-                            units={units}
-                            onFieldChange={handleCreateFieldChange}
-                        />
-
-                        <FormModalActions
-                            onCancel={closeCreateModal}
-                            saveLabel="Criar produto"
-                            saveDisabled={processing}
-                        />
-                    </form>
-                </div>
-            </Modal>
+                onSubmit={submit}
+                processing={processing}
+                data={data}
+                errors={errors}
+                onFieldChange={(field, value) => setData(field as keyof typeof data, value as never)}
+                title="Novo produto"
+                description="Estoque inicial fica em zero e passa a crescer conforme voce registra compras."
+                saveLabel="Criar produto"
+                categories={categories}
+                units={units}
+            />
         </AuthenticatedLayout>
     );
 }

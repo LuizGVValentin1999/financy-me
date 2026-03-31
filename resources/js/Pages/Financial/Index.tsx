@@ -1,47 +1,15 @@
 import DangerButton from '@/Components/DangerButton';
-import FormModalActions from '@/Components/FormModalActions';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import FinancialEntryModal from '@/Pages/Financial/components/FinancialEntryModal';
+import type { EntryRow, EntryTableRecord, FinancialPageProps } from '@/Pages/Financial/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Modal as AntdModal, Select, Table, Tag, message } from 'antd';
+import { Modal as AntdModal, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useMemo, useState } from 'react';
-
-interface FinancialPageProps {
-    accounts: Array<{
-        id: number;
-        code: string;
-        name: string;
-    }>;
-    categories: Array<{
-        id: number;
-        code: string;
-        name: string;
-        color: string;
-    }>;
-    entries: Array<{
-        id: number;
-        account_id: number | null;
-        account: { id: number; code: string; name: string } | null;
-        category_id: number | null;
-        category: { id: number; code: string; name: string; color: string } | null;
-        direction: 'inflow' | 'outflow';
-        origin: string;
-        amount: number;
-        moved_at: string | null;
-        description: string | null;
-        created_at: string | null;
-    }>;
-}
-
-type EntryRow = FinancialPageProps['entries'][number];
-type EntryTableRecord = EntryRow & { key: string };
 
 export default function FinancialIndex({ accounts, categories, entries }: FinancialPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -166,9 +134,10 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
 
         AntdModal.confirm({
             title: 'Confirmar exclusão',
-            content: total === 1
-                ? 'Excluir 1 lançamento manual selecionado?'
-                : `Excluir ${total} lançamentos manuais selecionados?`,
+            content:
+                total === 1
+                    ? 'Excluir 1 lançamento manual selecionado?'
+                    : `Excluir ${total} lançamentos manuais selecionados?`,
             okText: 'Sim',
             cancelText: 'Não',
             onOk: () => {
@@ -256,11 +225,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             title: 'Tipo',
             dataIndex: 'direction',
             key: 'direction',
-            render: (value: 'inflow' | 'outflow') => (
-                <Tag color={value === 'inflow' ? 'green' : 'red'}>
-                    {value === 'inflow' ? 'Entrada' : 'Saída'}
-                </Tag>
-            ),
+            render: (value: 'inflow' | 'outflow') => <Tag color={value === 'inflow' ? 'green' : 'red'}>{value === 'inflow' ? 'Entrada' : 'Saída'}</Tag>,
         },
         {
             title: 'Valor',
@@ -278,19 +243,13 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             title: 'Conta',
             dataIndex: 'account',
             key: 'account',
-            render: (_: unknown, record) => record.account ? `${record.account.code} - ${record.account.name}` : '--',
-            ...getTextFilter('description', 'Filtrar por descrição'),
+            render: (_: unknown, record) => (record.account ? `${record.account.code} - ${record.account.name}` : '--'),
         },
         {
             title: 'Categoria',
             dataIndex: 'category',
             key: 'category',
-            render: (_: unknown, record) =>
-                record.category ? (
-                    <Tag color="cyan">{record.category.name}</Tag>
-                ) : (
-                    '--'
-                ),
+            render: (_: unknown, record) => (record.category ? <Tag color="cyan">{record.category.name}</Tag> : '--'),
         },
         {
             title: 'Origem',
@@ -322,10 +281,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                         <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Financeiro</p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">Entradas e saídas das contas.</h1>
                     </div>
-
-                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>
-                        Novo lançamento
-                    </PrimaryButton>
+                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>Novo lançamento</PrimaryButton>
                 </div>
             }
         >
@@ -371,183 +327,38 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                 </div>
             </SectionCard>
 
-            <Modal show={Boolean(editingEntry)} onClose={closeEditModal} maxWidth="2xl">
-                <div className="p-5 sm:p-6">
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-400">Financeiro</p>
-                    <h2 className="mt-2 text-3xl font-semibold text-slate-900">Editar lançamento</h2>
+            <FinancialEntryModal
+                isOpen={Boolean(editingEntry)}
+                onClose={closeEditModal}
+                onSubmit={submitEdit}
+                processing={editProcessing}
+                data={editData}
+                errors={editErrors}
+                setData={(field, value) => setEditData(field as keyof typeof editData, value as never)}
+                title="Editar lançamento"
+                sectionLabel="Financeiro"
+                saveLabel="Salvar alterações"
+                accountOptions={accountOptions}
+                categoryOptions={categoryOptions}
+                directionOptions={directionOptions}
+                onDelete={deleteEditingEntry}
+            />
 
-                    <form onSubmit={submitEdit} className="mt-6 space-y-5">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="edit_direction" value="Direção" />
-                                <Select
-                                    id="edit_direction"
-                                    value={editData.direction}
-                                    options={directionOptions}
-                                    onChange={(value) => setEditData('direction', value as 'inflow' | 'outflow')}
-                                    className="mt-2 block w-full"
-                                />
-                                <InputError message={editErrors.direction} className="mt-2" />
-                            </div>
-                            <div>
-                                <InputLabel htmlFor="edit_amount" value="Valor" />
-                                <input
-                                    id="edit_amount"
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={editData.amount}
-                                    onChange={(event) => setEditData('amount', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                                <InputError message={editErrors.amount} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="edit_account_id" value="Conta" />
-                                <Select
-                                    id="edit_account_id"
-                                    value={editData.account_id}
-                                    options={accountOptions}
-                                    onChange={(value) => setEditData('account_id', value)}
-                                    className="mt-2 block w-full"
-                                />
-                                <InputError message={editErrors.account_id} className="mt-2" />
-                            </div>
-                            <div>
-                                <InputLabel htmlFor="edit_category_id" value="Categoria" />
-                                <Select
-                                    id="edit_category_id"
-                                    value={editData.category_id}
-                                    options={categoryOptions}
-                                    onChange={(value) => setEditData('category_id', value)}
-                                    className="mt-2 block w-full"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="edit_moved_at" value="Data" />
-                                <input
-                                    id="edit_moved_at"
-                                    type="date"
-                                    value={editData.moved_at}
-                                    onChange={(event) => setEditData('moved_at', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-                            <div>
-                                <InputLabel htmlFor="edit_description" value="Descrição" />
-                                <input
-                                    id="edit_description"
-                                    type="text"
-                                    value={editData.description}
-                                    onChange={(event) => setEditData('description', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                            </div>
-                        </div>
-
-                        <FormModalActions
-                            onCancel={closeEditModal}
-                            onDelete={deleteEditingEntry}
-                            saveLabel="Salvar alterações"
-                            saveDisabled={editProcessing}
-                        />
-                    </form>
-                </div>
-            </Modal>
-
-            <Modal show={isCreateModalOpen} onClose={closeCreateModal} maxWidth="2xl">
-                <div className="p-5 sm:p-6">
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-400">Financeiro</p>
-                    <h2 className="mt-2 text-3xl font-semibold text-slate-900">Novo lançamento</h2>
-
-                    <form onSubmit={submit} className="mt-6 space-y-5">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="direction" value="Direção" />
-                                <Select
-                                    id="direction"
-                                    value={data.direction}
-                                    options={directionOptions}
-                                    onChange={(value) => setData('direction', value as 'inflow' | 'outflow')}
-                                    className="mt-2 block w-full"
-                                />
-                                <InputError message={errors.direction} className="mt-2" />
-                            </div>
-                            <div>
-                                <InputLabel htmlFor="amount" value="Valor" />
-                                <input
-                                    id="amount"
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={data.amount}
-                                    onChange={(event) => setData('amount', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                                <InputError message={errors.amount} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="account_id" value="Conta" />
-                                <Select
-                                    id="account_id"
-                                    value={data.account_id}
-                                    options={accountOptions}
-                                    onChange={(value) => setData('account_id', value)}
-                                    className="mt-2 block w-full"
-                                />
-                                <InputError message={errors.account_id} className="mt-2" />
-                            </div>
-                            <div>
-                                <InputLabel htmlFor="category_id" value="Categoria" />
-                                <Select
-                                    id="category_id"
-                                    value={data.category_id}
-                                    options={categoryOptions}
-                                    onChange={(value) => setData('category_id', value)}
-                                    className="mt-2 block w-full"
-                                />
-                                <InputError message={errors.category_id} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <InputLabel htmlFor="moved_at" value="Data" />
-                                <input
-                                    id="moved_at"
-                                    type="date"
-                                    value={data.moved_at}
-                                    onChange={(event) => setData('moved_at', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                                <InputError message={errors.moved_at} className="mt-2" />
-                            </div>
-                            <div>
-                                <InputLabel htmlFor="description" value="Descrição" />
-                                <input
-                                    id="description"
-                                    type="text"
-                                    value={data.description}
-                                    onChange={(event) => setData('description', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                                />
-                                <InputError message={errors.description} className="mt-2" />
-                            </div>
-                        </div>
-
-                        <FormModalActions onCancel={closeCreateModal} saveLabel="Criar lançamento" saveDisabled={processing} />
-                    </form>
-                </div>
-            </Modal>
+            <FinancialEntryModal
+                isOpen={isCreateModalOpen}
+                onClose={closeCreateModal}
+                onSubmit={submit}
+                processing={processing}
+                data={data}
+                errors={errors}
+                setData={(field, value) => setData(field as keyof typeof data, value as never)}
+                title="Novo lançamento"
+                sectionLabel="Financeiro"
+                saveLabel="Criar lançamento"
+                accountOptions={accountOptions}
+                categoryOptions={categoryOptions}
+                directionOptions={directionOptions}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -1,9 +1,7 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { router, usePage } from '@inertiajs/react';
-import { Button, Modal, Collapse, Space, Tag, message } from 'antd';
+import { router } from '@inertiajs/react';
+import { Button, Collapse, Space, Tag, message } from 'antd';
+import CreateHouseModal from '@/Pages/Profile/Partials/components/CreateHouseModal';
+import JoinHouseModal from '@/Pages/Profile/Partials/components/JoinHouseModal';
 import { useState } from 'react';
 import { FormEventHandler } from 'react';
 
@@ -201,212 +199,31 @@ export default function ManageHousesForm({
                 </Space>
             </div>
 
-            {/* Create House Modal */}
-            <Modal
-                title="Criar Nova Casa"
-                open={isCreateModalOpen}
-                onCancel={() => {
+            <CreateHouseModal
+                isOpen={isCreateModalOpen}
+                onClose={() => {
                     setIsCreateModalOpen(false);
                     setCreateErrors({});
                 }}
-                footer={null}
-                width={500}
-            >
-                <form onSubmit={handleCreateHouse} className="space-y-4 pt-4">
-                    <div>
-                        <InputLabel htmlFor="name" value="Nome da Casa" />
-                        <TextInput
-                            id="name"
-                            className="mt-1 block w-full"
-                            value={createData.name}
-                            onChange={(e) =>
-                                setCreateData({
-                                    ...createData,
-                                    name: e.target.value,
-                                })
-                            }
-                            required
-                            placeholder="Ex: Casa da Praia"
-                        />
-                        <InputError
-                            className="mt-2"
-                            message={createErrors.name}
-                        />
-                    </div>
+                onSubmit={handleCreateHouse}
+                isLoading={isLoadingCreate}
+                data={createData}
+                setData={setCreateData}
+                errors={createErrors}
+            />
 
-                    <div>
-                        <InputLabel htmlFor="code" value="Código da Casa" />
-                        <TextInput
-                            id="code"
-                            className="mt-1 block w-full"
-                            value={createData.code}
-                            onChange={(e) =>
-                                setCreateData({
-                                    ...createData,
-                                    code: e.target.value,
-                                })
-                            }
-                            required
-                            placeholder="Ex: praia-2024"
-                            pattern="^[a-zA-Z0-9_-]+$"
-                            title="Apenas letras, números, hífen e underscore"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                            Código único para entrar nesta casa. Apenas letras,
-                            números, hífen e underscore.
-                        </p>
-                        <InputError
-                            className="mt-2"
-                            message={createErrors.code}
-                        />
-                    </div>
-
-                    <div>
-                        <InputLabel
-                            htmlFor="house_password"
-                            value="Senha da Casa"
-                        />
-                        <TextInput
-                            id="house_password"
-                            type="password"
-                            className="mt-1 block w-full"
-                            value={createData.house_password}
-                            onChange={(e) =>
-                                setCreateData({
-                                    ...createData,
-                                    house_password: e.target.value,
-                                })
-                            }
-                            required
-                            placeholder="Mínimo 6 caracteres"
-                        />
-                        <InputError
-                            className="mt-2"
-                            message={createErrors.house_password}
-                        />
-                    </div>
-
-                    <div>
-                        <InputLabel
-                            htmlFor="house_password_confirmation"
-                            value="Confirmar Senha"
-                        />
-                        <TextInput
-                            id="house_password_confirmation"
-                            type="password"
-                            className="mt-1 block w-full"
-                            value={createData.house_password_confirmation}
-                            onChange={(e) =>
-                                setCreateData({
-                                    ...createData,
-                                    house_password_confirmation: e.target.value,
-                                })
-                            }
-                            required
-                            placeholder="Confirme a senha"
-                        />
-                        <InputError
-                            className="mt-2"
-                            message={createErrors.house_password_confirmation}
-                        />
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            onClick={() => setIsCreateModalOpen(false)}
-                            disabled={isLoadingCreate}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="primary"
-                            htmlType="submit"
-                            loading={isLoadingCreate}
-                        >
-                            Criar Casa
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Join House Modal */}
-            <Modal
-                title="Entrar em Casa"
-                open={isJoinModalOpen}
-                onCancel={() => {
+            <JoinHouseModal
+                isOpen={isJoinModalOpen}
+                onClose={() => {
                     setIsJoinModalOpen(false);
                     setJoinErrors({});
                 }}
-                footer={null}
-                width={500}
-            >
-                <form onSubmit={handleJoinHouse} className="space-y-4 pt-4">
-                    <div>
-                        <InputLabel htmlFor="join_code" value="Código da Casa" />
-                        <TextInput
-                            id="join_code"
-                            className="mt-1 block w-full"
-                            value={joinData.code}
-                            onChange={(e) =>
-                                setJoinData({
-                                    ...joinData,
-                                    code: e.target.value,
-                                })
-                            }
-                            required
-                            placeholder="Ex: praia-2024"
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                            Peça o código da casa ao administrador.
-                        </p>
-                        <InputError
-                            className="mt-2"
-                            message={joinErrors.code}
-                        />
-                    </div>
-
-                    <div>
-                        <InputLabel
-                            htmlFor="join_password"
-                            value="Senha da Casa"
-                        />
-                        <TextInput
-                            id="join_password"
-                            type="password"
-                            className="mt-1 block w-full"
-                            value={joinData.password}
-                            onChange={(e) =>
-                                setJoinData({
-                                    ...joinData,
-                                    password: e.target.value,
-                                })
-                            }
-                            required
-                            placeholder="Digite a senha da casa"
-                        />
-                        <InputError
-                            className="mt-2"
-                            message={joinErrors.password}
-                        />
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            onClick={() => setIsJoinModalOpen(false)}
-                            disabled={isLoadingJoin}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            type="primary"
-                            htmlType="submit"
-                            loading={isLoadingJoin}
-                        >
-                            Entrar
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
+                onSubmit={handleJoinHouse}
+                isLoading={isLoadingJoin}
+                data={joinData}
+                setData={setJoinData}
+                errors={joinErrors}
+            />
         </section>
     );
 }

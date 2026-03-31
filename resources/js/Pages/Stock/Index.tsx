@@ -1,8 +1,5 @@
-import FormModalActions from '@/Components/FormModalActions';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import Modal from '@/Components/Modal';
-import PrimaryButton from '@/Components/PrimaryButton';
+import FormEntityModal from '@/Components/FormEntityModal';
+import LabeledInputField from '@/Components/form-fields/LabeledInputField';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -245,37 +242,32 @@ export default function StockIndex({ products }: StockPageProps) {
                 </div>
             </SectionCard>
 
-            <Modal show={Boolean(selectedProduct)} onClose={closeWithdrawModal} maxWidth="lg">
-                <div className="p-5 sm:p-6">
-                    <p className="text-sm uppercase tracking-[0.25em] text-slate-400">Estoque</p>
-                    <h2 className="mt-2 text-3xl font-semibold text-slate-900">Retirar do estoque</h2>
-                    <p className="mt-2 text-sm text-slate-500">
-                        {selectedProduct ? `${selectedProduct.name} • disponível: ${formatQuantity(selectedProduct.current_stock)} ${selectedProduct.unit}` : ''}
-                    </p>
-
-                    <form onSubmit={submitWithdraw} className="mt-6 space-y-5">
-                        <div>
-                            <InputLabel htmlFor="quantity" value="Quantidade" />
-                            <input
-                                id="quantity"
-                                type="number"
-                                min="0.001"
-                                step="0.001"
-                                value={data.quantity}
-                                onChange={(event) => setData('quantity', event.target.value)}
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                            />
-                            <InputError message={errors.quantity} className="mt-2" />
-                        </div>
-
-                        <FormModalActions
-                            onCancel={closeWithdrawModal}
-                            saveLabel="Confirmar retirada"
-                            saveDisabled={processing}
-                        />
-                    </form>
-                </div>
-            </Modal>
+            <FormEntityModal
+                isOpen={Boolean(selectedProduct)}
+                onClose={closeWithdrawModal}
+                onSubmit={submitWithdraw}
+                processing={processing}
+                sectionLabel="Estoque"
+                title="Retirar do estoque"
+                description={
+                    selectedProduct
+                        ? `${selectedProduct.name} • disponivel: ${formatQuantity(selectedProduct.current_stock)} ${selectedProduct.unit}`
+                        : undefined
+                }
+                saveLabel="Confirmar retirada"
+                maxWidth="lg"
+            >
+                <LabeledInputField
+                    id="quantity"
+                    label="Quantidade"
+                    type="number"
+                    min="0.001"
+                    step="0.001"
+                    value={data.quantity}
+                    onChange={(value) => setData('quantity', value)}
+                    error={errors.quantity}
+                />
+            </FormEntityModal>
         </AuthenticatedLayout>
     );
 }
