@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToHouse;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'user_id',
+    'house_id',
     'store_name',
     'cnpj',
     'address',
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class PurchaseInvoice extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToHouse;
 
     protected function casts(): array
     {
@@ -37,9 +38,9 @@ class PurchaseInvoice extends Model
         ];
     }
 
-    public function user(): BelongsTo
+    public function house(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(House::class);
     }
 
     public function purchaseEntries(): HasMany

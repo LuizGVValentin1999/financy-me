@@ -14,9 +14,7 @@ class AccountController extends Controller
 {
     public function index(Request $request): Response
     {
-        $accounts = $request->user()
-            ->accounts()
-            ->latest()
+        $accounts = Account::latest()
             ->get()
             ->map(fn (Account $account) => [
                 'id' => $account->id,
@@ -34,15 +32,15 @@ class AccountController extends Controller
 
     public function store(StoreAccountRequest $request): RedirectResponse
     {
-        $request->user()->accounts()->create($request->validated());
+        $house = $request->user()->getCurrentHouse();
+        
+        $house->accounts()->create($request->validated());
 
         return back()->with('success', 'Conta criada com sucesso.');
     }
 
     public function update(UpdateAccountRequest $request, Account $account): RedirectResponse
     {
-        abort_unless($account->user_id === $request->user()->id, 404);
-
         $account->update($request->validated());
 
         return back()->with('success', 'Conta atualizada com sucesso.');
@@ -50,8 +48,6 @@ class AccountController extends Controller
 
     public function destroy(Request $request, Account $account): RedirectResponse
     {
-        abort_unless($account->user_id === $request->user()->id, 404);
-
         $account->delete();
 
         return back()->with('success', 'Conta removida.');
@@ -61,10 +57,7 @@ class AccountController extends Controller
     {
         $ids = $request->input('ids', []);
 
-        $request->user()
-            ->accounts()
-            ->whereIn('id', $ids)
-            ->delete();
+        Account::whereIn('id', $ids)->delete();
 
         return back()->with('success', 'Contas removidas com sucesso.');
     }

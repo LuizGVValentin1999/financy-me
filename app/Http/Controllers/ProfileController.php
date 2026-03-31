@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\House;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,9 +19,22 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+        
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
+            'houses' => $user->houses()
+                ->get()
+                ->map(fn (House $house) => [
+                    'id' => $house->id,
+                    'code' => $house->code,
+                    'name' => $house->name,
+                    'description' => $house->description,
+                    'role' => $house->pivot->role,
+                    'is_active' => $user->active_house_id === $house->id,
+                ]),
+            'active_house_id' => $user->active_house_id,
         ]);
     }
 

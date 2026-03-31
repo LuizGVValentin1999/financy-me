@@ -14,17 +14,17 @@ class FinancialEntryController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
+        $house = $request->user()->getCurrentHouse();
 
         return Inertia::render('Financial/Index', [
-            'accounts' => $user->accounts()
+            'accounts' => $house->accounts()
                 ->orderBy('name')
-                ->get(['id', 'code', 'name']),
-            'categories' => $user->categories()
+                ->get(['id', 'name', 'type']),
+            'categories' => $house->categories()
                 ->orderBy('name')
                 ->get(['id', 'code', 'name', 'color']),
-            'entries' => $user->financialEntries()
-                ->with('account:id,code,name', 'category:id,code,name,color')
+            'entries' => $house->financialEntries()
+                ->with('account:id,name,type', 'category:id,code,name,color')
                 ->latest('moved_at')
                 ->latest('id')
                 ->get()
@@ -33,8 +33,8 @@ class FinancialEntryController extends Controller
                     'account_id' => $entry->account_id,
                     'account' => $entry->account ? [
                         'id' => $entry->account->id,
-                        'code' => $entry->account->code,
                         'name' => $entry->account->name,
+                        'type' => $entry->account->type,
                     ] : null,
                     'category_id' => $entry->category_id,
                     'category' => $entry->category ? [
@@ -46,7 +46,7 @@ class FinancialEntryController extends Controller
                     'direction' => $entry->direction,
                     'origin' => $entry->origin,
                     'amount' => (float) $entry->amount,
-                    'moved_at' => $entry->moved_at?->toDateString(),
+                    'moved_at' => $entry->moved_at,
                     'description' => $entry->description,
                     'created_at' => $entry->created_at?->toDateString(),
                 ]),
@@ -55,7 +55,9 @@ class FinancialEntryController extends Controller
 
     public function store(StoreFinancialEntryRequest $request): RedirectResponse
     {
-        $request->user()->financialEntries()->create([
+        $house = $request->user()->getCurrentHouse();
+        
+        $house->financialEntries()->create([
             ...$request->validated(),
             'origin' => 'manual',
         ]);
@@ -67,8 +69,6 @@ class FinancialEntryController extends Controller
         UpdateFinancialEntryRequest $request,
         FinancialEntry $financialEntry,
     ): RedirectResponse {
-        abort_unless($financialEntry->user_id === $request->user()->id, 404);
-
         if ($financialEntry->origin !== 'manual') {
             return back()->with('error', 'Somente lançamentos manuais podem ser editados.');
         }
@@ -80,8 +80,6 @@ class FinancialEntryController extends Controller
 
     public function destroy(Request $request, FinancialEntry $financialEntry): RedirectResponse
     {
-        abort_unless($financialEntry->user_id === $request->user()->id, 404);
-
         if ($financialEntry->origin !== 'manual') {
             return back()->with('error', 'Somente lançamentos manuais podem ser removidos.');
         }
@@ -95,9 +93,7 @@ class FinancialEntryController extends Controller
     {
         $ids = $request->input('ids', []);
 
-        $request->user()
-            ->financialEntries()
-            ->where('origin', 'manual')
+        FinancialEntry::where('origin', 'manual')
             ->whereIn('id', $ids)
             ->delete();
 

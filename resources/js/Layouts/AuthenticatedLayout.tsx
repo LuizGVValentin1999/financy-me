@@ -70,12 +70,26 @@ function SidebarContent({
 
             <div className="mt-auto rounded-[28px] border border-white/10 bg-white/5 p-5">
                 <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
-                    Conta
+                    Casa Ativa
                 </p>
                 <p className="mt-3 text-lg font-semibold text-white">
-                    {user.name}
+                    {user.currentHouse?.name || 'Sem casa'}
                 </p>
-                <p className="text-sm text-slate-300">{user.email}</p>
+                {user.currentHouse && (
+                    <p className="text-xs text-slate-400">
+                        {user.currentHouse.code}
+                    </p>
+                )}
+
+                <div className="mb-5 mt-5 border-t border-white/10 pt-5">
+                    <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
+                        Conta
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-white">
+                        {user.name}
+                    </p>
+                    <p className="text-sm text-slate-300">{user.email}</p>
+                </div>
 
                 <Link
                     href={route('logout')}

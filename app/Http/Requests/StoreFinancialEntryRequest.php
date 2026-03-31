@@ -23,16 +23,18 @@ class StoreFinancialEntryRequest extends FormRequest
      */
     public function rules(): array
     {
+        $houseId = $this->user()?->getCurrentHouse()?->id;
+
         return [
             'account_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('accounts', 'id')->where('user_id', $this->user()?->id),
+                Rule::exists('accounts', 'id')->where('house_id', $houseId),
             ],
             'category_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('categories', 'id')->where('user_id', $this->user()?->id),
+                Rule::exists('categories', 'id')->where('house_id', $houseId),
             ],
             'direction' => ['required', Rule::in(['inflow', 'outflow'])],
             'amount' => ['required', 'numeric', 'gt:0'],

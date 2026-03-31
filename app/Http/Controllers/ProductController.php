@@ -15,10 +15,10 @@ class ProductController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
+        $house = $request->user()->getCurrentHouse();
 
         return Inertia::render('Products/Index', [
-            'categories' => $user->categories()
+            'categories' => $house->categories()
                 ->orderBy('name')
                 ->get(['id', 'name', 'color']),
             'units' => [
@@ -29,7 +29,7 @@ class ProductController extends Controller
                 ['value' => 'ml', 'label' => 'Mililitro'],
                 ['value' => 'cx', 'label' => 'Caixa'],
             ],
-            'products' => $user->products()
+            'products' => $house->products()
                 ->with('category:id,name,color')
                 ->withSum('purchaseEntries as total_spent', 'total_amount')
                 ->withMax('purchaseEntries as last_purchase_at', 'purchased_at')
@@ -61,7 +61,9 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): RedirectResponse
     {
-        $request->user()->products()->create([
+        $house = $request->user()->getCurrentHouse();
+        
+        $house->products()->create([
             ...$request->validated(),
             'current_stock' => 0,
             'is_active' => true,
@@ -72,23 +74,25 @@ class ProductController extends Controller
 
     public function quickStore(Request $request): JsonResponse
     {
+        $house = $request->user()->getCurrentHouse();
+        
         $validated = $request->validate([
             'category_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('categories', 'id')->where('user_id', $request->user()->id),
+                Rule::exists('categories', 'id')->where('house_id', $house->id),
             ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('products')->where('user_id', $request->user()->id),
+                Rule::unique('products')->where('house_id', $house->id),
             ],
             'unit' => ['required', Rule::in(['un', 'kg', 'g', 'l', 'ml', 'cx'])],
             'type' => ['required', Rule::in(['stockable', 'non_stockable'])],
         ]);
 
-        $product = $request->user()->products()->create([
+        $product = $house->products()->create([
             ...$validated,
             'brand' => null,
             'sku' => null,
@@ -116,8 +120,6 @@ class ProductController extends Controller
         StoreProductRequest $request,
         Product $product,
     ): RedirectResponse {
-        abort_unless($product->user_id === $request->user()->id, 404);
-
         $product->update($request->validated());
 
         return back()->with('success', 'Produto atualizado com sucesso.');
@@ -125,8 +127,6 @@ class ProductController extends Controller
 
     public function destroy(Request $request, Product $product): RedirectResponse
     {
-        abort_unless($product->user_id === $request->user()->id, 404);
-
         if ($product->purchaseEntries()->exists()) {
             return back()->with('error', 'Remova os registros de compra antes de excluir o produto.');
         }
@@ -143,16 +143,11 @@ class ProductController extends Controller
             'ids.*' => [
                 'required',
                 'integer',
-                Rule::exists('products', 'id')->where(
-                    'user_id',
-                    $request->user()->id,
-                ),
+                Rule::exists('products', 'id'),
             ],
         ]);
 
-        $products = $request->user()
-            ->products()
-            ->withCount('purchaseEntries')
+        $products = Product::withCount('purchaseEntries')
             ->whereIn('id', $validated['ids'])
             ->get();
 
@@ -171,10 +166,7 @@ class ProductController extends Controller
 
         $deleted = $products->count();
 
-        $request->user()
-            ->products()
-            ->whereIn('id', $products->pluck('id'))
-            ->delete();
+        Product::whereIn('id', $products->pluck('id'))->delete();
 
         return back()->with(
             'success',

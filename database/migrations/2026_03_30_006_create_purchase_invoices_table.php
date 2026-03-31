@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('purchase_invoices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('house_id')->constrained()->cascadeOnDelete();
             $table->string('store_name');
             $table->string('cnpj')->nullable();
             $table->string('address')->nullable();
@@ -28,8 +28,8 @@ return new class extends Migration
             $table->decimal('paid_amount', 12, 2)->default(0);
             $table->timestamps();
 
-            $table->index(['user_id', 'issued_at']);
-            $table->index(['user_id', 'access_key']);
+            $table->index(['house_id', 'issued_at']);
+            $table->index(['house_id', 'access_key']);
         });
     }
 

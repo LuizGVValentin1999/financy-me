@@ -25,17 +25,17 @@ class PurchaseEntryController extends Controller
 
     public function index(Request $request): Response
     {
-        $user = $request->user();
-        $products = $user->products()
+        $house = $request->user()->getCurrentHouse();
+        $products = $house->products()
             ->with('category:id,name,color')
             ->orderBy('name')
             ->get();
 
-        $categories = $user->categories()
+        $categories = $house->categories()
             ->orderBy('name')
             ->get(['id', 'name', 'color']);
 
-        $accounts = $user->accounts()
+        $accounts = $house->accounts()
             ->orderBy('name')
             ->get(['id', 'code', 'name']);
 
@@ -60,7 +60,7 @@ class PurchaseEntryController extends Controller
                 ['value' => 'kg', 'label' => 'KG'],
             ],
             'importPreview' => $this->previewFromSession($request, $products),
-            'entries' => $user->purchaseEntries()
+            'entries' => $house->purchaseEntries()
                 ->with('product:id,name,unit', 'account:id,code,name')
                 ->latest('purchased_at')
                 ->latest('id')
@@ -82,7 +82,7 @@ class PurchaseEntryController extends Controller
                     'source' => $entry->source,
                     'invoice_reference' => $entry->invoice_reference,
                     'notes' => $entry->notes,
-                    'purchased_at' => $entry->purchased_at?->toDateString(),
+                    'purchased_at' => $entry->purchased_at,
                     'created_at' => $entry->created_at?->toDateString(),
                 ]),
         ]);
@@ -91,10 +91,10 @@ class PurchaseEntryController extends Controller
     public function store(StorePurchaseEntryRequest $request): RedirectResponse
     {
         $validated = $request->validated();
+        $house = $request->user()->getCurrentHouse();
 
-        DB::transaction(function () use ($request, $validated) {
-            $product = $request->user()
-                ->products()
+        DB::transaction(function () use ($house, $validated) {
+            $product = $house->products()
                 ->findOrFail($validated['product_id']);
 
             $totalAmount = round(
@@ -102,12 +102,12 @@ class PurchaseEntryController extends Controller
                 2,
             );
 
-            $purchaseEntry = $request->user()->purchaseEntries()->create([
+            $purchaseEntry = $house->purchaseEntries()->create([
                 ...$validated,
                 'total_amount' => $totalAmount,
             ]);
 
-            $this->syncPurchaseFinancialEntry($request->user()->id, $purchaseEntry);
+            $this->syncPurchaseFinancialEntry($house->id, $purchaseEntry);
 
             if ($product->type === 'stockable') {
                 $product->update([
@@ -123,14 +123,14 @@ class PurchaseEntryController extends Controller
         StorePurchaseEntryRequest $request,
         PurchaseEntry $purchaseEntry,
     ): RedirectResponse {
-        abort_unless($purchaseEntry->user_id === $request->user()->id, 404);
+        $house = $request->user()->getCurrentHouse();
+        abort_unless($purchaseEntry->house_id === $house->id, 404);
 
         $validated = $request->validated();
 
-        DB::transaction(function () use ($request, $purchaseEntry, $validated) {
+        DB::transaction(function () use ($house, $purchaseEntry, $validated) {
             $previousProduct = $purchaseEntry->product;
-            $nextProduct = $request->user()
-                ->products()
+            $nextProduct = $house->products()
                 ->findOrFail($validated['product_id']);
 
             if ($previousProduct && $previousProduct->type === 'stockable') {
@@ -152,7 +152,7 @@ class PurchaseEntryController extends Controller
                 'total_amount' => $totalAmount,
             ]);
 
-            $this->syncPurchaseFinancialEntry($request->user()->id, $purchaseEntry);
+            $this->syncPurchaseFinancialEntry($house->id, $purchaseEntry);
 
             if ($nextProduct->type === 'stockable') {
                 $nextProduct->update([
@@ -207,7 +207,7 @@ class PurchaseEntryController extends Controller
             return back()->with('error', 'A importacao da NFC-e expirou. Importe o link novamente.');
         }
 
-        $user = $request->user();
+        $house = $request->user()->getCurrentHouse();
         $itemsCount = count($preview['items']);
 
         $validator = Validator::make($request->all(), [
@@ -217,14 +217,14 @@ class PurchaseEntryController extends Controller
             'items.*.product_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('products', 'id')->where('user_id', $user->id),
+                Rule::exists('products', 'id')->where('house_id', $house->id),
             ],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['nullable'],
             'items.*.category_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('categories', 'id')->where('user_id', $user->id),
+                Rule::exists('categories', 'id')->where('house_id', $house->id),
             ],
             'items.*.unit' => ['nullable', Rule::in(['un', 'kg'])],
             'items.*.type' => ['nullable', Rule::in(['stockable', 'non_stockable'])],
@@ -232,7 +232,7 @@ class PurchaseEntryController extends Controller
             'payments.*.account_id' => [
                 'required',
                 'integer',
-                Rule::exists('accounts', 'id')->where('user_id', $user->id),
+                Rule::exists('accounts', 'id')->where('house_id', $house->id),
             ],
             'payments.*.type' => ['required', Rule::in(['cash', 'installment'])],
             'payments.*.principal_amount' => ['required', 'numeric', 'gt:0'],
@@ -357,8 +357,8 @@ class PurchaseEntryController extends Controller
 
         $validated = $validator->validate();
 
-        DB::transaction(function () use ($user, $preview, $validated, $importer) {
-            $invoice = $this->createImportedInvoice($user, $preview);
+        DB::transaction(function () use ($house, $preview, $validated, $importer) {
+            $invoice = $this->createImportedInvoice($house, $preview);
 
             foreach (array_values($preview['items']) as $index => $previewItem) {
                 $payload = $validated['items'][$index];
@@ -386,9 +386,9 @@ class PurchaseEntryController extends Controller
                 }
 
                 $product = ! empty($payload['product_id'])
-                    ? $user->products()->findOrFail($payload['product_id'])
+                    ? $house->products()->findOrFail($payload['product_id'])
                     : $this->firstOrCreateImportedProduct(
-                        $user,
+                        $house,
                         trim($payload['product_name']),
                         $payload['category_id'] ?? null,
                         $previewItem['code'] ?? null,
@@ -414,7 +414,7 @@ class PurchaseEntryController extends Controller
                 $quantity = round((float) $payload['quantity'], 3);
                 $unitPrice = $quantity > 0 ? round($totalAmount / $quantity, 2) : 0.0;
 
-                $purchaseEntry = $user->purchaseEntries()->create([
+                $purchaseEntry = $house->purchaseEntries()->create([
                     'product_id' => $product->id,
                     'purchase_invoice_id' => $invoice->id,
                     'account_id' => null,
@@ -440,7 +440,7 @@ class PurchaseEntryController extends Controller
             }
 
             $this->syncImportedInvoiceFinancialEntry(
-                $user->id,
+                $house->id,
                 $invoice,
                 $validated['payments'],
             );
@@ -462,7 +462,8 @@ class PurchaseEntryController extends Controller
 
     public function destroy(Request $request, PurchaseEntry $purchaseEntry): RedirectResponse
     {
-        abort_unless($purchaseEntry->user_id === $request->user()->id, 404);
+        $house = $request->user()->getCurrentHouse();
+        abort_unless($purchaseEntry->house_id === $house->id, 404);
 
         DB::transaction(function () use ($purchaseEntry) {
             $product = $purchaseEntry->product;
@@ -486,20 +487,21 @@ class PurchaseEntryController extends Controller
 
     public function destroyMany(Request $request): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
+
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => [
                 'required',
                 'integer',
                 Rule::exists('purchase_entries', 'id')->where(
-                    'user_id',
-                    $request->user()->id,
+                    'house_id',
+                    $house->id,
                 ),
             ],
         ]);
 
-        $entries = $request->user()
-            ->purchaseEntries()
+        $entries = $house->purchaseEntries()
             ->with('product')
             ->whereIn('id', $validated['ids'])
             ->get();
@@ -602,14 +604,14 @@ class PurchaseEntryController extends Controller
     }
 
     private function firstOrCreateImportedProduct(
-        $user,
+        $house,
         string $name,
         ?int $categoryId,
         ?string $sku,
         string $unit,
         string $type = 'stockable',
     ): Product {
-        $existingProduct = $user->products()
+        $existingProduct = $house->products()
             ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
             ->first();
 
@@ -617,7 +619,7 @@ class PurchaseEntryController extends Controller
             return $existingProduct;
         }
 
-        return $user->products()->create([
+        return $house->products()->create([
             'name' => $name,
             'category_id' => $categoryId,
             'brand' => null,
@@ -667,10 +669,11 @@ class PurchaseEntryController extends Controller
     }
 
     private function syncPurchaseFinancialEntry(
-        int $userId,
+        int $houseId,
         PurchaseEntry $purchaseEntry,
         string $origin = 'manual_purchase',
     ): void {
+        /** @var \App\Models\FinancialEntry|null $existingEntry */
         $existingEntry = $purchaseEntry->financialEntries()->first();
 
         if (! $purchaseEntry->account_id) {
@@ -680,14 +683,14 @@ class PurchaseEntryController extends Controller
         }
 
         $payload = [
-            'user_id' => $userId,
+            'house_id' => $houseId,
             'account_id' => $purchaseEntry->account_id,
             'category_id' => $purchaseEntry->product?->category_id,
             'purchase_invoice_id' => $purchaseEntry->purchase_invoice_id,
             'direction' => 'outflow',
             'origin' => $origin,
             'amount' => round((float) $purchaseEntry->total_amount, 2),
-            'moved_at' => $purchaseEntry->purchased_at?->toDateString() ?? now()->toDateString(),
+            'moved_at' => $purchaseEntry->purchased_at ?? now()->toDateString(),
             'description' => $purchaseEntry->notes ?: sprintf(
                 'Compra: %s',
                 $purchaseEntry->product?->name ?? 'Item removido',
@@ -707,7 +710,7 @@ class PurchaseEntryController extends Controller
      * @param  array<int, array<string, mixed>>  $payments
      */
     private function syncImportedInvoiceFinancialEntry(
-        int $userId,
+        int $houseId,
         PurchaseInvoice $invoice,
         array $payments,
     ): void {
@@ -720,11 +723,11 @@ class PurchaseEntryController extends Controller
             $paymentType = (string) $payment['type'];
             $principalAmount = round((float) $payment['principal_amount'], 2);
             $firstDueDate = $payment['first_due_date']
-                ?: ($invoice->issued_at?->toDateString() ?? now()->toDateString());
+                ?: ($invoice->issued_at ?? now()->toDateString());
 
             if ($paymentType === 'cash') {
                 $invoice->financialEntries()->create([
-                    'user_id' => $userId,
+                    'house_id' => $houseId,
                     'account_id' => $accountId,
                     'purchase_invoice_id' => $invoice->id,
                     'direction' => 'outflow',
@@ -753,7 +756,7 @@ class PurchaseEntryController extends Controller
 
             for ($installment = 1; $installment <= $installments; $installment++) {
                 $invoice->financialEntries()->create([
-                    'user_id' => $userId,
+                    'house_id' => $houseId,
                     'account_id' => $accountId,
                     'purchase_invoice_id' => $invoice->id,
                     'direction' => 'outflow',
@@ -799,9 +802,9 @@ class PurchaseEntryController extends Controller
     /**
      * @param  array<string, mixed>  $preview
      */
-    private function createImportedInvoice($user, array $preview): PurchaseInvoice
+    private function createImportedInvoice($house, array $preview): PurchaseInvoice
     {
-        return $user->purchaseInvoices()->create([
+        return $house->purchaseInvoices()->create([
             'store_name' => $preview['store_name'] ?? 'Nota fiscal importada',
             'cnpj' => $preview['cnpj'] ?? null,
             'address' => $preview['address'] ?? null,

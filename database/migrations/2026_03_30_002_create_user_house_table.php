@@ -11,17 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('categories', function (Blueprint $table) {
+        Schema::create('user_house', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('code', 50);
-            $table->string('name');
-            $table->string('color', 7)->default('#1F7A8C');
-            $table->text('description')->nullable();
+            $table->foreignId('house_id')->constrained()->cascadeOnDelete();
+            $table->string('role', 20)->default('member'); // admin, member
             $table->timestamps();
 
-            $table->unique(['user_id', 'name']);
-            $table->unique(['user_id', 'code']);
+            $table->unique(['user_id', 'house_id']);
         });
     }
 
@@ -30,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('categories');
+        Schema::dropIfExists('user_house');
     }
 };

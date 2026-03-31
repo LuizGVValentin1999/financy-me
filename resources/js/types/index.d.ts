@@ -3,6 +3,13 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
+    active_house_id?: number | null;
+    currentHouse?: {
+        id: number;
+        name: string;
+        code: string;
+        description?: string;
+    } | null;
 }
 
 export type PageProps<

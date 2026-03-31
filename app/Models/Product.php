@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToHouse;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
-    'user_id',
+    'house_id',
     'category_id',
     'name',
     'brand',
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToHouse;
 
     protected function casts(): array
     {
@@ -34,9 +35,9 @@ class Product extends Model
         ];
     }
 
-    public function user(): BelongsTo
+    public function house(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(House::class);
     }
 
     public function category(): BelongsTo

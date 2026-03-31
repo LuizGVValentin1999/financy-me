@@ -25,14 +25,15 @@ class StoreProductRequest extends FormRequest
     {
         $product = $this->route('product');
         $productId = is_object($product) ? $product->id : $product;
+        $houseId = $this->user()?->getCurrentHouse()?->id;
 
         return [
             'category_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('categories', 'id')->where(
-                    'user_id',
-                    $this->user()?->id,
+                    'house_id',
+                    $houseId,
                 ),
             ],
             'name' => [
@@ -40,7 +41,7 @@ class StoreProductRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('products')
-                    ->where('user_id', $this->user()?->id)
+                    ->where('house_id', $houseId)
                     ->ignore($productId),
             ],
             'brand' => ['nullable', 'string', 'max:255'],

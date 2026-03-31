@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToHouse;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['code', 'name', 'color', 'description'])]
+#[Fillable(['house_id', 'code', 'name', 'color', 'description'])]
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToHouse;
 
-    public function user(): BelongsTo
+    public function house(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(House::class);
     }
 
     public function products(): HasMany

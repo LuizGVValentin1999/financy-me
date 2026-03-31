@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToHouse;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
-    'user_id',
+    'house_id',
     'account_id',
     'category_id',
     'purchase_entry_id',
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class FinancialEntry extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToHouse;
 
     protected function casts(): array
     {
@@ -31,9 +32,9 @@ class FinancialEntry extends Model
         ];
     }
 
-    public function user(): BelongsTo
+    public function house(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(House::class);
     }
 
     public function account(): BelongsTo

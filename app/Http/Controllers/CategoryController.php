@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,9 +15,7 @@ class CategoryController extends Controller
 {
     public function index(Request $request): Response
     {
-        $categories = $request->user()
-            ->categories()
-            ->latest()
+        $categories = Category::latest()
             ->get()
             ->map(fn (Category $category) => [
                 'id' => $category->id,
@@ -34,15 +33,15 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        $request->user()->categories()->create($request->validated());
+        $house = $request->user()->getCurrentHouse();
+        
+        $house->categories()->create($request->validated());
 
         return back()->with('success', 'Categoria criada com sucesso.');
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        abort_unless($category->user_id === $request->user()->id, 404);
-
         $category->update($request->validated());
 
         return back()->with('success', 'Categoria atualizada com sucesso.');
@@ -50,8 +49,6 @@ class CategoryController extends Controller
 
     public function destroy(Request $request, Category $category): RedirectResponse
     {
-        abort_unless($category->user_id === $request->user()->id, 404);
-
         $category->delete();
 
         return back()->with('success', 'Categoria removida.');
@@ -61,10 +58,7 @@ class CategoryController extends Controller
     {
         $ids = $request->input('ids', []);
 
-        $request->user()
-            ->categories()
-            ->whereIn('id', $ids)
-            ->delete();
+        Category::whereIn('id', $ids)->delete();
 
         return back()->with('success', 'Categorias removidas com sucesso.');
     }

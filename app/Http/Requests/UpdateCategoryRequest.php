@@ -23,6 +23,8 @@ class UpdateCategoryRequest extends FormRequest
      */
     public function rules(): array
     {
+        $houseId = $this->user()?->getCurrentHouse()?->id;
+
         return [
             'code' => [
                 'required',
@@ -36,7 +38,7 @@ class UpdateCategoryRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('categories')
-                    ->where('user_id', $this->user()?->id)
+                    ->where('house_id', $houseId)
                     ->ignore($this->route('category')),
             ],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],

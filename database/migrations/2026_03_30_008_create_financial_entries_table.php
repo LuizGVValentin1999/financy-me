@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('financial_entries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('house_id')->constrained()->cascadeOnDelete();
             $table->foreignId('account_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('purchase_entry_id')->nullable()->constrained()->cascadeOnDelete();
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('description', 255)->nullable();
             $table->timestamps();
 
-            $table->index(['user_id', 'moved_at']);
+            $table->index(['house_id', 'moved_at']);
         });
     }
 

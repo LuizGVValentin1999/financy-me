@@ -23,6 +23,8 @@ class StoreCategoryRequest extends FormRequest
      */
     public function rules(): array
     {
+        $houseId = $this->user()?->getCurrentHouse()?->id;
+
         return [
             'code' => [
                 'required',
@@ -35,7 +37,7 @@ class StoreCategoryRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('categories')
-                    ->where('user_id', $this->user()?->id),
+                    ->where('house_id', $houseId),
             ],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'description' => ['nullable', 'string', 'max:1000'],

@@ -14,8 +14,10 @@ class PurchaseInvoiceController extends Controller
 {
     public function index(Request $request): Response
     {
+        $house = $request->user()->getCurrentHouse();
+
         $invoices = PurchaseInvoice::query()
-            ->whereBelongsTo($request->user())
+            ->where('house_id', $house->id)
             ->with([
                 'purchaseEntries' => fn ($query) => $query
                     ->with('product:id,name,unit')
@@ -34,7 +36,7 @@ class PurchaseInvoiceController extends Controller
                 'series' => $invoice->series,
                 'access_key' => $invoice->access_key,
                 'receipt_url' => $invoice->receipt_url,
-                'issued_at' => $invoice->issued_at?->toDateString(),
+                'issued_at' => $invoice->issued_at,
                 'items_count' => (int) $invoice->items_count,
                 'gross_amount' => (float) $invoice->gross_amount,
                 'discount_amount' => (float) $invoice->discount_amount,
@@ -64,7 +66,8 @@ class PurchaseInvoiceController extends Controller
 
     public function destroy(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse
     {
-        abort_unless($purchaseInvoice->user_id === $request->user()->id, 404);
+        $house = $request->user()->getCurrentHouse();
+        abort_unless($purchaseInvoice->house_id === $house->id, 404);
 
         DB::transaction(function () use ($purchaseInvoice) {
             $entries = $purchaseInvoice->purchaseEntries()

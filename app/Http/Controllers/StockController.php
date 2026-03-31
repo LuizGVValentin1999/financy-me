@@ -13,7 +13,9 @@ class StockController extends Controller
 {
     public function index(Request $request): Response
     {
-        $products = $request->user()->products()
+        $house = $request->user()->getCurrentHouse();
+        
+        $products = Product::where('house_id', $house->id)
             ->where('type', 'stockable')
             ->with('category:id,name,color')
             ->orderBy('name')
@@ -42,16 +44,19 @@ class StockController extends Controller
 
     public function withdraw(Request $request): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
+        
         $validated = $request->validate([
             'product_id' => [
                 'required',
                 'integer',
-                Rule::exists('products', 'id')->where('user_id', $request->user()->id),
+                Rule::exists('products', 'id')->where('house_id', $house->id),
             ],
             'quantity' => ['required', 'numeric', 'gt:0'],
         ]);
 
-        $product = $request->user()->products()->findOrFail($validated['product_id']);
+        $product = Product::where('house_id', $house->id)
+            ->findOrFail($validated['product_id']);
 
         if ($product->type !== 'stockable') {
             return back()->with('error', 'Somente produtos estocaveis podem ter retirada.');

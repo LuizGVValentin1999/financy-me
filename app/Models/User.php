@@ -3,14 +3,15 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'active_house_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -30,33 +31,74 @@ class User extends Authenticatable
         ];
     }
 
-    public function categories(): HasMany
+    public function activeHouse(): BelongsTo
     {
-        return $this->hasMany(Category::class);
+        return $this->belongsTo(House::class, 'active_house_id');
     }
 
-    public function accounts(): HasMany
+    public function houses(): BelongsToMany
     {
-        return $this->hasMany(Account::class);
+        return $this->belongsToMany(House::class, 'user_house')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
-    public function products(): HasMany
+    public function getCurrentHouse(): ?House
     {
-        return $this->hasMany(Product::class);
+        return $this->activeHouse ?? $this->houses()->first();
     }
 
-    public function purchaseEntries(): HasMany
+    public function categories()
     {
-        return $this->hasMany(PurchaseEntry::class);
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->categories()
+            : Category::query()->whereRaw('1 = 0');
     }
 
-    public function purchaseInvoices(): HasMany
+    public function accounts()
     {
-        return $this->hasMany(PurchaseInvoice::class);
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->accounts()
+            : Account::query()->whereRaw('1 = 0');
     }
 
-    public function financialEntries(): HasMany
+    public function products()
     {
-        return $this->hasMany(FinancialEntry::class);
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->products()
+            : Product::query()->whereRaw('1 = 0');
+    }
+
+    public function purchaseEntries()
+    {
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->purchaseEntries()
+            : PurchaseEntry::query()->whereRaw('1 = 0');
+    }
+
+    public function purchaseInvoices()
+    {
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->purchaseInvoices()
+            : PurchaseInvoice::query()->whereRaw('1 = 0');
+    }
+
+    public function financialEntries()
+    {
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->financialEntries()
+            : FinancialEntry::query()->whereRaw('1 = 0');
     }
 }

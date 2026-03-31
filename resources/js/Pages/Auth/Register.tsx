@@ -12,13 +12,17 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        house_action: 'create',
+        house_name: '',
+        house_code: '',
+        house_password: '',
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
         post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
+            onFinish: () => reset('password', 'password_confirmation', 'house_password'),
         });
     };
 
@@ -114,6 +118,77 @@ export default function Register() {
                         message={errors.password_confirmation}
                         className="mt-2"
                     />
+                </div>
+
+                <div className="mt-6 space-y-2">
+                    <InputLabel value="Casa" />
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setData('house_action', 'create')}
+                            className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                                data.house_action === 'create'
+                                    ? 'border-slate-900 bg-slate-900 text-white'
+                                    : 'border-slate-300 bg-white text-slate-700'
+                            }`}
+                        >
+                            Criar casa
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setData('house_action', 'join')}
+                            className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                                data.house_action === 'join'
+                                    ? 'border-slate-900 bg-slate-900 text-white'
+                                    : 'border-slate-300 bg-white text-slate-700'
+                            }`}
+                        >
+                            Entrar em casa
+                        </button>
+                    </div>
+                    <InputError message={errors.house_action} className="mt-2" />
+                </div>
+
+                {data.house_action === 'create' && (
+                    <div className="mt-4">
+                        <InputLabel htmlFor="house_name" value="Nome da casa" />
+                        <TextInput
+                            id="house_name"
+                            name="house_name"
+                            value={data.house_name}
+                            className="mt-2 block w-full"
+                            onChange={(e) => setData('house_name', e.target.value)}
+                            required
+                        />
+                        <InputError message={errors.house_name} className="mt-2" />
+                    </div>
+                )}
+
+                <div className="mt-4">
+                    <InputLabel htmlFor="house_code" value="Codigo da casa (sem espacos)" />
+                    <TextInput
+                        id="house_code"
+                        name="house_code"
+                        value={data.house_code}
+                        className="mt-2 block w-full"
+                        onChange={(e) => setData('house_code', e.target.value)}
+                        required
+                    />
+                    <InputError message={errors.house_code} className="mt-2" />
+                </div>
+
+                <div className="mt-4">
+                    <InputLabel htmlFor="house_password" value="Senha da casa" />
+                    <TextInput
+                        id="house_password"
+                        type="password"
+                        name="house_password"
+                        value={data.house_password}
+                        className="mt-2 block w-full"
+                        onChange={(e) => setData('house_password', e.target.value)}
+                        required
+                    />
+                    <InputError message={errors.house_password} className="mt-2" />
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

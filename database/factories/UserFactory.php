@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\House;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +32,20 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $house = House::create([
+                'name' => 'Casa '.$user->id,
+                'code' => 'casa_'.$user->id,
+                'password' => Hash::make('house-password'),
+            ]);
+
+            $user->houses()->attach($house->id, ['role' => 'admin']);
+            $user->update(['active_house_id' => $house->id]);
+        });
     }
 
     /**

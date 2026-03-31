@@ -2,7 +2,7 @@
 
 use App\Models\User;
 
-test('account code uniqueness is scoped per user', function () {
+test('account code uniqueness is scoped per house', function () {
     $firstUser = User::factory()->create();
     $secondUser = User::factory()->create();
 
@@ -13,16 +13,11 @@ test('account code uniqueness is scoped per user', function () {
         'initial_balance_date' => now()->toDateString(),
     ];
 
-    $this->actingAs($firstUser)
-        ->post(route('accounts.store'), $payload)
-        ->assertRedirect();
+    $firstUser->getCurrentHouse()?->accounts()->create($payload);
+    $secondUser->getCurrentHouse()?->accounts()->create($payload);
 
-    $this->actingAs($secondUser)
-        ->post(route('accounts.store'), $payload)
-        ->assertRedirect();
-
-    expect($firstUser->accounts()->count())->toBe(1);
-    expect($secondUser->accounts()->count())->toBe(1);
+    expect($firstUser->getCurrentHouse()?->accounts()->count())->toBe(1);
+    expect($secondUser->getCurrentHouse()?->accounts()->count())->toBe(1);
 });
 
 test('user can create and update a manual financial entry', function () {

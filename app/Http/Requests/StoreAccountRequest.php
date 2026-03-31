@@ -23,12 +23,14 @@ class StoreAccountRequest extends FormRequest
      */
     public function rules(): array
     {
+        $houseId = $this->user()?->getCurrentHouse()?->id;
+
         return [
             'code' => [
                 'required',
                 'string',
                 'max:50',
-                Rule::unique('accounts')->where('user_id', $this->user()?->id),
+                Rule::unique('accounts')->where('house_id', $houseId),
             ],
             'name' => ['required', 'string', 'max:255'],
             'initial_balance' => ['required', 'numeric', 'min:0'],

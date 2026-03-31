@@ -23,21 +23,23 @@ class StorePurchaseEntryRequest extends FormRequest
      */
     public function rules(): array
     {
+        $houseId = $this->user()?->getCurrentHouse()?->id;
+
         return [
             'product_id' => [
                 'required',
                 'integer',
                 Rule::exists('products', 'id')->where(
-                    'user_id',
-                    $this->user()?->id,
+                    'house_id',
+                    $houseId,
                 ),
             ],
             'account_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('accounts', 'id')->where(
-                    'user_id',
-                    $this->user()?->id,
+                    'house_id',
+                    $houseId,
                 ),
             ],
             'quantity' => ['required', 'numeric', 'gt:0'],

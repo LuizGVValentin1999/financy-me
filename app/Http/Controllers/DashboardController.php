@@ -19,12 +19,12 @@ class DashboardController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
-        $user = $request->user();
+        $house = $request->user()->getCurrentHouse();
         $startDate = $validated['start_date'] ?? now()->subDays(30)->toDateString();
         $endDate = $validated['end_date'] ?? now()->toDateString();
 
         $products = Product::query()
-            ->whereBelongsTo($user)
+            ->where('house_id', $house->id)
             ->with('category:id,name,color')
             ->withSum([
                 'purchaseEntries as period_quantity' => fn ($query) => $query
@@ -60,7 +60,7 @@ class DashboardController extends Controller
             ]);
 
         $recentEntries = PurchaseEntry::query()
-            ->whereBelongsTo($user)
+            ->where('house_id', $house->id)
             ->with('product:id,name,unit')
             ->latest('purchased_at')
             ->limit(6)
@@ -73,15 +73,15 @@ class DashboardController extends Controller
                 'total_amount' => (float) $entry->total_amount,
                 'source' => $entry->source,
                 'invoice_reference' => $entry->invoice_reference,
-                'purchased_at' => $entry->purchased_at?->toDateString(),
+                'purchased_at' => $entry->purchased_at,
             ]);
 
         $periodEntries = PurchaseEntry::query()
-            ->whereBelongsTo($user)
+            ->where('house_id', $house->id)
             ->whereBetween('purchased_at', [$startDate, $endDate]);
 
         $periodFinancialEntries = FinancialEntry::query()
-            ->whereBelongsTo($user)
+            ->where('house_id', $house->id)
             ->whereBetween('moved_at', [$startDate, $endDate]);
 
         $periodIncome = (float) (clone $periodFinancialEntries)
@@ -92,7 +92,7 @@ class DashboardController extends Controller
             ->where('direction', 'outflow')
             ->sum('amount');
 
-        $accountsBalance = $user->accounts()
+        $accountsBalance = $house->accounts()
             ->get()
             ->sum(function ($account) {
                 $income = (float) $account->financialEntries()->where('direction', 'inflow')->sum('amount');
@@ -112,10 +112,10 @@ class DashboardController extends Controller
                 ),
             ],
             'stats' => [
-                'categories' => $user->categories()->count(),
-                'accounts' => $user->accounts()->count(),
-                'products' => $user->products()->count(),
-                'current_stock' => (float) $user->products()->sum('current_stock'),
+                'categories' => $house->categories()->count(),
+                'accounts' => $house->accounts()->count(),
+                'products' => $house->products()->count(),
+                'current_stock' => (float) $house->products()->sum('current_stock'),
                 'period_quantity' => (float) $periodEntries->sum('quantity'),
                 'period_spent' => (float) $periodEntries->sum('total_amount'),
                 'period_income' => $periodIncome,
@@ -124,7 +124,7 @@ class DashboardController extends Controller
             ],
             'products' => $products,
             'recentEntries' => $recentEntries,
-            'accounts' => $user->accounts()
+            'accounts' => $house->accounts()
                 ->orderBy('name')
                 ->get()
                 ->map(fn ($account) => [
@@ -136,7 +136,7 @@ class DashboardController extends Controller
                     'income_sum' => (float) $account->financialEntries()->where('direction', 'inflow')->sum('amount'),
                     'expense_sum' => (float) $account->financialEntries()->where('direction', 'outflow')->sum('amount'),
                 ]),
-            'categoryBreakdown' => $user->categories()
+            'categoryBreakdown' => $house->categories()
                 ->withCount('products')
                 ->orderBy('name')
                 ->get()

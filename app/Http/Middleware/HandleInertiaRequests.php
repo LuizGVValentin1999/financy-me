@@ -29,10 +29,31 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        
+        // Create a custom user object with current house data
+        if ($user) {
+            $userData = $user->toArray();
+            $currentHouse = $user->getCurrentHouse();
+            
+            if ($currentHouse) {
+                $userData['currentHouse'] = [
+                    'id' => $currentHouse->id,
+                    'name' => $currentHouse->name,
+                    'code' => $currentHouse->code,
+                    'description' => $currentHouse->description,
+                ];
+            } else {
+                $userData['currentHouse'] = null;
+            }
+            
+            $user = (object) $userData;
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

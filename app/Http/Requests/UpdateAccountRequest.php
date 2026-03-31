@@ -23,13 +23,15 @@ class UpdateAccountRequest extends FormRequest
      */
     public function rules(): array
     {
+        $houseId = $this->user()?->getCurrentHouse()?->id;
+
         return [
             'code' => [
                 'required',
                 'string',
                 'max:50',
                 Rule::unique('accounts')
-                    ->where('user_id', $this->user()?->id)
+                    ->where('house_id', $houseId)
                     ->ignore($this->route('account')),
             ],
             'name' => ['required', 'string', 'max:255'],

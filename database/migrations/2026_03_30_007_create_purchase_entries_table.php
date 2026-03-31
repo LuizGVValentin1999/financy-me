@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('purchase_entries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('house_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->foreignId('purchase_invoice_id')->nullable()->constrained('purchase_invoices')->nullOnDelete();
             $table->foreignId('account_id')->nullable()->constrained()->nullOnDelete();
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->index(['user_id', 'purchased_at']);
+            $table->index(['house_id', 'purchased_at']);
         });
     }
 
