@@ -1,5 +1,6 @@
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ImportNfceModal from '@/Pages/Purchases/components/ImportNfceModal';
 import ImportPreviewSection from '@/Pages/Purchases/components/ImportPreviewSection';
@@ -7,7 +8,6 @@ import PurchaseFormModal from '@/Pages/Purchases/components/PurchaseFormModal';
 import PurchaseHistoryTable from '@/Pages/Purchases/components/PurchaseHistoryTable';
 import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import { Head, useForm } from '@inertiajs/react';
-import { message } from 'antd';
 import { FormEvent, useEffect, useState } from 'react';
 
 export default function PurchasesIndex({
@@ -22,6 +22,7 @@ export default function PurchasesIndex({
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const [productsCatalog, setProductsCatalog] = useState(products);
+    const { message } = useAntdApp();
 
     useEffect(() => {
         setProductsCatalog(products);

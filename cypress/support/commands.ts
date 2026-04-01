@@ -3,6 +3,8 @@ type LoginCredentials = {
 	password: string;
 };
 
+type AntdSelectOption = string | RegExp;
+
 type RegisterUserOptions = Partial<{
 	name: string;
 	email: string;
@@ -11,6 +13,27 @@ type RegisterUserOptions = Partial<{
 	houseCode: string;
 	housePassword: string;
 }>;
+
+type CreateProductOptions = {
+	name: string;
+	brand?: string;
+	sku?: string;
+	category?: AntdSelectOption;
+	type?: AntdSelectOption;
+};
+
+type CreateManualPurchaseOptions = {
+	productName: string;
+	accountLabel?: string;
+	quantity: string;
+	unitPrice: string;
+};
+
+type WithdrawStockOptions = {
+	productName: string;
+	quantity: string;
+	expectedStockText?: string;
+};
 
 const uniqueSuffix = () => `${Date.now()}${Cypress._.random(1000, 9999)}`;
 
@@ -66,11 +89,128 @@ Cypress.Commands.add('registerAndLogin', (options: RegisterUserOptions = {}) => 
 	);
 });
 
+Cypress.Commands.add(
+	'selectAntdOption',
+	(id: string, option: AntdSelectOption, searchable = false) => {
+		cy.get(`input[id="${id}"]`).click({ force: true });
+
+		cy.get('body')
+			.find('.ant-select-dropdown:not(.ant-select-dropdown-hidden)', {
+				timeout: 10000,
+			})
+			.should('have.length.at.least', 1);
+
+		if (searchable && typeof option === 'string') {
+			cy.get(`input[id="${id}"]`)
+				.clear({ force: true })
+				.type(option, { force: true });
+		}
+
+		cy.get('body')
+			.find('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
+			.last()
+			.contains('.ant-select-item-option-content', option, {
+				timeout: 10000,
+			})
+			.click({ force: true });
+	},
+);
+
+Cypress.Commands.add('assertNoVisibleModal', () => {
+	cy.get('body', { timeout: 15000 }).should(($body) => {
+		expect($body.find('.ant-modal-wrap:visible').length).to.equal(0);
+	});
+});
+
+Cypress.Commands.add('createProductViaUi', (options: CreateProductOptions) => {
+	cy.contains('button', 'Novo produto').click();
+	cy.intercept('POST', '**/products').as('storeProduct');
+	cy.get('input#name', { timeout: 10000 }).should('exist').type(options.name, {
+		force: true,
+	});
+
+	if (options.brand) {
+		cy.get('input#brand').type(options.brand, { force: true });
+	}
+
+	if (options.sku) {
+		cy.get('input#sku').type(options.sku, { force: true });
+	}
+
+	if (options.category) {
+		cy.selectAntdOption('category_id', options.category);
+	}
+
+	if (options.type) {
+		cy.selectAntdOption('type', options.type);
+	}
+
+	cy.contains('button', 'Criar produto').click();
+	cy.wait('@storeProduct')
+		.its('response.statusCode')
+		.should('be.oneOf', [200, 302, 303]);
+	cy.assertNoVisibleModal();
+});
+
+Cypress.Commands.add(
+	'createManualPurchaseViaUi',
+	({ productName, accountLabel, quantity, unitPrice }: CreateManualPurchaseOptions) => {
+		cy.contains('button', 'Nova compra manual').click();
+		cy.selectAntdOption('product_id', productName, true);
+
+		if (accountLabel) {
+			cy.selectAntdOption('account_id', accountLabel);
+		}
+
+		cy.intercept('POST', '**/purchases').as('storePurchase');
+		cy.get('input#quantity').clear().type(quantity);
+		cy.get('input#unit_price').clear().type(unitPrice);
+		cy.contains('button', 'Registrar compra').click();
+		cy.wait('@storePurchase')
+			.its('response.statusCode')
+			.should('be.oneOf', [200, 302, 303]);
+		cy.assertNoVisibleModal();
+	},
+);
+
+Cypress.Commands.add(
+	'withdrawStockViaUi',
+	({ productName, quantity, expectedStockText }: WithdrawStockOptions) => {
+		cy.contains('tr', productName, { timeout: 10000 }).as('stockRow');
+		cy.get('@stockRow').click();
+		cy.intercept('POST', '**/stock/withdraw').as('withdrawStock');
+		cy.get('input#quantity').clear().type(quantity);
+		cy.contains('button', 'Confirmar retirada').click();
+		cy.wait('@withdrawStock')
+			.its('response.statusCode')
+			.should('be.oneOf', [200, 302, 303]);
+		cy.assertNoVisibleModal();
+
+		if (expectedStockText) {
+			cy.contains('tr', productName, { timeout: 10000 }).should(
+				'contain.text',
+				expectedStockText,
+			);
+		}
+	},
+);
+
 declare global {
 	namespace Cypress {
 		interface Chainable {
 			loginByUi(credentials: LoginCredentials): Chainable<void>;
 			registerAndLogin(options?: RegisterUserOptions): Chainable<LoginCredentials>;
+			selectAntdOption(
+				id: string,
+				option: AntdSelectOption,
+				searchable?: boolean,
+			): Chainable<void>;
+			assertNoVisibleModal(): Chainable<void>;
+			createProductViaUi(options: CreateProductOptions): Chainable<void>;
+			createManualPurchaseViaUi(
+				options: CreateManualPurchaseOptions,
+			): Chainable<void>;
+			withdrawStockViaUi(options: WithdrawStockOptions): Chainable<void>;
 		}
 	}
 }

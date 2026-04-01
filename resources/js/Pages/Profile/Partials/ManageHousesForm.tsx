@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
-import { Button, Collapse, Space, Tag, message } from 'antd';
+import { Button, Collapse, Space, Tag } from 'antd';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import CreateHouseModal from '@/Pages/Profile/Partials/components/CreateHouseModal';
 import JoinHouseModal from '@/Pages/Profile/Partials/components/JoinHouseModal';
 import { useState } from 'react';
@@ -25,6 +26,7 @@ export default function ManageHousesForm({
     active_house_id,
     className = '',
 }: ManageHousesFormProps) {
+    const { message } = useAntdApp();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
     const [createData, setCreateData] = useState({

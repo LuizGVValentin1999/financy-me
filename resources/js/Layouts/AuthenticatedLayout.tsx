@@ -1,6 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import { PageProps } from '@/types';
-import { Button, Drawer, Menu, type MenuProps, message } from 'antd';
+import { Button, Drawer, Menu, type MenuProps } from 'antd';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Boxes,
@@ -181,6 +182,7 @@ export default function AuthenticatedLayout({
 
     const selectedKey = navigation.find((item) => item.active)?.key;
     const lastErrorFlashRef = useRef<string | null>(null);
+    const { message } = useAntdApp();
 
     useEffect(() => {
         const nextError = flash.error ?? null;
@@ -251,11 +253,15 @@ export default function AuthenticatedLayout({
                 open={mobileMenuOpen}
                 onClose={() => setMobileMenuOpen(false)}
                 placement="left"
-                width={320}
+                size="default"
                 closable={false}
                 className="app-mobile-drawer"
                 rootClassName="app-mobile-drawer"
                 styles={{
+                    wrapper: {
+                        width: 320,
+                        maxWidth: '100vw',
+                    },
                     body: {
                         padding: 24,
                         background: '#0f172a',

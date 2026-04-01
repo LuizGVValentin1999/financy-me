@@ -38,13 +38,15 @@ class DashboardController extends Controller
 
         $startDate = $validated['start_date'] ?? now()->subDays(30)->toDateString();
         $endDate = $validated['end_date'] ?? now()->toDateString();
+        $startDateTime = Carbon::parse($startDate)->startOfDay()->toDateTimeString();
+        $endDateTime = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
         $selectedCategoryIds = array_map('intval', $validated['category_ids'] ?? []);
         $selectedAccountIds = array_map('intval', $validated['account_ids'] ?? []);
         $selectedProductIds = array_map('intval', $validated['product_ids'] ?? []);
 
         $entriesQuery = PurchaseEntry::query()
             ->where('house_id', $house->id)
-            ->whereBetween('purchased_at', [$startDate, $endDate])
+            ->whereBetween('purchased_at', [$startDateTime, $endDateTime])
             ->with([
                 'product:id,name,unit,type,category_id',
                 'product.category:id,name,color',
@@ -100,7 +102,7 @@ class DashboardController extends Controller
         $periodOutflowQuery = FinancialEntry::query()
             ->where('house_id', $house->id)
             ->where('direction', 'outflow')
-            ->whereBetween('moved_at', [$startDate, $endDate]);
+            ->whereBetween('moved_at', [$startDateTime, $endDateTime]);
 
         if ($selectedAccountIds !== []) {
             $periodOutflowQuery->whereIn('account_id', $selectedAccountIds);

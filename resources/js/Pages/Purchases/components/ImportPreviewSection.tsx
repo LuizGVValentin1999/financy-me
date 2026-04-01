@@ -4,11 +4,12 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import SecondaryButton from '@/Components/SecondaryButton';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import { useDependencyErrorNotification } from '@/hooks/useDependencyErrorNotification';
 import { formatCurrency } from '@/lib/format';
 import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import { router, useForm } from '@inertiajs/react';
-import { DatePicker, Modal as AntdModal, Select, message } from 'antd';
+import { DatePicker, Select } from 'antd';
 import { FormEvent, useMemo } from 'react';
 import dayjs from 'dayjs';
 import ImportPreviewItemCard from './importPreview/ImportPreviewItemCard';
@@ -32,6 +33,7 @@ export default function ImportPreviewSection({
     accounts: PurchasesPageProps['accounts'];
 }) {
     const firstAccountId = accounts[0] ? String(accounts[0].id) : '';
+    const { message, modal } = useAntdApp();
 
     const meaningfulPaymentMethods = useMemo(
         () => getMeaningfulPaymentMethods(preview.payment_methods),
@@ -174,7 +176,7 @@ export default function ImportPreviewSection({
                     type="button"
                     className="px-4 py-2 text-xs"
                     onClick={() => {
-                        AntdModal.confirm({
+                        modal.confirm({
                             title: 'Confirmar exclusão',
                             content: 'Excluir rascunho da importação?',
                             okText: 'Sim',

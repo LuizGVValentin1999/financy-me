@@ -36,13 +36,15 @@ export default function Modal({
                 open={show}
                 onClose={close}
                 closeIcon={closeable ? undefined : false}
-                maskClosable={closeable}
+                mask={{ closable: closeable }}
                 keyboard={closeable}
                 placement="right"
-                width="100%"
+                size="default"
+                destroyOnHidden
                 className="app-fullscreen-modal"
                 rootClassName="app-fullscreen-modal"
                 styles={{
+                    wrapper: { width: '100%' },
                     body: { padding: 0 },
                     header: {
                         padding: '12px 16px',
@@ -61,9 +63,10 @@ export default function Modal({
             onCancel={close}
             footer={null}
             closable={closeable}
-            maskClosable={closeable}
+            mask={{ closable: closeable }}
             keyboard={closeable}
             width={maxWidthValue}
+            destroyOnHidden
             centered
             className="app-responsive-modal"
             rootClassName="app-responsive-modal"

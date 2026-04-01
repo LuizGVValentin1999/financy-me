@@ -1,9 +1,9 @@
 import SectionCard from '@/Components/SectionCard';
 import StatCard from '@/Components/StatCard';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, Link, router } from '@inertiajs/react';
-import { Modal, message } from 'antd';
 
 interface InvoicesPageProps {
     stats: {
@@ -40,8 +40,10 @@ interface InvoicesPageProps {
 }
 
 export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
+    const { message, modal } = useAntdApp();
+
     const deleteInvoice = (invoiceId: number) => {
-        Modal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: 'Excluir esta nota fiscal? Isso vai remover também as compras e os lançamentos financeiros gerados por ela.',
             okText: 'Sim',

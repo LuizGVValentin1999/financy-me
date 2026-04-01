@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import { Head, router } from '@inertiajs/react';
-import { message } from 'antd';
 
 type HouseItem = {
     id: number;
@@ -16,6 +16,8 @@ type Props = {
 };
 
 export default function ListHouses({ houses }: Props) {
+    const { message } = useAntdApp();
+
     return (
         <AuthenticatedLayout>
             <Head title="Minhas casas" />

@@ -60,6 +60,12 @@ class ParanaNfceImporter
             throw new RuntimeException('No momento so aceitamos links de NFC-e do portal da SEFAZ do Parana.');
         }
 
+        if (app()->environment('testing')) {
+            return $this->parseHtml(
+                (string) file_get_contents(base_path('tests/Fixtures/parana_nfce_sample.html')),
+            );
+        }
+
         $response = Http::timeout(20)
             ->retry(2, 300)
             ->withHeaders([

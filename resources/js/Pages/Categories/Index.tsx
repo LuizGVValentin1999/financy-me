@@ -2,12 +2,13 @@ import DangerButton from '@/Components/DangerButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import CategoryModal from '@/Pages/Categories/components/CategoryModal';
 import type { CategoriesPageProps, CategoryRow, CategoryTableRecord } from '@/Pages/Categories/types';
 import { formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Modal as AntdModal, Table, message } from 'antd';
+import { Table } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -15,6 +16,7 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<CategoryRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+    const { message, modal } = useAntdApp();
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         code: '',
@@ -97,7 +99,7 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
             return;
         }
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: 'Excluir esta categoria?',
             okText: 'Sim',
@@ -122,7 +124,7 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
 
         const total = selectedRowKeys.length;
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: total === 1 ? 'Excluir 1 categoria selecionada?' : `Excluir ${total} categorias selecionadas?`,
             okText: 'Sim',

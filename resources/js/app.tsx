@@ -2,7 +2,7 @@ import '../css/app.css';
 import 'antd/dist/reset.css';
 import './bootstrap';
 
-import { ConfigProvider } from 'antd';
+import { App as AntdApp, ConfigProvider } from 'antd';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
@@ -56,7 +56,9 @@ createInertiaApp({
                     },
                 }}
             >
-                <App {...props} />
+                <AntdApp>
+                    <App {...props} />
+                </AntdApp>
             </ConfigProvider>,
         );
     },

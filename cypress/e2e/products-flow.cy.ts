@@ -6,18 +6,11 @@ describe('Product flow', () => {
         cy.registerAndLogin();
         cy.visit('/products');
 
-        cy.contains('button', 'Novo produto').click();
-
-        cy.intercept('POST', '**/products').as('storeProduct');
-
-        cy.get('input#name').should('be.visible').type(productName);
-        cy.get('input#brand').type('Marca E2E');
-        cy.get('input#sku').type(productSku);
-
-        cy.contains('button', 'Criar produto').click();
-        cy.wait('@storeProduct')
-            .its('response.statusCode')
-            .should('be.oneOf', [200, 302, 303]);
+        cy.createProductViaUi({
+            name: productName,
+            brand: 'Marca E2E',
+            sku: productSku,
+        });
 
         cy.contains(productName, { timeout: 10000 }).should('be.visible');
     });

@@ -88,3 +88,69 @@ test('dashboard shows registered inventory information', function () {
         ->assertSee('Detergente')
         ->assertSee('Limpeza');
 });
+
+test('dashboard includes entries created on the selected end date even when stored with time', function () {
+    $user = User::factory()->create();
+
+    $category = $user->categories()->create([
+        'code' => 'CAT-SERV',
+        'name' => 'Servicos',
+        'color' => '#0F766E',
+        'description' => 'Servicos recorrentes',
+    ]);
+
+    $account = $user->accounts()->create([
+        'code' => 'ACC-SERV',
+        'name' => 'Conta servicos',
+        'initial_balance' => 200,
+        'initial_balance_date' => '2026-04-01',
+    ]);
+
+    $product = $user->products()->create([
+        'category_id' => $category->id,
+        'name' => 'Servico de limpeza',
+        'brand' => null,
+        'sku' => null,
+        'unit' => 'un',
+        'type' => 'non_stockable',
+        'minimum_stock' => 0,
+        'current_stock' => 0,
+        'notes' => null,
+    ]);
+
+    $entry = $user->purchaseEntries()->create([
+        'product_id' => $product->id,
+        'account_id' => $account->id,
+        'quantity' => 1,
+        'unit_price' => 30,
+        'total_amount' => 30,
+        'purchased_at' => '2026-04-01 00:00:00',
+        'source' => 'manual',
+        'invoice_reference' => 'NF-SERV-001',
+        'notes' => 'Servico de limpeza mensal',
+    ]);
+
+    $entry->financialEntries()->create([
+        'house_id' => $user->active_house_id,
+        'account_id' => $account->id,
+        'purchase_entry_id' => $entry->id,
+        'direction' => 'outflow',
+        'origin' => 'manual_purchase',
+        'amount' => 30,
+        'moved_at' => '2026-04-01 00:00:00',
+        'description' => 'Compra: Servico de limpeza',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard', [
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-01',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard')
+            ->where('stats.entries_count', 1)
+            ->where('stats.period_spent', 30)
+            ->where('entries.0.product_name', 'Servico de limpeza')
+        );
+});

@@ -2,12 +2,13 @@ import DangerButton from '@/Components/DangerButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import FinancialEntryModal from '@/Pages/Financial/components/FinancialEntryModal';
 import type { EntryRow, EntryTableRecord, FinancialPageProps } from '@/Pages/Financial/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Modal as AntdModal, Table, Tag, message } from 'antd';
+import { Table, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useMemo, useState } from 'react';
 
@@ -15,6 +16,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingEntry, setEditingEntry] = useState<EntryRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+    const { message, modal } = useAntdApp();
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         account_id: '',
@@ -107,7 +109,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             return;
         }
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: 'Excluir este lançamento?',
             okText: 'Sim',
@@ -132,7 +134,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
 
         const total = selectedRowKeys.length;
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content:
                 total === 1

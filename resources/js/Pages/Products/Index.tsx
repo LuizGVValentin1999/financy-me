@@ -2,12 +2,13 @@ import DangerButton from '@/Components/DangerButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ProductModal from '@/Pages/Products/components/ProductModal';
 import type { ProductRow, ProductsPageProps, ProductTableRecord } from '@/Pages/Products/types';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
+import { Button, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -15,6 +16,7 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+    const { message, modal } = useAntdApp();
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         category_id: '',
@@ -109,7 +111,7 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
             return;
         }
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: 'Excluir este produto?',
             okText: 'Sim',
@@ -134,7 +136,7 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
 
         const total = selectedRowKeys.length;
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: total === 1 ? 'Excluir 1 produto selecionado?' : `Excluir ${total} produtos selecionados?`,
             okText: 'Sim',

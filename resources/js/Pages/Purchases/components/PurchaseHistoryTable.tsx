@@ -1,10 +1,11 @@
 import DangerButton from '@/Components/DangerButton';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import type { PurchaseEntryRow, PurchasesPageProps } from '@/Pages/Purchases/types';
 import { router, useForm } from '@inertiajs/react';
-import { Button, DatePicker, Input, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
+import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { FormEvent, Key, useState } from 'react';
@@ -27,6 +28,7 @@ export default function PurchaseHistoryTable({
     const [groupBy, setGroupBy] = useState<PurchaseGroupBy>('none');
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
     const [editingEntry, setEditingEntry] = useState<PurchaseEntryRow | null>(null);
+    const { message, modal } = useAntdApp();
     const {
         data: editData,
         setData: setEditData,
@@ -89,7 +91,7 @@ export default function PurchaseHistoryTable({
             return;
         }
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: 'Excluir este registro de compra?',
             okText: 'Sim',
@@ -114,7 +116,7 @@ export default function PurchaseHistoryTable({
 
         const total = selectedRowKeys.length;
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content:
                 total === 1

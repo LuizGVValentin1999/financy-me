@@ -2,12 +2,13 @@ import DangerButton from '@/Components/DangerButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
+import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AccountModal from '@/Pages/Accounts/components/AccountModal';
 import type { AccountRow, AccountsPageProps, AccountTableRecord } from '@/Pages/Accounts/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Modal as AntdModal, Table, Tag, message } from 'antd';
+import { Table, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -15,6 +16,7 @@ export default function AccountsIndex({ accounts }: AccountsPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+    const { message, modal } = useAntdApp();
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         code: '',
@@ -97,7 +99,7 @@ export default function AccountsIndex({ accounts }: AccountsPageProps) {
             return;
         }
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: 'Excluir esta conta?',
             okText: 'Sim',
@@ -122,7 +124,7 @@ export default function AccountsIndex({ accounts }: AccountsPageProps) {
 
         const total = selectedRowKeys.length;
 
-        AntdModal.confirm({
+        modal.confirm({
             title: 'Confirmar exclusão',
             content: total === 1 ? 'Excluir 1 conta selecionada?' : `Excluir ${total} contas selecionadas?`,
             okText: 'Sim',
