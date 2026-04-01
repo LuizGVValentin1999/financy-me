@@ -18,6 +18,27 @@
             linear-gradient(180deg, #fffaf2 0%, #f8f4ec 100%);
     }
 
+    input,
+    textarea,
+    select,
+    .ant-input,
+    .ant-input-affix-wrapper,
+    .ant-select-selector,
+    .ant-select-selection-item,
+    .ant-select-selection-search-input,
+    .ant-picker-input > input {
+        font-family: 'Manrope', sans-serif;
+        color: rgb(71 85 105); /* slate-600 */
+        font-weight: 500;
+    }
+
+    ::placeholder,
+    .ant-select-selection-placeholder,
+    .ant-picker-input > input::placeholder {
+        color: rgb(148 163 184); /* slate-400 */
+        font-weight: 500;
+    }
+
     h1,
     h2,
     h3,

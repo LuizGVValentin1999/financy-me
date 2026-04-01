@@ -2,7 +2,8 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import { formatCurrency } from '@/lib/format';
 import type { AccountOption, ProductOption, SourceOption } from '@/Pages/Purchases/components/purchaseForm/types';
-import { Select } from 'antd';
+import { DatePicker, Select } from 'antd';
+import dayjs from 'dayjs';
 
 interface PurchaseMainFieldsProps {
     formData: Record<string, string>;
@@ -115,12 +116,15 @@ export default function PurchaseMainFields({
             <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel htmlFor="purchased_at" value="Data da compra" />
-                    <input
+                    <DatePicker
                         id="purchased_at"
-                        type="date"
-                        value={formData.purchased_at}
-                        onChange={(event) => setFormData('purchased_at', event.target.value)}
-                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                        value={formData.purchased_at ? dayjs(formData.purchased_at) : null}
+                        format="DD/MM/YYYY"
+                        size="large"
+                        onChange={(date) =>
+                            setFormData('purchased_at', date ? date.format('YYYY-MM-DD') : '')
+                        }
+                        className="mt-2 w-full"
                     />
                     <InputError message={errors.purchased_at} className="mt-2" />
                 </div>

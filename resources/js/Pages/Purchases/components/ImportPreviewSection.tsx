@@ -8,8 +8,9 @@ import { useDependencyErrorNotification } from '@/hooks/useDependencyErrorNotifi
 import { formatCurrency } from '@/lib/format';
 import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import { router, useForm } from '@inertiajs/react';
-import { Modal as AntdModal, Select, message } from 'antd';
+import { DatePicker, Modal as AntdModal, Select, message } from 'antd';
 import { FormEvent, useMemo } from 'react';
+import dayjs from 'dayjs';
 import ImportPreviewItemCard from './importPreview/ImportPreviewItemCard';
 import ImportPreviewSidebar from './importPreview/ImportPreviewSidebar';
 import {
@@ -313,18 +314,23 @@ export default function ImportPreviewSection({
                                                 htmlFor={`payments.${paymentIndex}.first_due_date`}
                                                 value="1º vencimento"
                                             />
-                                            <input
+                                            <DatePicker
                                                 id={`payments.${paymentIndex}.first_due_date`}
-                                                type="date"
-                                                value={payment.first_due_date}
-                                                onChange={(event) =>
+                                                value={
+                                                    payment.first_due_date
+                                                        ? dayjs(payment.first_due_date)
+                                                        : null
+                                                }
+                                                format="DD/MM/YYYY"
+                                                size="large"
+                                                onChange={(date) =>
                                                     updatePayment(
                                                         paymentIndex,
                                                         'first_due_date',
-                                                        event.target.value,
+                                                        date ? date.format('YYYY-MM-DD') : '',
                                                     )
                                                 }
-                                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                className="mt-2 w-full"
                                             />
                                             <InputError
                                                 message={errors[`payments.${paymentIndex}.first_due_date`]}

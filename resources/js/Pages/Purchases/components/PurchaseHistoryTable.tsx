@@ -4,8 +4,9 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import type { PurchaseEntryRow, PurchasesPageProps } from '@/Pages/Purchases/types';
 import { router, useForm } from '@inertiajs/react';
-import { Button, Input, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
+import { Button, DatePicker, Input, Modal as AntdModal, Select, Space, Table, Tag, message } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
+import dayjs from 'dayjs';
 import { FormEvent, Key, useState } from 'react';
 import { buildPurchaseHistoryDataSource } from './purchaseHistory/buildDataSource';
 import GroupingToolbar from './purchaseHistory/GroupingToolbar';
@@ -193,10 +194,18 @@ export default function PurchaseHistoryTable({
                 record.isGroup && groupBy !== 'date' ? '--' : formatDate(record.purchased_at),
             filterDropdown: ({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
                 <div className="w-56 p-3">
-                    <Input
-                        type="date"
-                        value={String(selectedKeys[0] ?? '')}
-                        onChange={(event) => setSelectedKeys(event.target.value ? [event.target.value] : [])}
+                    <DatePicker
+                        value={
+                            selectedKeys[0]
+                                ? dayjs(String(selectedKeys[0]))
+                                : null
+                        }
+                        format="DD/MM/YYYY"
+                        size="large"
+                        onChange={(date) =>
+                            setSelectedKeys(date ? [date.format('YYYY-MM-DD')] : [])
+                        }
+                        className="w-full"
                     />
                     <Space className="mt-3">
                         <Button type="primary" size="small" onClick={() => confirm()}>

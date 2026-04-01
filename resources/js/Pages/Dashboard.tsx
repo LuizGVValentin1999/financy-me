@@ -6,8 +6,9 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, Link, router } from '@inertiajs/react';
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
+import dayjs from 'dayjs';
 import { FormEvent, Key, useEffect, useMemo, useState } from 'react';
 
 interface DashboardProps {
@@ -717,31 +718,39 @@ export default function Dashboard({
                 <div className="grid gap-4 md:grid-cols-2">
                     <label className="text-sm font-semibold text-slate-600">
                         Inicio
-                        <input
-                            type="date"
-                            value={draftFilters.start_date}
-                            onChange={(event) =>
+                        <DatePicker
+                            value={
+                                draftFilters.start_date
+                                    ? dayjs(draftFilters.start_date)
+                                    : null
+                            }
+                            format="DD/MM/YYYY"
+                            size="large"
+                            onChange={(date) =>
                                 setDraftFilters((previous) => ({
                                     ...previous,
-                                    start_date: event.target.value,
+                                    start_date: date ? date.format('YYYY-MM-DD') : '',
                                 }))
                             }
-                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            className="mt-2 w-full"
                         />
                     </label>
 
                     <label className="text-sm font-semibold text-slate-600">
                         Fim
-                        <input
-                            type="date"
-                            value={draftFilters.end_date}
-                            onChange={(event) =>
+                        <DatePicker
+                            value={
+                                draftFilters.end_date ? dayjs(draftFilters.end_date) : null
+                            }
+                            format="DD/MM/YYYY"
+                            size="large"
+                            onChange={(date) =>
                                 setDraftFilters((previous) => ({
                                     ...previous,
-                                    end_date: event.target.value,
+                                    end_date: date ? date.format('YYYY-MM-DD') : '',
                                 }))
                             }
-                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                            className="mt-2 w-full"
                         />
                     </label>
                 </div>

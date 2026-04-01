@@ -1,5 +1,7 @@
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import { DatePicker } from 'antd';
+import dayjs from 'dayjs';
 
 interface LabeledInputFieldProps {
     id: string;
@@ -26,6 +28,27 @@ export default function LabeledInputField({
     placeholder,
     className,
 }: LabeledInputFieldProps) {
+    if (type === 'date') {
+        const parsedDate = value ? dayjs(value) : null;
+        const dateValue = parsedDate && parsedDate.isValid() ? parsedDate : null;
+
+        return (
+            <div>
+                <InputLabel htmlFor={id} value={label} />
+                <DatePicker
+                    id={id}
+                    value={dateValue}
+                    onChange={(date) => onChange(date ? date.format('YYYY-MM-DD') : '')}
+                    format="DD/MM/YYYY"
+                    size="large"
+                    className="mt-2 w-full"
+                    style={{ width: '100%' }}
+                />
+                <InputError message={error} className="mt-2" />
+            </div>
+        );
+    }
+
     return (
         <div>
             <InputLabel htmlFor={id} value={label} />
