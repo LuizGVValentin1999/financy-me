@@ -155,6 +155,55 @@ Rodar a suite completa:
 npm run e2e:run
 ```
 
+## Rotas operacionais para hospedagem sem terminal
+
+Se a sua hospedagem nao oferece acesso SSH/terminal, o projeto agora tem rotas opcionais para tarefas operacionais.
+
+Essas rotas ficam desligadas por padrao. Para habilitar em producao, configure no `.env`:
+
+```env
+OPS_ROUTE_ENABLED=true
+OPS_ROUTE_TOKEN=coloque-um-token-longo-e-dificil-aqui
+```
+
+Rotas disponiveis:
+
+- `GET /api/ops/migrate`
+- `GET /api/ops/optimize-clear`
+- `POST /api/ops/migrate`
+- `POST /api/ops/optimize-clear`
+
+Autenticacao:
+
+- enviar header `X-Deploy-Token: seu-token`
+- ou usar `?token=seu-token`
+
+Exemplo para rodar migrations no navegador:
+
+```text
+https://seu-dominio.com/api/ops/migrate?token=seu-token
+```
+
+Exemplo com `curl`:
+
+```bash
+curl -X POST https://seu-dominio.com/api/ops/migrate \
+  -H "X-Deploy-Token: seu-token"
+```
+
+Exemplo para limpar caches:
+
+```bash
+curl -X POST https://seu-dominio.com/api/ops/optimize-clear \
+  -H "X-Deploy-Token: seu-token"
+```
+
+Observacao importante:
+
+- existe rota para `migrate --force`
+- nao existe rota para `migrate:fresh`, porque isso apagaria os dados de producao
+- depois do deploy, o ideal e desligar novamente com `OPS_ROUTE_ENABLED=false`
+
 Abrir o Cypress em modo interativo:
 
 ```bash
