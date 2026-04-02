@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\House;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -82,4 +84,71 @@ test('correct password must be provided to delete account', function () {
         ->assertRedirect('/profile');
 
     $this->assertNotNull($user->fresh());
+});
+
+test('user can delete account together with active house when sole admin', function () {
+    $user = User::factory()->create();
+    $houseId = $user->active_house_id;
+
+    $response = $this
+        ->actingAs($user)
+        ->delete('/profile/with-house', [
+            'password' => 'password',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/');
+
+    $this->assertGuest();
+    $this->assertNull($user->fresh());
+    $this->assertNull(House::find($houseId));
+});
+
+test('non admin cannot delete active house together with account', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+
+    $member->houses()->detach();
+    $member->update(['active_house_id' => null]);
+
+    $house = $owner->getCurrentHouse();
+    $member->houses()->attach($house->id, ['role' => 'member']);
+    $member->update(['active_house_id' => $house->id]);
+
+    $this->actingAs($member)
+        ->from('/profile')
+        ->delete('/profile/with-house', [
+            'password' => 'password',
+        ])
+        ->assertRedirect('/profile')
+        ->assertSessionHas('error');
+
+    $this->assertNotNull($member->fresh());
+    $this->assertNotNull($house->fresh());
+});
+
+test('house with multiple members cannot be deleted together with account', function () {
+    $owner = User::factory()->create();
+    $house = $owner->getCurrentHouse();
+
+    $member = User::query()->create([
+        'name' => 'Member User',
+        'email' => 'member-'.uniqid().'@example.com',
+        'password' => Hash::make('password'),
+    ]);
+
+    $member->houses()->attach($house->id, ['role' => 'member']);
+    $member->update(['active_house_id' => $house->id]);
+
+    $this->actingAs($owner)
+        ->from('/profile')
+        ->delete('/profile/with-house', [
+            'password' => 'password',
+        ])
+        ->assertRedirect('/profile')
+        ->assertSessionHas('error');
+
+    $this->assertNotNull($owner->fresh());
+    $this->assertNotNull($house->fresh());
 });

@@ -99,7 +99,11 @@ describe('Full app journey', () => {
             .its('response.statusCode')
             .should('be.oneOf', [200, 302, 303]);
 
-        cy.contains('MERCADO TESTE LTDA', { timeout: 10000 }).should('be.visible');
+        cy.contains('Revisar NFC-e importada', { timeout: 10000 }).should(
+            'be.visible',
+        );
+        cy.contains('Pagamento da nota').should('be.visible');
+        cy.contains('Confirmar NFC-e').should('be.visible');
         cy.assertNoVisibleModal();
         cy.selectAntdOption('payments.0.account_id', `${accountACode} - ${accountAName}`);
         cy.selectAntdOption('items.0.category_id', marketCategory);
@@ -151,11 +155,27 @@ describe('Full app journey', () => {
         cy.wait('@quickStoreService')
             .its('response.statusCode')
             .should('eq', 201);
-        cy.get('input#account_id', { timeout: 10000 }).should('exist');
+        cy.get('.ant-modal-wrap:visible', { timeout: 10000 }).should(
+            'have.length',
+            1,
+        );
+        cy.get('.ant-modal-wrap:visible')
+            .last()
+            .within(() => {
+                cy.get('input#account_id', { timeout: 10000 }).should('exist');
+            });
         cy.selectAntdOption('account_id', `${accountBCode} - ${accountBName}`);
         cy.intercept('POST', '**/purchases').as('storeQuickServicePurchase');
-        cy.get('input#quantity').clear().type('1');
-        cy.get('input#unit_price').clear().type('18.00');
+        cy.get('.ant-modal-wrap:visible')
+            .last()
+            .within(() => {
+                cy.get('input#quantity').clear({ force: true }).type('1', {
+                    force: true,
+                });
+                cy.get('input#unit_price').clear({ force: true }).type('18.00', {
+                    force: true,
+                });
+            });
         cy.contains('button', 'Registrar compra').click();
         cy.wait('@storeQuickServicePurchase')
             .its('response.statusCode')
@@ -212,11 +232,11 @@ describe('Full app journey', () => {
         cy.contains(serviceName).should('not.exist');
 
         cy.visit('/profile');
-        cy.contains('button', 'Delete Account').click();
+        cy.contains('button', 'Excluir conta e casa ativa').click();
         cy.get('.app-responsive-modal input#password').type(password);
-        cy.intercept('DELETE', '**/profile').as('deleteProfile');
+        cy.intercept('DELETE', '**/profile/with-house').as('deleteProfile');
         cy.get('.app-responsive-modal')
-            .contains('button', 'Delete Account')
+            .contains('button', 'Excluir conta e casa ativa')
             .click();
         cy.wait('@deleteProfile')
             .its('response.statusCode')

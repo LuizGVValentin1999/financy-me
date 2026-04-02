@@ -65,6 +65,11 @@ Cypress.Commands.add('loginByUi', ({ email, password }: LoginCredentials) => {
 Cypress.Commands.add('registerAndLogin', (options: RegisterUserOptions = {}) => {
 	const payload = buildRegisterPayload(options);
 
+	Cypress.env('__cleanup_credentials', {
+		email: payload.email,
+		password: payload.password,
+	});
+
 	cy.clearCookies();
 	cy.clearLocalStorage();
 	cy.visit('/register', { timeout: 120000 });
@@ -87,6 +92,49 @@ Cypress.Commands.add('registerAndLogin', (options: RegisterUserOptions = {}) => 
 		},
 		{ log: false },
 	);
+});
+
+Cypress.Commands.add('cleanupCurrentUserAndHouse', () => {
+	const credentials = Cypress.env('__cleanup_credentials') as
+		| LoginCredentials
+		| undefined;
+
+	if (!credentials?.email || !credentials?.password) {
+		return cy.wrap(null, { log: false });
+	}
+
+	cy.clearCookies();
+	cy.clearLocalStorage();
+	cy.visit('/login', { timeout: 120000, failOnStatusCode: false });
+	cy.get('body').then(($body) => {
+		if ($body.find('input#email').length > 0) {
+			cy.get('input#email').clear().type(credentials.email);
+			cy.get('input#password').clear().type(credentials.password);
+			cy.contains('button', 'Entrar').click();
+		}
+	});
+
+	cy.visit('/profile', { timeout: 120000, failOnStatusCode: false });
+	cy.get('body').then(($body) => {
+		if (
+			$body.text().includes('Excluir conta e casa ativa') &&
+			$body.find('input#password').length === 0
+		) {
+			cy.contains('button', 'Excluir conta e casa ativa').click({ force: true });
+			cy.get('input#password', { timeout: 10000 }).clear().type(credentials.password, {
+				force: true,
+			});
+			cy.intercept('DELETE', '**/profile/with-house').as('deleteProfileWithHouse');
+			cy.contains('button', 'Excluir conta e casa ativa').last().click({ force: true });
+			cy.wait('@deleteProfileWithHouse')
+				.its('response.statusCode')
+				.should('be.oneOf', [200, 302, 303]);
+		}
+	});
+
+	cy.url({ timeout: 20000 }).then(() => {
+		Cypress.env('__cleanup_credentials', null);
+	});
 });
 
 Cypress.Commands.add(
@@ -200,6 +248,7 @@ declare global {
 		interface Chainable {
 			loginByUi(credentials: LoginCredentials): Chainable<void>;
 			registerAndLogin(options?: RegisterUserOptions): Chainable<LoginCredentials>;
+			cleanupCurrentUserAndHouse(): Chainable<void>;
 			selectAntdOption(
 				id: string,
 				option: AntdSelectOption,

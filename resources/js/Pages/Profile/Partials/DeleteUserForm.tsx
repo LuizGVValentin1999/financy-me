@@ -12,7 +12,9 @@ export default function DeleteUserForm({
 }: {
     className?: string;
 }) {
-    const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
+    const [confirmationMode, setConfirmationMode] = useState<'account' | 'account_and_house' | null>(
+        null,
+    );
     const passwordInput = useRef<HTMLInputElement>(null);
 
     const {
@@ -27,64 +29,77 @@ export default function DeleteUserForm({
         password: '',
     });
 
-    const confirmUserDeletion = () => {
-        setConfirmingUserDeletion(true);
+    const confirmUserDeletion = (mode: 'account' | 'account_and_house') => {
+        setConfirmationMode(mode);
     };
 
     const deleteUser: FormEventHandler = (e) => {
         e.preventDefault();
 
-        destroy(route('profile.destroy'), {
+        const targetRoute =
+            confirmationMode === 'account_and_house'
+                ? route('profile.destroy-with-house')
+                : route('profile.destroy');
+
+        destroy(targetRoute, {
             preserveScroll: true,
             onSuccess: () => closeModal(),
             onError: () => passwordInput.current?.focus(),
+            onBefore: () => true,
             onFinish: () => reset(),
         });
     };
 
     const closeModal = () => {
-        setConfirmingUserDeletion(false);
+        setConfirmationMode(null);
 
         clearErrors();
         reset();
     };
 
+    const isDeletingHouse = confirmationMode === 'account_and_house';
+
     return (
         <section className={`space-y-6 ${className}`}>
             <header>
                 <h2 className="text-lg font-medium text-gray-900">
-                    Delete Account
+                    Excluir conta
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                    Once your account is deleted, all of its resources and data
-                    will be permanently deleted. Before deleting your account,
-                    please download any data or information that you wish to
-                    retain.
+                    Exclua apenas sua conta ou, se esta casa for somente sua e
+                    voce for administrador, exclua a conta junto com a casa
+                    ativa para limpar os rastros do ambiente.
                 </p>
             </header>
 
-            <DangerButton onClick={confirmUserDeletion}>
-                Delete Account
-            </DangerButton>
+            <div className="flex flex-wrap gap-3">
+                <DangerButton onClick={() => confirmUserDeletion('account')}>
+                    Excluir conta
+                </DangerButton>
+                <DangerButton onClick={() => confirmUserDeletion('account_and_house')}>
+                    Excluir conta e casa ativa
+                </DangerButton>
+            </div>
 
-            <Modal show={confirmingUserDeletion} onClose={closeModal}>
+            <Modal show={confirmationMode !== null} onClose={closeModal}>
                 <form onSubmit={deleteUser} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
-                        Are you sure you want to delete your account?
+                        {isDeletingHouse
+                            ? 'Tem certeza que deseja excluir sua conta e a casa ativa?'
+                            : 'Tem certeza que deseja excluir sua conta?'}
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-600">
-                        Once your account is deleted, all of its resources and
-                        data will be permanently deleted. Please enter your
-                        password to confirm you would like to permanently delete
-                        your account.
+                        {isDeletingHouse
+                            ? 'Essa acao remove sua conta e todos os dados da casa ativa. Ela so funciona quando voce e o unico usuario vinculado a essa casa. Informe sua senha para confirmar.'
+                            : 'Essa acao remove sua conta permanentemente. Informe sua senha para confirmar.'}
                     </p>
 
                     <div className="mt-6">
                         <InputLabel
                             htmlFor="password"
-                            value="Password"
+                            value="Senha"
                             className="sr-only"
                         />
 
@@ -99,7 +114,7 @@ export default function DeleteUserForm({
                             }
                             className="mt-1 block w-3/4"
                             isFocused
-                            placeholder="Password"
+                            placeholder="Senha"
                         />
 
                         <InputError
@@ -110,11 +125,13 @@ export default function DeleteUserForm({
 
                     <div className="mt-6 flex justify-end">
                         <SecondaryButton onClick={closeModal}>
-                            Cancel
+                            Cancelar
                         </SecondaryButton>
 
                         <DangerButton className="ms-3" disabled={processing}>
-                            Delete Account
+                            {isDeletingHouse
+                                ? 'Excluir conta e casa ativa'
+                                : 'Excluir conta'}
                         </DangerButton>
                     </div>
                 </form>
