@@ -19,12 +19,12 @@ class FinancialEntryController extends Controller
         return Inertia::render('Financial/Index', [
             'accounts' => $house->accounts()
                 ->orderBy('name')
-                ->get(['id', 'name', 'type']),
+                ->get(['id', 'code', 'name']),
             'categories' => $house->categories()
                 ->orderBy('name')
                 ->get(['id', 'code', 'name', 'color']),
             'entries' => $house->financialEntries()
-                ->with('account:id,name,type', 'category:id,code,name,color')
+                ->with('account:id,code,name', 'category:id,code,name,color')
                 ->latest('moved_at')
                 ->latest('id')
                 ->get()
@@ -33,8 +33,8 @@ class FinancialEntryController extends Controller
                     'account_id' => $entry->account_id,
                     'account' => $entry->account ? [
                         'id' => $entry->account->id,
+                        'code' => $entry->account->code,
                         'name' => $entry->account->name,
-                        'type' => $entry->account->type,
                     ] : null,
                     'category_id' => $entry->category_id,
                     'category' => $entry->category ? [
