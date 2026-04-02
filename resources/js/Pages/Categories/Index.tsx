@@ -1,5 +1,12 @@
 import DangerButton from '@/Components/DangerButton';
 import PrimaryButton from '@/Components/PrimaryButton';
+import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
+import {
+    ResponsiveCard,
+    ResponsiveCardField,
+    ResponsiveCardFields,
+    ResponsiveCardHeader,
+} from '@/Components/responsive-table/ResponsiveCard';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import { useAntdApp } from '@/hooks/useAntdApp';
@@ -8,7 +15,7 @@ import CategoryModal from '@/Pages/Categories/components/CategoryModal';
 import type { CategoriesPageProps, CategoryRow, CategoryTableRecord } from '@/Pages/Categories/types';
 import { formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Table } from 'antd';
+import { Checkbox } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useState } from 'react';
 
@@ -210,12 +217,16 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                     <div>
                         <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Categorias</p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">Organize seus produtos em categorias.</h1>
                     </div>
-                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>
+                    <PrimaryButton
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="w-full justify-center sm:w-auto"
+                    >
                         Nova categoria
                     </PrimaryButton>
                 </div>
@@ -234,40 +245,79 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
                     ) : null
                 }
             >
-                <div className="purchase-ant-table">
-                    <Table<CategoryTableRecord>
-                        rowKey="key"
-                        columns={columns}
-                        dataSource={dataSource}
-                        rowSelection={{
-                            selectedRowKeys,
-                            onChange: (keys) => setSelectedRowKeys(keys),
-                            preserveSelectedRowKeys: true,
-                        }}
-                        pagination={{
-                            pageSize: 12,
-                            showSizeChanger: true,
-                            pageSizeOptions: [12, 24, 48],
-                            showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} categorias`,
-                        }}
-                        size="middle"
-                        scroll={{ x: 1200 }}
-                        rowClassName={() => 'cursor-pointer'}
-                        onRow={(record) => ({
-                            onClick: (event) => {
-                                const target = event.target as HTMLElement;
-                                if (
-                                    target.closest(
-                                        'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
-                                    )
-                                ) {
-                                    return;
-                                }
-                                openEditModal(record);
-                            },
-                        })}
-                    />
-                </div>
+                <ResponsiveDataTable<CategoryTableRecord>
+                    rowKey="key"
+                    columns={columns}
+                    dataSource={dataSource}
+                    rowSelection={{
+                        selectedRowKeys,
+                        onChange: (keys) => setSelectedRowKeys(keys),
+                        preserveSelectedRowKeys: true,
+                    }}
+                    pagination={{
+                        pageSize: 12,
+                        showSizeChanger: true,
+                        pageSizeOptions: [12, 24, 48],
+                        showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} categorias`,
+                    }}
+                    size="middle"
+                    scroll={{ x: 1200 }}
+                    rowClassName={() => 'cursor-pointer'}
+                    onRow={(record) => ({
+                        onClick: (event) => {
+                            const target = event.target as HTMLElement;
+                            if (
+                                target.closest(
+                                    'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                                )
+                            ) {
+                                return;
+                            }
+                            openEditModal(record);
+                        },
+                    })}
+                    mobileHint="As categorias aparecem em cards no celular. Toque para editar e use o checkbox para selecionar exclusao em lote."
+                    mobileRenderCard={(record, mobileMeta) => (
+                        <ResponsiveCard key={record.key}>
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    checked={mobileMeta.isSelected}
+                                    onChange={(event) => mobileMeta.toggleSelected(event.target.checked)}
+                                />
+
+                                <button
+                                    type="button"
+                                    className="min-w-0 flex-1 text-left"
+                                    onClick={() => openEditModal(record)}
+                                >
+                                    <ResponsiveCardHeader
+                                        eyebrow={record.code}
+                                        title={
+                                            <span className="flex items-center gap-3">
+                                                <span
+                                                    className="h-6 w-6 rounded-md border border-slate-200"
+                                                    style={{ backgroundColor: record.color }}
+                                                />
+                                                <span className="truncate">{record.name}</span>
+                                            </span>
+                                        }
+                                    />
+
+                                    <ResponsiveCardFields>
+                                        <ResponsiveCardField
+                                            label="Descricao:"
+                                            value={record.description || 'Sem descrição.'}
+                                        />
+                                        <ResponsiveCardField
+                                            label="Criada em:"
+                                            value={formatDate(record.created_at)}
+                                        />
+                                    </ResponsiveCardFields>
+                                </button>
+                            </div>
+                        </ResponsiveCard>
+                    )}
+                />
             </SectionCard>
 
             <CategoryModal

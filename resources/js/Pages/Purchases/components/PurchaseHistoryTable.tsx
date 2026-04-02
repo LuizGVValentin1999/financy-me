@@ -1,17 +1,26 @@
 import DangerButton from '@/Components/DangerButton';
+import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
+import {
+    ResponsiveCard,
+    ResponsiveCardField,
+    ResponsiveCardFields,
+    ResponsiveCardHeader,
+    ResponsiveCardPill,
+    ResponsiveCardPills,
+} from '@/Components/responsive-table/ResponsiveCard';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import { useAntdApp } from '@/hooks/useAntdApp';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import type { PurchaseEntryRow, PurchasesPageProps } from '@/Pages/Purchases/types';
 import { router, useForm } from '@inertiajs/react';
-import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, Checkbox, DatePicker, Grid, Select, Space, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { FormEvent, Key, useState } from 'react';
 import { buildPurchaseHistoryDataSource } from './purchaseHistory/buildDataSource';
 import GroupingToolbar from './purchaseHistory/GroupingToolbar';
-import type { PurchaseGroupBy, PurchaseTableRecord } from './purchaseHistory/types';
+import type { PurchaseGroupBy, PurchaseGroupRecord, PurchaseTableRecord } from './purchaseHistory/types';
 import PurchaseFormModal from './PurchaseFormModal';
 
 export default function PurchaseHistoryTable({
@@ -25,6 +34,8 @@ export default function PurchaseHistoryTable({
     products: PurchasesPageProps['products'];
     accounts: PurchasesPageProps['accounts'];
 }) {
+    const screens = Grid.useBreakpoint();
+    const isMobile = !screens.md;
     const [groupBy, setGroupBy] = useState<PurchaseGroupBy>('none');
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
     const [editingEntry, setEditingEntry] = useState<PurchaseEntryRow | null>(null);
@@ -166,6 +177,9 @@ export default function PurchaseHistoryTable({
     });
 
     const dataSource: PurchaseTableRecord[] = buildPurchaseHistoryDataSource(entries, groupBy);
+
+    const sourceLabel = (source: string) =>
+        source === 'invoice' ? 'Nota fiscal' : source === 'manual' ? 'Manual' : '--';
 
     const columns: ColumnsType<PurchaseTableRecord> = [
         {
@@ -340,6 +354,7 @@ export default function PurchaseHistoryTable({
         <SectionCard
             title="Tabela de compras"
             description="Clique em um registro para editar. Use os checkboxes para selecionar e excluir em lote."
+            className={isMobile ? 'p-4' : ''}
             actions={
                 selectedRowKeys.length > 0 ? (
                     <DangerButton type="button" onClick={deleteSelectedEntries}>
@@ -354,50 +369,240 @@ export default function PurchaseHistoryTable({
                 onChangeGroupBy={setGroupBy}
             />
 
-            <div className="purchase-ant-table">
-                <Table<PurchaseTableRecord>
-                    rowKey="key"
-                    columns={columns}
-                    dataSource={dataSource}
-                    rowSelection={{
-                        selectedRowKeys,
-                        onChange: (keys) => setSelectedRowKeys(keys),
-                        getCheckboxProps: (record) => ({
-                            disabled: Boolean(record.isGroup),
-                        }),
-                        preserveSelectedRowKeys: true,
-                    }}
-                    pagination={{
-                        pageSize: 12,
-                        showSizeChanger: true,
-                        pageSizeOptions: [12, 24, 48],
-                        showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} compras`,
-                    }}
-                    expandable={groupBy === 'none' ? undefined : { defaultExpandAllRows: false }}
-                    size="middle"
-                    scroll={{ x: 1200 }}
-                    rowClassName={(record) => (record.isGroup ? '' : 'cursor-pointer')}
-                    onRow={(record) => ({
-                        onClick: (event) => {
-                            if (record.isGroup) {
-                                return;
-                            }
+            <ResponsiveDataTable<PurchaseTableRecord>
+                rowKey="key"
+                columns={columns}
+                dataSource={dataSource}
+                rowSelection={{
+                    selectedRowKeys,
+                    onChange: (keys) => setSelectedRowKeys(keys),
+                    getCheckboxProps: (record) => ({
+                        disabled: Boolean(record.isGroup),
+                    }),
+                    preserveSelectedRowKeys: true,
+                }}
+                pagination={{
+                    pageSize: 12,
+                    showSizeChanger: true,
+                    pageSizeOptions: [12, 24, 48],
+                    showTotal: (total, range) => `${range[0]}-${range[1]} de ${total} compras`,
+                }}
+                expandable={groupBy === 'none' ? undefined : { defaultExpandAllRows: false }}
+                size="middle"
+                scroll={{ x: 1200 }}
+                rowClassName={(record) => (record.isGroup ? '' : 'cursor-pointer')}
+                onRow={(record) => ({
+                    onClick: (event) => {
+                        if (record.isGroup) {
+                            return;
+                        }
 
-                            const target = event.target as HTMLElement;
+                        const target = event.target as HTMLElement;
 
-                            if (
-                                target.closest(
-                                    'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
-                                )
-                            ) {
-                                return;
-                            }
+                        if (
+                            target.closest(
+                                'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox, .ant-table-row-expand-icon',
+                            )
+                        ) {
+                            return;
+                        }
 
-                            openEditModal(record);
-                        },
-                    })}
-                />
-            </div>
+                        openEditModal(record);
+                    },
+                })}
+                mobilePageSize={6}
+                mobileHint="No celular a listagem vira cards. Toque em um item para editar e use o checkbox para selecionar exclusao em lote."
+                mobileRenderCard={(record, mobileMeta) => {
+                    if (record.isGroup) {
+                        const groupRecord = record as PurchaseGroupRecord;
+
+                        return (
+                            <ResponsiveCard
+                                key={groupRecord.key}
+                                tone="warm"
+                                className="overflow-hidden p-0"
+                            >
+                                <div className="border-b border-slate-200/80 px-4 py-4">
+                                    <ResponsiveCardHeader
+                                        eyebrow="Grupo"
+                                        title={groupRecord.groupLabel}
+                                        trailing={
+                                            <div className="rounded-2xl bg-slate-900 px-3 py-2 text-right text-white">
+                                                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
+                                                    Total
+                                                </p>
+                                                <p className="mt-1 text-sm font-semibold">
+                                                    {formatCurrency(groupRecord.total_amount)}
+                                                </p>
+                                            </div>
+                                        }
+                                    />
+
+                                    <ResponsiveCardPills>
+                                        <ResponsiveCardPill tone="muted">
+                                            {groupRecord.children.length} registros
+                                        </ResponsiveCardPill>
+                                        <ResponsiveCardPill tone="muted">
+                                            {formatQuantity(groupRecord.quantity)}
+                                        </ResponsiveCardPill>
+                                    </ResponsiveCardPills>
+                                </div>
+
+                                <div className="space-y-3 p-3">
+                                    {groupRecord.children.map((childRecord) => {
+                                        const entry = childRecord as PurchaseEntryRow & {
+                                            key: string;
+                                        };
+
+                                        const childSelected = mobileMeta.selectedKeys.some(
+                                            (selectedKey) =>
+                                                String(selectedKey) === String(entry.id),
+                                        );
+
+                                        return (
+                                            <ResponsiveCard
+                                                key={entry.key}
+                                                className="rounded-[22px]"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <Checkbox
+                                                        checked={childSelected}
+                                                        onChange={(event) =>
+                                                            setSelectedRowKeys((current) => {
+                                                                const nextKeys = event.target.checked
+                                                                    ? Array.from(
+                                                                          new Map(
+                                                                              [
+                                                                                  ...current,
+                                                                                  entry.id,
+                                                                              ].map((item) => [
+                                                                                  String(item),
+                                                                                  item,
+                                                                              ]),
+                                                                          ).values(),
+                                                                      )
+                                                                    : current.filter(
+                                                                          (key) =>
+                                                                              String(key) !==
+                                                                              String(entry.id),
+                                                                      );
+
+                                                                return nextKeys;
+                                                            })
+                                                        }
+                                                    />
+
+                                                    <button
+                                                        type="button"
+                                                        className="min-w-0 flex-1 text-left"
+                                                        onClick={() => openEditModal(entry)}
+                                                    >
+                                                        <ResponsiveCardHeader
+                                                            title={entry.product ?? 'Produto removido'}
+                                                            subtitle={`${formatDate(entry.purchased_at)} • ${sourceLabel(entry.source)}`}
+                                                            trailing={
+                                                                <span className="rounded-full bg-[#f3ede3] px-3 py-1 text-sm font-semibold text-slate-900">
+                                                                    {formatCurrency(entry.total_amount)}
+                                                                </span>
+                                                            }
+                                                        />
+
+                                                        <ResponsiveCardFields columns={2}>
+                                                            <ResponsiveCardField
+                                                                value={`${formatQuantity(entry.quantity)} ${entry.unit ?? 'un'}`}
+                                                            />
+                                                            <ResponsiveCardField
+                                                                value={`${formatCurrency(entry.unit_price)}/un`}
+                                                            />
+                                                            <ResponsiveCardField
+                                                                value={
+                                                                    entry.account
+                                                                        ? `${entry.account.code} - ${entry.account.name}`
+                                                                        : 'Sem conta'
+                                                                }
+                                                                colSpan={2}
+                                                            />
+                                                            <ResponsiveCardField
+                                                                value={`Nota: ${entry.invoice_reference || '--'}`}
+                                                                colSpan={2}
+                                                            />
+                                                            <ResponsiveCardField
+                                                                value={entry.notes || 'Sem observacoes.'}
+                                                                colSpan={2}
+                                                            />
+                                                        </ResponsiveCardFields>
+                                                    </button>
+                                                </div>
+                                            </ResponsiveCard>
+                                        );
+                                    })}
+                                </div>
+                            </ResponsiveCard>
+                        );
+                    }
+
+                    const entry = record as PurchaseEntryRow & { key: string };
+
+                    return (
+                        <ResponsiveCard
+                            key={entry.key}
+                        >
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    checked={mobileMeta.isSelected}
+                                    onChange={(event) =>
+                                        mobileMeta.toggleSelected(event.target.checked)
+                                    }
+                                />
+
+                                <button
+                                    type="button"
+                                    className="min-w-0 flex-1 text-left"
+                                    onClick={() => openEditModal(entry)}
+                                >
+                                    <ResponsiveCardHeader
+                                        title={entry.product ?? 'Produto removido'}
+                                        subtitle={`${formatDate(entry.purchased_at)} • ${sourceLabel(entry.source)}`}
+                                        trailing={
+                                            <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
+                                                {formatCurrency(entry.total_amount)}
+                                            </span>
+                                        }
+                                    />
+
+                                    <ResponsiveCardPills>
+                                        <ResponsiveCardPill tone="warm">
+                                            {formatQuantity(entry.quantity)} {entry.unit ?? 'un'}
+                                        </ResponsiveCardPill>
+                                        <ResponsiveCardPill>
+                                            {formatCurrency(entry.unit_price)}/un
+                                        </ResponsiveCardPill>
+                                    </ResponsiveCardPills>
+
+                                    <ResponsiveCardFields>
+                                        <ResponsiveCardField
+                                            label="Conta:"
+                                            value={
+                                                entry.account
+                                                    ? `${entry.account.code} - ${entry.account.name}`
+                                                    : 'Sem conta'
+                                            }
+                                        />
+                                        <ResponsiveCardField
+                                            label="Nota:"
+                                            value={entry.invoice_reference || '--'}
+                                        />
+                                        <ResponsiveCardField
+                                            label="Observacoes:"
+                                            value={entry.notes || 'Sem observacoes.'}
+                                        />
+                                    </ResponsiveCardFields>
+                                </button>
+                            </div>
+                        </ResponsiveCard>
+                    );
+                }}
+            />
 
             <PurchaseFormModal
                 isOpen={Boolean(editingEntry)}

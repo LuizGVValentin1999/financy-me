@@ -1,5 +1,14 @@
 import DangerButton from '@/Components/DangerButton';
 import PrimaryButton from '@/Components/PrimaryButton';
+import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
+import {
+    ResponsiveCard,
+    ResponsiveCardField,
+    ResponsiveCardFields,
+    ResponsiveCardHeader,
+    ResponsiveCardPill,
+    ResponsiveCardPills,
+} from '@/Components/responsive-table/ResponsiveCard';
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import { useAntdApp } from '@/hooks/useAntdApp';
@@ -8,7 +17,7 @@ import FinancialEntryModal from '@/Pages/Financial/components/FinancialEntryModa
 import type { EntryRow, EntryTableRecord, FinancialPageProps } from '@/Pages/Financial/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Table, Tag } from 'antd';
+import { Checkbox, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FormEvent, Key, useMemo, useState } from 'react';
 
@@ -278,12 +287,18 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                     <div>
                         <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Financeiro</p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">Entradas e saídas das contas.</h1>
                     </div>
-                    <PrimaryButton type="button" onClick={() => setIsCreateModalOpen(true)}>Novo lançamento</PrimaryButton>
+                    <PrimaryButton
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="w-full justify-center sm:w-auto"
+                    >
+                        Novo lançamento
+                    </PrimaryButton>
                 </div>
             }
         >
@@ -300,33 +315,112 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                     ) : null
                 }
             >
-                <div className="purchase-ant-table">
-                    <Table<EntryTableRecord>
-                        rowKey="key"
-                        columns={columns}
-                        dataSource={dataSource}
-                        rowSelection={{
-                            selectedRowKeys,
-                            onChange: (keys) => setSelectedRowKeys(keys.filter((key) => manualIds.has(String(key)))),
-                            getCheckboxProps: (record) => ({
-                                disabled: record.origin !== 'manual',
-                            }),
-                        }}
-                        pagination={{ pageSize: 12, showSizeChanger: true }}
-                        size="middle"
-                        scroll={{ x: 1200 }}
-                        rowClassName={(record) => (record.origin === 'manual' ? 'cursor-pointer' : 'opacity-90')}
-                        onRow={(record) => ({
-                            onClick: (event) => {
-                                const target = event.target as HTMLElement;
-                                if (target.closest('button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox')) {
-                                    return;
-                                }
-                                openEditModal(record);
-                            },
-                        })}
-                    />
-                </div>
+                <ResponsiveDataTable<EntryTableRecord>
+                    rowKey="key"
+                    columns={columns}
+                    dataSource={dataSource}
+                    rowSelection={{
+                        selectedRowKeys,
+                        onChange: (keys) =>
+                            setSelectedRowKeys(keys.filter((key) => manualIds.has(String(key)))),
+                        getCheckboxProps: (record) => ({
+                            disabled: record.origin !== 'manual',
+                        }),
+                    }}
+                    pagination={{ pageSize: 12, showSizeChanger: true }}
+                    size="middle"
+                    scroll={{ x: 1200 }}
+                    rowClassName={(record) =>
+                        record.origin === 'manual' ? 'cursor-pointer' : 'opacity-90'
+                    }
+                    onRow={(record) => ({
+                        onClick: (event) => {
+                            const target = event.target as HTMLElement;
+                            if (
+                                target.closest(
+                                    'button, a, input, label, textarea, .ant-checkbox-wrapper, .ant-checkbox',
+                                )
+                            ) {
+                                return;
+                            }
+                            openEditModal(record);
+                        },
+                    })}
+                    mobileHint="No celular os lançamentos aparecem em cards. Toque para editar quando a origem for manual e use o checkbox para exclusao em lote."
+                    mobileRenderCard={(record, mobileMeta) => {
+                        const originLabel =
+                            record.origin === 'manual'
+                                ? 'Manual'
+                                : record.origin === 'manual_purchase'
+                                  ? 'Compra manual'
+                                  : record.origin === 'invoice_purchase'
+                                    ? 'Compra importada'
+                                    : record.origin === 'invoice_discount'
+                                      ? 'Desconto de nota'
+                                      : record.origin;
+
+                        return (
+                            <ResponsiveCard key={record.key}>
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        checked={mobileMeta.isSelected}
+                                        disabled={mobileMeta.selectionDisabled}
+                                        onChange={(event) =>
+                                            mobileMeta.toggleSelected(event.target.checked)
+                                        }
+                                    />
+
+                                    <button
+                                        type="button"
+                                        className="min-w-0 flex-1 text-left"
+                                        onClick={() => openEditModal(record)}
+                                    >
+                                        <ResponsiveCardHeader
+                                            eyebrow={formatDate(record.moved_at)}
+                                            title={record.description || 'Sem descrição'}
+                                            trailing={
+                                                <span
+                                                    className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                                                        record.direction === 'inflow'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : 'bg-red-100 text-red-700'
+                                                    }`}
+                                                >
+                                                    {record.direction === 'inflow' ? '+' : '-'}{' '}
+                                                    {formatCurrency(record.amount)}
+                                                </span>
+                                            }
+                                        />
+
+                                        <ResponsiveCardPills>
+                                            <ResponsiveCardPill tone="warm">
+                                                {record.direction === 'inflow' ? 'Entrada' : 'Saída'}
+                                            </ResponsiveCardPill>
+                                            <ResponsiveCardPill>
+                                                {originLabel}
+                                            </ResponsiveCardPill>
+                                        </ResponsiveCardPills>
+
+                                        <ResponsiveCardFields>
+                                            <ResponsiveCardField
+                                                label="Conta:"
+                                                value={
+                                                    record.account
+                                                        ? `${record.account.code} - ${record.account.name}`
+                                                        : '--'
+                                                }
+                                            />
+                                            <ResponsiveCardField
+                                                label="Categoria:"
+                                                value={record.category?.name ?? '--'}
+                                            />
+                                        </ResponsiveCardFields>
+                                    </button>
+                                </div>
+                            </ResponsiveCard>
+                        );
+                    }}
+                />
             </SectionCard>
 
             <FinancialEntryModal

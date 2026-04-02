@@ -1,12 +1,20 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import InputLabel from '@/Components/InputLabel';
+import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
+import {
+    ResponsiveCardField,
+    ResponsiveCardFields,
+    ResponsiveCardHeader,
+    ResponsiveCardPill,
+    ResponsiveCardPills,
+} from '@/Components/responsive-table/ResponsiveCard';
 import SectionCard from '@/Components/SectionCard';
 import StatCard from '@/Components/StatCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, Link, router } from '@inertiajs/react';
-import { Button, DatePicker, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, DatePicker, Input, Select, Space, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { FormEvent, Key, useEffect, useMemo, useState } from 'react';
@@ -470,7 +478,7 @@ export default function Dashboard({
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                     <div>
                         <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Dashboard</p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">Visao geral da casa.</h1>
@@ -479,23 +487,23 @@ export default function Dashboard({
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="grid gap-3 sm:flex sm:flex-wrap">
                         <button
                             type="button"
                             onClick={() => setIsFilterModalOpen(true)}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5"
+                            className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 sm:w-auto"
                         >
                             Filtros avancados
                         </button>
                         <Link
                             href={route('products.index')}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5"
+                            className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 sm:w-auto"
                         >
                             Novo item
                         </Link>
                         <Link
                             href={route('purchases.index')}
-                            className="inline-flex items-center rounded-full bg-[#0f172a] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.8)] transition hover:-translate-y-0.5"
+                            className="inline-flex w-full items-center justify-center rounded-full bg-[#0f172a] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_rgba(15,23,42,0.8)] transition hover:-translate-y-0.5 sm:w-auto"
                         >
                             Registrar compra
                         </Link>
@@ -583,16 +591,60 @@ export default function Dashboard({
                         )}
                     </div>
 
-                    <div className="purchase-ant-table">
-                        <Table<DashboardTableRecord>
-                            rowKey="key"
-                            columns={columns}
-                            dataSource={dataSource}
-                            pagination={{ pageSize: 12, showSizeChanger: true }}
-                            size="middle"
-                            scroll={{ x: 1200 }}
-                        />
-                    </div>
+                    <ResponsiveDataTable<DashboardTableRecord>
+                        rowKey="key"
+                        columns={columns}
+                        dataSource={dataSource}
+                        pagination={{ pageSize: 12, showSizeChanger: true }}
+                        size="middle"
+                        scroll={{ x: 1200 }}
+                        mobileHint="No celular os gastos e consumos aparecem em cards. Use a busca e os filtros avancados para refinar a leitura."
+                        mobileRenderCard={(record) => (
+                            <article
+                                key={record.key}
+                                className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.4)]"
+                            >
+                                <ResponsiveCardHeader
+                                    title={record.product_name}
+                                    subtitle={`${sourceLabel(record.source)}${record.invoice_reference ? ` • ${record.invoice_reference}` : ''}`}
+                                    trailing={
+                                        <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
+                                            {formatCurrency(record.total_amount)}
+                                        </span>
+                                    }
+                                />
+
+                                <ResponsiveCardPills>
+                                    <ResponsiveCardPill tone="warm">
+                                        {typeLabel(record.product_type)}
+                                    </ResponsiveCardPill>
+                                    <ResponsiveCardPill>
+                                        {record.category?.name ?? 'Sem categoria'}
+                                    </ResponsiveCardPill>
+                                </ResponsiveCardPills>
+
+                                <ResponsiveCardFields columns={2}>
+                                    <ResponsiveCardField
+                                        label="Conta:"
+                                        value={
+                                            record.account
+                                                ? `${record.account.code} - ${record.account.name}`
+                                                : '--'
+                                        }
+                                        colSpan={2}
+                                    />
+                                    <ResponsiveCardField
+                                        label="Quantidade:"
+                                        value={`${formatQuantity(record.quantity)} ${record.unit}`}
+                                    />
+                                    <ResponsiveCardField
+                                        label="Data:"
+                                        value={formatDate(record.purchased_at)}
+                                    />
+                                </ResponsiveCardFields>
+                            </article>
+                        )}
+                    />
                 </SectionCard>
 
                 <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">

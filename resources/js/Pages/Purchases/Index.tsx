@@ -98,19 +98,27 @@ export default function PurchasesIndex({
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-wrap items-end justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                     <div>
                         <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Compras</p>
-                        <h1 className="mt-2 text-4xl font-semibold text-slate-900">
+                        <h1 className="mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
                             Registre entradas no estoque.
                         </h1>
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
-                        <SecondaryButton type="button" onClick={() => setIsImportModalOpen(true)}>
+                    <div className="grid gap-3 sm:flex sm:flex-wrap">
+                        <SecondaryButton
+                            type="button"
+                            onClick={() => setIsImportModalOpen(true)}
+                            className="w-full justify-center sm:w-auto"
+                        >
                             Importar NFC-e
                         </SecondaryButton>
-                        <PrimaryButton type="button" onClick={() => setIsPurchaseModalOpen(true)}>
+                        <PrimaryButton
+                            type="button"
+                            onClick={() => setIsPurchaseModalOpen(true)}
+                            className="w-full justify-center sm:w-auto"
+                        >
                             Nova compra manual
                         </PrimaryButton>
                     </div>
