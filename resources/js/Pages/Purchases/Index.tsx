@@ -145,6 +145,7 @@ export default function PurchasesIndex({
                 receiptUrlError={importForm.errors.receipt_url}
                 processing={importForm.processing}
                 onReceiptUrlChange={(value) => importForm.setData('receipt_url', value)}
+                onQrCodeDetected={(value) => importForm.setData('receipt_url', value)}
                 onSubmit={submitImport}
             />
 
