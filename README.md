@@ -1,120 +1,219 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Financy Me
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicacao web para controle financeiro domestico e operacional, com foco em categorias, contas, produtos, compras, estoque, importacao de NFC-e e consolidacao de indicadores na dashboard.
 
-## About Laravel
+O projeto usa:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Backend em Laravel 13
+- Frontend em React + TypeScript com Inertia
+- UI com Ant Design
+- Banco SQLite no ambiente local
+- Testes backend com Pest
+- Testes end-to-end com Cypress
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Principais modulos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Autenticacao de usuarios
+- Gestao de casas (`house_id`) como contexto ativo da aplicacao
+- Categorias e contas
+- Cadastro de produtos estocaveis e nao estocaveis
+- Compras manuais e importacao de NFC-e
+- Movimentacao e saida de estoque
+- Dashboard com indicadores financeiros e operacionais
 
-## Learning Laravel
+## Requisitos
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Antes de iniciar, tenha instalado:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.3+
+- Composer
+- Node.js 20+ com npm
+- SQLite 3
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Como executar depois de clonar
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### 1. Clonar o repositorio
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone git@github-pessoal:LuizGVValentin1999/financy-me.git
+cd financy-me
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Instalar dependencias
 
-## Contributing
+```bash
+composer install
+npm install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 3. Criar e configurar o ambiente
 
-## Code of Conduct
+Se o arquivo `.env` nao existir:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+cp .env.example .env
+```
 
-## Security Vulnerabilities
+Gere a chave da aplicacao:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan key:generate
+```
 
-## License
+Crie o banco SQLite local, se necessario:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+mkdir -p database
+touch database/database.sqlite
+```
 
-## Testes E2E com Cypress
+### 4. Rodar as migrations
 
-O projeto agora inclui Cypress para testes end-to-end da interface.
+```bash
+php artisan migrate
+```
 
-### Comandos
+### 5. Subir o projeto
 
-- `npm run cypress:open`: abre o Cypress interativo (com servidores ja rodando).
-- `npm run cypress:run`: executa Cypress em modo headless (com servidores ja rodando).
-- `npm run e2e:reset-db`: recria o banco E2E do zero.
-- `npm run e2e:open`: sobe Laravel + Vite automaticamente e abre o Cypress.
-- `npm run e2e:run`: sobe Laravel + Vite automaticamente e executa os testes headless.
+Em um terminal:
 
-Os scripts `e2e:*` usam portas dedicadas para evitar conflito com seu ambiente local:
+```bash
+php artisan serve
+```
 
-- App Laravel: `http://127.0.0.1:8010`
-- Vite dev server: `http://127.0.0.1:5180`
+Em outro terminal:
 
-Os scripts E2E tambem usam banco dedicado (`database/e2e.sqlite`) e executam
-`migrate:fresh` antes de rodar, evitando acumulo de dados de teste.
+```bash
+npm run dev
+```
 
-### Estrutura
+Depois acesse a URL exibida pelo Laravel, normalmente:
 
-- Specs: `cypress/e2e/**/*.cy.ts`
-- Support: `cypress/support/e2e.ts`
-- Configuracao: `cypress.config.ts`
+```text
+http://127.0.0.1:8000
+```
 
-Specs atuais incluidas:
+## Setup rapido
 
-- `cypress/e2e/auth-smoke.cy.ts`
-- `cypress/e2e/products-flow.cy.ts`
-- `cypress/e2e/purchases-flow.cy.ts`
-- `cypress/e2e/nfce-import-flow.cy.ts`
-- `cypress/e2e/stock-withdraw-flow.cy.ts`
-- `cypress/e2e/financial-flow.cy.ts`
+Se quiser fazer quase tudo em um comando, o projeto tem o script:
 
-Comandos customizados (em `cypress/support/commands.ts`):
+```bash
+composer run setup
+```
 
-- `cy.registerAndLogin()` para criar usuario/casa e autenticar pela UI.
-- `cy.loginByUi({ email, password })` para autenticar via tela de login.
+Esse script:
 
-## CI
+- instala dependencias PHP
+- cria `.env` se nao existir
+- gera `APP_KEY`
+- roda migrations
+- instala dependencias frontend
+- gera build
 
-O workflow de CI em `.github/workflows/ci.yml` executa:
+## Comandos uteis
 
-- Build frontend (`npm run build`)
-- Testes backend com cobertura minima (`php artisan test --coverage-clover=coverage.xml --min=50`)
-- Testes E2E (`npm run cypress:run`, com Laravel + Vite iniciados automaticamente)
+- Desenvolvimento completo: `composer run dev`
+- Servidor frontend: `npm run dev`
+- Build de producao: `npm run build`
+- Lint frontend: `npm run lint`
 
-## Cobertura backend
+## Testes
 
-Para rodar cobertura local do backend com gate minimo:
+O projeto possui testes de backend e testes E2E.
+
+### Testes backend
+
+Executa toda a suite:
+
+```bash
+php artisan test
+```
+
+Ou usando o script do Composer:
+
+```bash
+composer test
+```
+
+Cobertura minima local:
 
 ```bash
 composer test:coverage
 ```
 
-### Primeira execucao sugerida
+### Testes end-to-end com Cypress
+
+Os testes E2E usam:
+
+- Laravel na porta `8010`
+- Vite na porta `5180`
+- banco dedicado `database/e2e.sqlite`
+
+Rodar a suite completa:
 
 ```bash
+npm run e2e:run
+```
+
+Abrir o Cypress em modo interativo:
+
+```bash
+npm run e2e:open
+```
+
+Recriar apenas o banco E2E:
+
+```bash
+npm run e2e:reset-db
+```
+
+Se voce ja estiver com os servidores corretos rodando, tambem pode usar:
+
+```bash
+npm run cypress:run
+npm run cypress:open
+```
+
+### O que o fluxo E2E cobre
+
+As specs atuais cobrem jornadas como:
+
+- autenticacao
+- fluxo financeiro
+- cadastro e compra de produtos
+- importacao de NFC-e
+- saida de estoque
+- jornada completa ponta a ponta
+
+Os arquivos ficam em:
+
+```text
+cypress/e2e/
+```
+
+## Observacoes do dominio
+
+- O sistema e multi-tenant por casa, usando `house_id`
+- Os dados de negocio devem sempre respeitar a casa ativa do usuario
+- O projeto trabalha com compras, estoque, contas e lancamentos financeiros sincronizados
+
+## Estrutura principal
+
+```text
+app/            Backend Laravel
+resources/js/   Frontend React + Inertia
+resources/css/  Estilos
+database/       Migrations e arquivos SQLite
+tests/          Testes backend
+cypress/        Testes E2E
+```
+
+## Verificacao rapida apos setup
+
+Depois de configurar o ambiente, a validacao minima recomendada e:
+
+```bash
+php artisan test
+npm run build
 npm run e2e:run
 ```
