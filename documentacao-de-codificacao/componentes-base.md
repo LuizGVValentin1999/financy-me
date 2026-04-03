@@ -139,12 +139,14 @@ Uso:
 - camada base de modal do projeto
 - usa `AntModal` no desktop
 - usa `Drawer` no mobile
+- centraliza tamanhos de modal, inclusive fluxos largos e quase full-screen
 
 Boas praticas:
 
 - nao use `AntModal` direto nas paginas
 - use `Modal` ou `FormEntityModal`
 - isso preserva o mesmo comportamento responsivo
+- se um fluxo em etapas precisar de mais area, ajuste `maxWidth` no `Modal` antes de criar um layout paralelo
 
 ### Campos de formulario padrao
 

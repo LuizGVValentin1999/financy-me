@@ -43,7 +43,7 @@ export default function FormEntityModal({
                     ) : null}
                 </div>
 
-                <form onSubmit={onSubmit} className="mt-6 space-y-5">
+                <form noValidate onSubmit={onSubmit} className="mt-6 space-y-5">
                     {children}
 
                     {actions ?? (

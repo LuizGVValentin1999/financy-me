@@ -32,7 +32,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 </div>
             )}
 
-            <form onSubmit={submit}>
+            <form noValidate onSubmit={submit}>
                 <TextInput
                     id="email"
                     type="email"

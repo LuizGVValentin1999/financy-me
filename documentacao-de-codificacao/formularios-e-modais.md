@@ -12,6 +12,7 @@ Padrao atual:
 - `FormEntityModal` como casca visual
 - `LabeledInputField`, `LabeledSelectField` e `LabeledTextAreaField` para campos
 - `useAntdApp()` para `message` e `modal`
+- `noValidate` nos formularios React para evitar mensagens nativas do navegador em ingles
 
 ## Estrutura recomendada
 
@@ -92,6 +93,28 @@ Padrao atual do projeto:
 - `closeEditModal()` limpa entidade em edicao e erros
 - `openEditModal(entity)` carrega dados no formulario
 
+## Fluxos em etapas
+
+Quando o fluxo nao cabe em um CRUD simples, use modal em etapas.
+
+Exemplos atuais:
+
+- `resources/js/Pages/Purchases/components/ImportPreviewSection.tsx`
+- `resources/js/Pages/Purchases/components/ManualPurchaseWizardModal.tsx`
+
+Regras:
+
+- usar `Modal` base do projeto
+- mostrar apenas a etapa atual e o contexto minimo de navegacao
+- usar scroll interno no conteudo sem comprimir os campos
+- reaproveitar modais de CRUD existentes para cadastros auxiliares
+
+Padrao ja adotado:
+
+- criar conta via `AccountModal`
+- criar categoria via `CategoryModal`
+- reaproveitar `ProductFormFields` quando o fluxo precisa criar produto inline
+
 ## Exclusao
 
 ### Exclusao simples
@@ -149,11 +172,13 @@ Padrao:
 
 - UI: `DD/MM/YYYY`
 - backend: `YYYY-MM-DD`
+- locale do calendario em portugues
 
 Boas praticas:
 
 - no formulario, use `LabeledInputField` com `type=\"date\"` quando o campo seguir o padrao do sistema
 - nao deixe um campo de data nativo isolado com visual diferente do resto
+- quando o usuario filtra por periodo, prefira `RangePicker`
 
 ## Selects
 

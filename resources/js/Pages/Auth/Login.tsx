@@ -54,7 +54,7 @@ export default function Login({
                 </div>
             )}
 
-            <form onSubmit={submit} className="mt-8 space-y-5">
+            <form noValidate onSubmit={submit} className="mt-8 space-y-5">
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
 

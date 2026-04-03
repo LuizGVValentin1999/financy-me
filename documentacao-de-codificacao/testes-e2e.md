@@ -68,6 +68,10 @@ Helpers principais:
 - `cy.createManualPurchaseViaUi(...)`
 - `cy.withdrawStockViaUi(...)`
 
+Observacao:
+
+- `cy.createManualPurchaseViaUi(...)` acompanha o wizard manual atual, nao o modal simples antigo
+
 ## Regra para novas specs
 
 ### Quando a spec cria usuário
@@ -164,6 +168,11 @@ Bom:
 - validar o comportamento principal
 - validar payloads e status
 - validar blocos visíveis esperados
+
+Para producao:
+
+- na NFC-e, valide preview e confirmacao
+- nao dependa de nome fixo retornado por consulta externa
 
 ## Estratégia de organização das specs
 

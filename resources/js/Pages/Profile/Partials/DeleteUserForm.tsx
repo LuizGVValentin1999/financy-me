@@ -83,7 +83,7 @@ export default function DeleteUserForm({
             </div>
 
             <Modal show={confirmationMode !== null} onClose={closeModal}>
-                <form onSubmit={deleteUser} className="p-6">
+                <form noValidate onSubmit={deleteUser} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
                         {isDeletingHouse
                             ? 'Tem certeza que deseja excluir sua conta e a casa ativa?'

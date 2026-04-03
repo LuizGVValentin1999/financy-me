@@ -902,7 +902,7 @@ export default function ManualPurchaseWizardModal({
     return (
         <>
             <Modal show={isOpen} onClose={onClose} maxWidth="screen">
-                <form onSubmit={handleSubmit} className="flex max-h-[88vh] flex-col overflow-hidden bg-white">
+                <form noValidate onSubmit={handleSubmit} className="flex max-h-[88vh] flex-col overflow-hidden bg-white">
                     <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
                         <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>

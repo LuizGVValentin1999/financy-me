@@ -33,6 +33,13 @@ Exemplos:
 - `FinancialEntryController`
 - `DashboardController`
 
+Ponto de atencao:
+
+- `PurchaseEntryController` hoje orquestra os fluxos mais complexos do dominio:
+  - compra manual em wizard com itens e pagamentos
+  - importacao de NFC-e com revisao em etapas
+  - sincronizacao entre compras, nota fiscal, estoque e financeiro
+
 ## Convencao de requests
 
 Padrao atual:
@@ -155,6 +162,11 @@ Boa pratica:
 
 - integrações externas ou parsing mais complexo devem ir para `Services`
 - controller deve orquestrar, não concentrar parsing pesado
+
+Estado atual:
+
+- consulta e parsing da NFC-e ficam no service
+- confirmacao final continua no controller porque precisa salvar nota, itens, pagamentos e lancamentos sincronizados
 
 ## Convencoes de implementação
 

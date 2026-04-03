@@ -32,7 +32,7 @@ export default function ResetPassword({
         <GuestLayout>
             <Head title="Reset Password" />
 
-            <form onSubmit={submit}>
+            <form noValidate onSubmit={submit}>
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
 

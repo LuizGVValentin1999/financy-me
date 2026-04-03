@@ -34,7 +34,7 @@ export default function ChooseHouse() {
             <Head title="Escolher casa" />
 
             <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2">
-                <form onSubmit={submitCreate} className="rounded-xl border border-slate-200 p-6">
+                <form noValidate onSubmit={submitCreate} className="rounded-xl border border-slate-200 p-6">
                     <h2 className="text-lg font-semibold text-slate-900">Criar casa</h2>
 
                     <div className="mt-4">
@@ -91,7 +91,7 @@ export default function ChooseHouse() {
                     </PrimaryButton>
                 </form>
 
-                <form onSubmit={submitJoin} className="rounded-xl border border-slate-200 p-6">
+                <form noValidate onSubmit={submitJoin} className="rounded-xl border border-slate-200 p-6">
                     <h2 className="text-lg font-semibold text-slate-900">Entrar em casa</h2>
 
                     <div className="mt-4">

@@ -17,9 +17,9 @@ O projeto usa:
 - Gestao de casas (`house_id`) como contexto ativo da aplicacao
 - Categorias e contas
 - Cadastro de produtos estocaveis e nao estocaveis
-- Compras manuais e importacao de NFC-e
-- Movimentacao e saida de estoque
-- Dashboard com indicadores financeiros e operacionais
+- Compras manuais em wizard e importacao de NFC-e com revisao em etapas
+- Movimentacao, consumo e saida de estoque
+- Dashboard com abas de gastos, consumo e movimentacoes de conta
 
 ## Requisitos
 
@@ -73,6 +73,12 @@ touch database/database.sqlite
 php artisan migrate
 ```
 
+Se quiser popular o sistema com dados de demonstracao:
+
+```bash
+php artisan db:seed --class=DemoSystemSeeder
+```
+
 ### 5. Subir o projeto
 
 Em um terminal:
@@ -109,6 +115,23 @@ Esse script:
 - roda migrations
 - instala dependencias frontend
 - gera build
+
+## Base demo
+
+Existe uma seeder de demonstracao com:
+
+- casa `DEMO`
+- 15 notas fiscais
+- produtos estocaveis e nao estocaveis
+- compras manuais
+- saídas de estoque
+- lançamentos financeiros
+
+Credenciais:
+
+- email: `demo@financyme.local`
+- senha: `DEMO123`
+- casa: codigo `demo`, senha `DEMO123`
 
 ## Comandos uteis
 
@@ -153,6 +176,20 @@ Rodar a suite completa:
 
 ```bash
 npm run e2e:run
+```
+
+Abrir visualmente:
+
+```bash
+npm run e2e:open
+```
+
+Rodar contra producao:
+
+```bash
+npm run prod:e2e:smoke
+npm run prod:e2e:full
+npm run prod:e2e
 ```
 
 ## Rotas operacionais para hospedagem sem terminal
@@ -204,12 +241,6 @@ Observacao importante:
 - nao existe rota para `migrate:fresh`, porque isso apagaria os dados de producao
 - depois do deploy, o ideal e desligar novamente com `OPS_ROUTE_ENABLED=false`
 
-Abrir o Cypress em modo interativo:
-
-```bash
-npm run e2e:open
-```
-
 Recriar apenas o banco E2E:
 
 ```bash
@@ -230,7 +261,7 @@ As specs atuais cobrem jornadas como:
 - autenticacao
 - fluxo financeiro
 - cadastro e compra de produtos
-- importacao de NFC-e
+- importacao de NFC-e com revisao em etapas
 - saida de estoque
 - jornada completa ponta a ponta
 

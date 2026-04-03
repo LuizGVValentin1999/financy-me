@@ -150,6 +150,23 @@ Nao dependa de:
 
 - `npm run build` no servidor compartilhado
 
+## Seeder demo
+
+Para subir o sistema com massa de dados de apresentacao:
+
+```bash
+php artisan db:seed --class=DemoSystemSeeder
+```
+
+A base demo inclui hoje:
+
+- casa demo
+- produtos e servicos
+- compras manuais
+- 15 notas fiscais
+- saidas de estoque
+- movimentacoes financeiras
+
 ## Produção e Cypress
 
 Scripts disponiveis:
@@ -164,6 +181,7 @@ Regra:
 - comece por smoke
 - use full apenas com consciencia do impacto
 - o cleanup automatico depende de `registerAndLogin()`
+- o fluxo full em producao depende tambem da disponibilidade externa da consulta de NFC-e
 
 ## Checklist final de deploy
 

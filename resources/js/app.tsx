@@ -3,11 +3,18 @@ import 'antd/dist/reset.css';
 import './bootstrap';
 
 import { App as AntdApp, ConfigProvider } from 'antd';
+import type { Locale } from 'antd/es/locale';
+import ptBRModule from 'antd/locale/pt_BR.js';
 import { createInertiaApp } from '@inertiajs/react';
+import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const ptBR = ('default' in ptBRModule ? ptBRModule.default : ptBRModule) as Locale;
+
+dayjs.locale('pt-br');
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -21,6 +28,7 @@ createInertiaApp({
 
         root.render(
             <ConfigProvider
+                locale={ptBR}
                 theme={{
                     token: {
                         colorPrimary: '#6f8ea8',
