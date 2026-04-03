@@ -207,8 +207,8 @@ export default function AuthenticatedLayout({
     };
 
     return (
-        <div className="min-h-screen w-full px-3 py-3 sm:px-4 lg:px-5">
-            <div className="flex min-h-[calc(100vh-1.5rem)] w-full gap-3 lg:gap-4 xl:gap-5">
+        <div className="app-safe-screen w-full px-3 py-3 sm:px-4 lg:px-5">
+            <div className="app-safe-frame flex w-full gap-3 lg:gap-4 xl:gap-5">
                 <aside className="app-sidebar hidden w-[272px] shrink-0 rounded-[32px] border border-white/70 bg-[#0f172a] p-6 text-white shadow-[0_30px_90px_-35px_rgba(15,23,42,0.88)] lg:flex lg:flex-col xl:w-[296px]">
                     <SidebarContent
                         navigation={navigation}
@@ -263,7 +263,7 @@ export default function AuthenticatedLayout({
                         maxWidth: '100vw',
                     },
                     body: {
-                        padding: 24,
+                        padding: 0,
                         background: '#0f172a',
                     },
                     header: {

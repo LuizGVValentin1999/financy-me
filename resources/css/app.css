@@ -20,6 +20,16 @@
         --app-ant-accent-soft: rgba(111, 142, 168, 0.14);
         --app-ant-accent-softer: rgba(111, 142, 168, 0.08);
         --app-ant-shadow: 0 24px 50px -30px rgba(15, 23, 42, 0.18);
+        --app-safe-top: env(safe-area-inset-top, 0px);
+        --app-safe-right: env(safe-area-inset-right, 0px);
+        --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+        --app-safe-left: env(safe-area-inset-left, 0px);
+    }
+
+    html,
+    body,
+    #app {
+        min-height: 100%;
     }
 
     * {
@@ -99,6 +109,16 @@
 }
 
 @layer components {
+    .app-safe-screen {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    .app-safe-frame {
+        min-height: calc(100vh - 1.5rem);
+        min-height: calc(100dvh - 1.5rem);
+    }
+
     .app-ant-menu {
         background: transparent !important;
         border-inline-end: none !important;
@@ -139,6 +159,11 @@
         background: #0f172a !important;
     }
 
+    .app-mobile-drawer .ant-drawer-body {
+        padding: calc(24px + var(--app-safe-top)) calc(24px + var(--app-safe-right))
+            calc(24px + var(--app-safe-bottom)) calc(24px + var(--app-safe-left)) !important;
+    }
+
     .app-mobile-drawer .ant-drawer-mask {
         backdrop-filter: blur(4px);
     }
@@ -150,6 +175,16 @@
 
     .app-fullscreen-modal .ant-drawer-content {
         border-radius: 0 !important;
+    }
+
+    .app-fullscreen-modal .ant-drawer-header {
+        padding: calc(12px + var(--app-safe-top)) calc(16px + var(--app-safe-right)) 12px
+            calc(16px + var(--app-safe-left)) !important;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.85) !important;
+    }
+
+    .app-fullscreen-modal .ant-drawer-body {
+        padding-bottom: var(--app-safe-bottom);
     }
 
     .app-responsive-modal .ant-modal-content {
@@ -443,7 +478,22 @@
     }
 
     @media (max-width: 640px) {
-        .app-fullscreen-modal .ant-drawer-header,
+        .app-safe-screen {
+            min-height: calc(100vh - var(--app-safe-top) - var(--app-safe-bottom));
+            min-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom));
+            padding: var(--app-safe-top) var(--app-safe-right) var(--app-safe-bottom) var(--app-safe-left);
+        }
+
+        .app-safe-frame {
+            min-height: calc(100vh - var(--app-safe-top) - var(--app-safe-bottom) - 1.5rem);
+            min-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 1.5rem);
+        }
+
+        .app-fullscreen-modal .ant-drawer-header {
+            padding: calc(8px + var(--app-safe-top)) calc(12px + var(--app-safe-right)) 8px
+                calc(12px + var(--app-safe-left)) !important;
+        }
+
         .app-responsive-modal .ant-modal-header {
             padding: 8px 12px !important;
         }

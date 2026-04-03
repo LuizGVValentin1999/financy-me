@@ -4,7 +4,7 @@ import { PropsWithChildren } from 'react';
 
 export default function Guest({ children }: PropsWithChildren) {
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
+        <div className="app-safe-screen relative flex items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(224,122,95,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(30,122,138,0.16),transparent_32%)]" />
 
             <div className="relative w-full max-w-xl">
