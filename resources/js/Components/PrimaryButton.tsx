@@ -18,7 +18,7 @@ export default function PrimaryButton({
             {...props}
             type="primary"
             htmlType={type}
-            className={`h-12 rounded-full px-5 text-sm font-semibold ${className}`}
+            className={`h-10 rounded-full px-4 text-xs font-semibold sm:h-12 sm:px-5 sm:text-sm ${className}`}
             disabled={disabled}
         >
             {children}

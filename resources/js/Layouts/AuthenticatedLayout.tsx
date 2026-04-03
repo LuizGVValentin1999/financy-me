@@ -219,7 +219,7 @@ export default function AuthenticatedLayout({
                 </aside>
 
                 <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-white/80 bg-white/78 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur-xl lg:rounded-[32px]">
-                    <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-4 sm:px-6 lg:hidden">
+                    <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3 sm:px-6 lg:hidden">
                         <Link href="/" className="flex min-w-0 items-center gap-3">
                             <ApplicationLogo className="h-10 w-10 shrink-0 text-slate-900" />
                             <div className="min-w-0">
@@ -241,8 +241,8 @@ export default function AuthenticatedLayout({
                         />
                     </div>
 
-                    <div className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7 xl:px-10">
-                        {header && <div className="mb-6">{header}</div>}
+                    <div className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7 xl:px-10">
+                        {header && <div className="mb-4 sm:mb-6">{header}</div>}
 
                         <main className="w-full">{children}</main>
                     </div>

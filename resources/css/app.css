@@ -90,6 +90,12 @@
         box-shadow: none;
         outline: none;
     }
+
+    @media (max-width: 640px) {
+        html {
+            font-size: 90%;
+        }
+    }
 }
 
 @layer components {
@@ -434,5 +440,57 @@
 
     .purchase-ant-table .ant-pagination .ant-pagination-item-active a {
         color: white;
+    }
+
+    @media (max-width: 640px) {
+        .app-fullscreen-modal .ant-drawer-header,
+        .app-responsive-modal .ant-modal-header {
+            padding: 8px 12px !important;
+        }
+
+        .app-fullscreen-modal .ant-drawer-title,
+        .app-responsive-modal .ant-modal-title,
+        .app-fullscreen-modal .ant-drawer-body,
+        .app-responsive-modal .ant-modal-body,
+        .ant-typography,
+        .ant-btn,
+        .ant-input,
+        .ant-input-affix-wrapper,
+        .ant-select-selection-item,
+        .ant-select-selection-placeholder,
+        .ant-picker-input > input,
+        .ant-form-item-label > label,
+        .ant-pagination,
+        .ant-menu-item,
+        .ant-tag {
+            font-size: 90% !important;
+        }
+
+        .ant-btn {
+            min-height: 40px !important;
+            padding-inline: 12px !important;
+        }
+
+        .ant-input,
+        .ant-input-affix-wrapper,
+        .ant-picker {
+            min-height: 40px !important;
+        }
+
+        .ant-select-single .ant-select-selector {
+            height: 40px !important;
+            min-height: 40px !important;
+            padding-inline: 12px !important;
+        }
+
+        .ant-select-single .ant-select-selection-item,
+        .ant-select-single .ant-select-selection-placeholder {
+            line-height: 38px !important;
+        }
+
+        .ant-picker.ant-picker-large {
+            min-height: 40px;
+            padding-inline: 12px;
+        }
     }
 }

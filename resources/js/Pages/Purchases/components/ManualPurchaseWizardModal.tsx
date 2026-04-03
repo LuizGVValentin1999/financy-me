@@ -14,7 +14,7 @@ import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import ProductFormFields from '@/Pages/Products/components/ProductFormFields';
 import { useForm } from '@inertiajs/react';
 import axios from 'axios';
-import { DatePicker, Select } from 'antd';
+import { DatePicker, Grid, Select } from 'antd';
 import dayjs from 'dayjs';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
@@ -168,6 +168,8 @@ export default function ManualPurchaseWizardModal({
     });
     const [accountModalErrors, setAccountModalErrors] = useState<Record<string, string | undefined>>({});
     const [categoryModalErrors, setCategoryModalErrors] = useState<Record<string, string | undefined>>({});
+    const screens = Grid.useBreakpoint();
+    const isMobile = !screens.sm;
 
     const firstAccountId = accountsCatalog[0] ? String(accountsCatalog[0].id) : '';
     const today = todayDateInputValue();
@@ -288,6 +290,10 @@ export default function ManualPurchaseWizardModal({
     }, [data.items.length, errors]);
 
     const totalSteps = data.items.length + 2;
+    const controlSize = isMobile ? 'middle' : 'large';
+    const inputClassName = 'mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm sm:px-4 sm:py-3';
+    const compactButtonClassName = 'h-9 px-3 text-[11px] sm:h-12 sm:px-5 sm:text-sm';
+
     const isInvoiceStep = currentStep === 0;
     const isPaymentStep = currentStep === totalSteps - 1;
     const currentItemIndex = Math.max(0, currentStep - 1);
@@ -475,23 +481,23 @@ export default function ManualPurchaseWizardModal({
     };
 
     const renderInvoiceStep = () => (
-        <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-            <div className="rounded-[28px] border border-slate-200 bg-white p-5">
+        <div className="grid gap-4 sm:gap-6 xl:grid-cols-[0.9fr,1.1fr]">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-4 sm:p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Resumo da compra</p>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Data</p>
                         <p className="mt-2 font-semibold text-slate-900">{dayjs(data.invoice.issued_at).format('DD/MM/YYYY')}</p>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Itens</p>
                         <p className="mt-2 font-semibold text-slate-900">{data.items.length}</p>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Valor previsto</p>
                         <p className="mt-2 font-semibold text-slate-900">{formatCurrency(itemsTotal)}</p>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Pagamentos</p>
                         <p className="mt-2 font-semibold text-slate-900">{data.payments.length}</p>
                     </div>
@@ -501,11 +507,11 @@ export default function ManualPurchaseWizardModal({
             <div className="space-y-4">
                 <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Etapa 1</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">Dados da compra</p>
+                    <p className="mt-2 text-base font-semibold text-slate-900 sm:text-lg">Dados da compra</p>
                     <p className="mt-1 text-sm text-slate-500">Defina a data da compra e informe os dados da nota fiscal, se houver.</p>
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <InputLabel htmlFor="manual_invoice_issued_at" value="Data da compra" />
@@ -513,7 +519,7 @@ export default function ManualPurchaseWizardModal({
                                 id="manual_invoice_issued_at"
                                 value={data.invoice.issued_at ? dayjs(data.invoice.issued_at) : null}
                                 format="DD/MM/YYYY"
-                                size="large"
+                                size={controlSize}
                                 onChange={(date) => updateInvoice('issued_at', date ? date.format('YYYY-MM-DD') : '')}
                                 className="mt-2 w-full"
                             />
@@ -521,7 +527,7 @@ export default function ManualPurchaseWizardModal({
                         </div>
 
                         <div className="flex items-end">
-                            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700">
+                            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 sm:px-4 sm:py-3">
                                 <input
                                     type="checkbox"
                                     checked={data.invoice.has_invoice}
@@ -541,7 +547,7 @@ export default function ManualPurchaseWizardModal({
                                     type="text"
                                     value={data.invoice.store_name}
                                     onChange={(event) => updateInvoice('store_name', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className={inputClassName}
                                 />
                                 <InputError message={errors['invoice.store_name']} className="mt-2" />
                             </div>
@@ -553,7 +559,7 @@ export default function ManualPurchaseWizardModal({
                                     type="text"
                                     value={data.invoice.cnpj}
                                     onChange={(event) => updateInvoice('cnpj', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className={inputClassName}
                                 />
                                 <InputError message={errors['invoice.cnpj']} className="mt-2" />
                             </div>
@@ -565,7 +571,7 @@ export default function ManualPurchaseWizardModal({
                                     type="text"
                                     value={data.invoice.invoice_number}
                                     onChange={(event) => updateInvoice('invoice_number', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className={inputClassName}
                                 />
                                 <InputError message={errors['invoice.invoice_number']} className="mt-2" />
                             </div>
@@ -577,7 +583,7 @@ export default function ManualPurchaseWizardModal({
                                     type="text"
                                     value={data.invoice.series}
                                     onChange={(event) => updateInvoice('series', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className={inputClassName}
                                 />
                                 <InputError message={errors['invoice.series']} className="mt-2" />
                             </div>
@@ -589,7 +595,7 @@ export default function ManualPurchaseWizardModal({
                                     type="text"
                                     value={data.invoice.access_key}
                                     onChange={(event) => updateInvoice('access_key', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className={inputClassName}
                                 />
                                 <InputError message={errors['invoice.access_key']} className="mt-2" />
                             </div>
@@ -608,20 +614,20 @@ export default function ManualPurchaseWizardModal({
         const itemTotal = (Number(currentItem.quantity) || 0) * (Number(currentItem.unit_price) || 0);
 
         return (
-            <div className="w-full space-y-5">
+            <div className="w-full space-y-4 sm:space-y-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Etapa {currentStep + 1} de {totalSteps}</p>
-                        <p className="mt-2 text-lg font-semibold text-slate-900">Produto da compra</p>
+                        <p className="mt-2 text-base font-semibold text-slate-900 sm:text-lg">Produto da compra</p>
                         <p className="mt-1 text-sm text-slate-500">Adicione um produto por vez e defina os dados necessarios antes de seguir.</p>
                     </div>
 
-                    <div className="rounded-full bg-[#eef7f7] px-4 py-2 text-sm font-semibold text-slate-700">
+                    <div className="rounded-full bg-[#eef7f7] px-3 py-1.5 text-xs font-semibold text-slate-700 sm:px-4 sm:py-2 sm:text-sm">
                         {formatCurrency(itemTotal)}
                     </div>
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                     <div>
                         <InputLabel htmlFor={`manual_item_${currentItemIndex}_product_id`} value="Produto existente" />
                         <Select
@@ -629,7 +635,7 @@ export default function ManualPurchaseWizardModal({
                             value={currentItem.product_id || undefined}
                             onChange={(value) => updateItem(currentItemIndex, 'product_id', (value ?? '') as string)}
                             className="mt-2 w-full"
-                            size="large"
+                            size={controlSize}
                             showSearch
                             allowClear
                             optionFilterProp="label"
@@ -652,7 +658,7 @@ export default function ManualPurchaseWizardModal({
                                 step="0.001"
                                 value={currentItem.quantity}
                                 onChange={(event) => updateItem(currentItemIndex, 'quantity', event.target.value)}
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                className={inputClassName}
                             />
                             <InputError message={errors[`items.${currentItemIndex}.quantity`]} className="mt-2" />
                         </div>
@@ -666,7 +672,7 @@ export default function ManualPurchaseWizardModal({
                                 step="0.01"
                                 value={currentItem.unit_price}
                                 onChange={(event) => updateItem(currentItemIndex, 'unit_price', event.target.value)}
-                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                className={inputClassName}
                             />
                             <InputError message={errors[`items.${currentItemIndex}.unit_price`]} className="mt-2" />
                         </div>
@@ -674,14 +680,14 @@ export default function ManualPurchaseWizardModal({
                 </div>
 
                 {!currentItem.product_id ? (
-                    <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+                    <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Novo produto</p>
-                                <p className="mt-2 text-lg font-semibold text-slate-900">Cadastre o produto durante o lancamento</p>
+                                <p className="mt-2 text-base font-semibold text-slate-900 sm:text-lg">Cadastre o produto durante o lancamento</p>
                             </div>
 
-                            <SecondaryButton type="button" onClick={openCategoryModal}>
+                            <SecondaryButton type="button" onClick={openCategoryModal} className={compactButtonClassName}>
                                 Nova categoria
                             </SecondaryButton>
                         </div>
@@ -726,15 +732,15 @@ export default function ManualPurchaseWizardModal({
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Etapa final</p>
-                    <p className="mt-2 text-lg font-semibold text-slate-900">Pagamento da compra</p>
+                    <p className="mt-2 text-base font-semibold text-slate-900 sm:text-lg">Pagamento da compra</p>
                     <p className="mt-1 text-sm text-slate-500">Escolha ou crie contas, distribua o valor e defina parcelamentos.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    <SecondaryButton type="button" onClick={openAccountModal}>
+                    <SecondaryButton type="button" onClick={openAccountModal} className={compactButtonClassName}>
                         Nova conta
                     </SecondaryButton>
-                    <SecondaryButton type="button" onClick={addPayment}>
+                    <SecondaryButton type="button" onClick={addPayment} className={compactButtonClassName}>
                         Adicionar conta
                     </SecondaryButton>
                 </div>
@@ -742,7 +748,7 @@ export default function ManualPurchaseWizardModal({
 
             <div className="space-y-4">
                 {data.payments.map((payment, paymentIndex) => (
-                    <div key={`manual-payment-${paymentIndex}`} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                    <div key={`manual-payment-${paymentIndex}`} className="rounded-[24px] border border-slate-200 bg-slate-50 p-3 sm:p-4">
                         <div className="grid gap-4 xl:grid-cols-[1.4fr,1fr,1fr,1fr]">
                             <div>
                                 <InputLabel htmlFor={`manual_payments_${paymentIndex}_account_id`} value="Conta" />
@@ -751,7 +757,7 @@ export default function ManualPurchaseWizardModal({
                                     value={payment.account_id || undefined}
                                     onChange={(value) => updatePayment(paymentIndex, 'account_id', (value ?? '') as string)}
                                     className="mt-2 w-full"
-                                    size="large"
+                                    size={controlSize}
                                     options={accountsCatalog.map((account) => ({
                                         value: String(account.id),
                                         label: `${account.code} - ${account.name}`,
@@ -767,7 +773,7 @@ export default function ManualPurchaseWizardModal({
                                     value={payment.type}
                                     onChange={(value) => updatePayment(paymentIndex, 'type', value)}
                                     className="mt-2 w-full"
-                                    size="large"
+                                    size={controlSize}
                                     options={[
                                         { value: 'cash', label: 'A vista' },
                                         { value: 'installment', label: 'Parcelado' },
@@ -784,7 +790,7 @@ export default function ManualPurchaseWizardModal({
                                     step="0.01"
                                     value={payment.principal_amount}
                                     onChange={(event) => updatePayment(paymentIndex, 'principal_amount', event.target.value)}
-                                    className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                    className={inputClassName}
                                 />
                                 <InputError message={errors[`payments.${paymentIndex}.principal_amount`]} className="mt-2" />
                             </div>
@@ -795,7 +801,7 @@ export default function ManualPurchaseWizardModal({
                                     id={`manual_payments_${paymentIndex}_first_due_date`}
                                     value={payment.first_due_date ? dayjs(payment.first_due_date) : null}
                                     format="DD/MM/YYYY"
-                                    size="large"
+                                    size={controlSize}
                                     onChange={(date) => updatePayment(paymentIndex, 'first_due_date', date ? date.format('YYYY-MM-DD') : '')}
                                     className="mt-2 w-full"
                                 />
@@ -814,7 +820,7 @@ export default function ManualPurchaseWizardModal({
                                         step="1"
                                         value={payment.installments}
                                         onChange={(event) => updatePayment(paymentIndex, 'installments', event.target.value)}
-                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                        className={inputClassName}
                                     />
                                     <InputError message={errors[`payments.${paymentIndex}.installments`]} className="mt-2" />
                                 </div>
@@ -826,7 +832,7 @@ export default function ManualPurchaseWizardModal({
                                         value={payment.interest_type}
                                         onChange={(value) => updatePayment(paymentIndex, 'interest_type', value)}
                                         className="mt-2 w-full"
-                                        size="large"
+                                        size={controlSize}
                                         options={[
                                             { value: 'rate', label: 'Percentual' },
                                             { value: 'fixed_installment', label: 'Valor da parcela' },
@@ -846,7 +852,7 @@ export default function ManualPurchaseWizardModal({
                                                 step="0.01"
                                                 value={payment.installment_amount}
                                                 onChange={(event) => updatePayment(paymentIndex, 'installment_amount', event.target.value)}
-                                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                className={inputClassName}
                                             />
                                             <InputError message={errors[`payments.${paymentIndex}.installment_amount`]} className="mt-2" />
                                         </>
@@ -860,7 +866,7 @@ export default function ManualPurchaseWizardModal({
                                                 step="0.01"
                                                 value={payment.interest_rate}
                                                 onChange={(event) => updatePayment(paymentIndex, 'interest_rate', event.target.value)}
-                                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                className={inputClassName}
                                             />
                                             <InputError message={errors[`payments.${paymentIndex}.interest_rate`]} className="mt-2" />
                                         </>
@@ -871,7 +877,7 @@ export default function ManualPurchaseWizardModal({
 
                         <div className="mt-4 flex justify-end">
                             {data.payments.length > 1 ? (
-                                <SecondaryButton type="button" onClick={() => removePayment(paymentIndex)}>
+                                <SecondaryButton type="button" onClick={() => removePayment(paymentIndex)} className={compactButtonClassName}>
                                     Remover conta
                                 </SecondaryButton>
                             ) : null}
@@ -903,25 +909,25 @@ export default function ManualPurchaseWizardModal({
     return (
         <>
             <Modal show={isOpen} onClose={onClose} maxWidth="screen">
-                <form noValidate onSubmit={handleSubmit} className="flex max-h-[88vh] flex-col overflow-hidden bg-white">
-                    <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
-                        <div className="flex flex-wrap items-start justify-between gap-4">
+                <form noValidate onSubmit={handleSubmit} className="flex max-h-[95vh] flex-col overflow-hidden bg-white">
+                    <div className="border-b border-slate-200 px-3 py-2.5 sm:px-6 sm:py-4">
+                        <div className="flex items-start justify-between gap-2 sm:flex-wrap sm:gap-4">
                             <div>
-                                <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Compra manual</p>
-                                <h2 className="mt-2 text-3xl font-semibold text-slate-900">Lancamento em etapas</h2>
-                                <p className="mt-2 text-sm leading-6 text-slate-500">
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-sm sm:tracking-[0.24em]">Compra manual</p>
+                                <h2 className="mt-1 text-xl font-semibold text-slate-900 sm:mt-2 sm:text-3xl">Lancamento em etapas</h2>
+                                <p className="mt-1 hidden text-sm leading-5 text-slate-500 sm:mt-2 sm:block sm:leading-6">
                                     Defina a compra, adicione os produtos um por um e finalize no pagamento.
                                 </p>
                             </div>
 
-                            <DangerButton type="button" onClick={resetWizard}>
+                            <DangerButton type="button" onClick={resetWizard} className={compactButtonClassName}>
                                 Limpar rascunho
                             </DangerButton>
                         </div>
 
-                        <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1">
+                        <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 sm:mt-4 sm:gap-2">
                             {hasHiddenPreviousSteps ? (
-                                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em]">
                                     ...
                                 </span>
                             ) : null}
@@ -931,14 +937,14 @@ export default function ManualPurchaseWizardModal({
                                     key={`manual-step-${stepIndex}`}
                                     type="button"
                                     onClick={() => setCurrentStep(stepIndex)}
-                                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${currentStep === stepIndex ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}
+                                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] sm:px-3 sm:text-xs sm:tracking-[0.18em] ${currentStep === stepIndex ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}`}
                                 >
                                     {stepIndex + 1}. {getStepLabel(stepIndex, data.items, totalSteps)}
                                 </button>
                             ))}
 
                             {hasHiddenNextSteps ? (
-                                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em]">
                                     ...
                                 </span>
                             ) : null}
@@ -946,12 +952,12 @@ export default function ManualPurchaseWizardModal({
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-y-auto">
-                        <div className="flex min-h-full w-full flex-col gap-5 p-5 sm:p-6">
+                        <div className="flex min-h-full w-full flex-col gap-4 p-4 sm:gap-5 sm:p-6">
                             {isInvoiceStep ? renderInvoiceStep() : isPaymentStep ? renderPaymentStep() : renderItemStep()}
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-200 px-5 py-4 sm:px-6">
+                    <div className="border-t border-slate-200 px-4 py-3.5 sm:px-6 sm:py-4">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="text-sm text-slate-500">
                                 {isPaymentStep ? (
@@ -963,39 +969,39 @@ export default function ManualPurchaseWizardModal({
                                 )}
                             </div>
 
-                            <div className="flex flex-wrap justify-end gap-3">
+                            <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
                                 {isInvoiceStep ? (
                                     <>
-                                        <SecondaryButton type="button" onClick={onClose}>
+                                        <SecondaryButton type="button" onClick={onClose} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Cancelar
                                         </SecondaryButton>
-                                        <PrimaryButton type="button" onClick={() => setCurrentStep(1)}>
+                                        <PrimaryButton type="button" onClick={() => setCurrentStep(1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Avancar para produtos
                                         </PrimaryButton>
                                     </>
                                 ) : isPaymentStep ? (
                                     <>
-                                        <SecondaryButton type="button" onClick={() => setCurrentStep(Math.max(data.items.length, 1))}>
+                                        <SecondaryButton type="button" onClick={() => setCurrentStep(Math.max(data.items.length, 1))} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Voltar
                                         </SecondaryButton>
-                                        <PrimaryButton disabled={processing}>
+                                        <PrimaryButton disabled={processing} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Registrar compra
                                         </PrimaryButton>
                                     </>
                                 ) : (
                                     <>
-                                        <SecondaryButton type="button" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}>
+                                        <SecondaryButton type="button" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Voltar
                                         </SecondaryButton>
                                         {currentItemIndex < data.items.length - 1 ? (
-                                            <SecondaryButton type="button" onClick={() => setCurrentStep(currentStep + 1)}>
+                                            <SecondaryButton type="button" onClick={() => setCurrentStep(currentStep + 1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                                 Proximo produto
                                             </SecondaryButton>
                                         ) : null}
-                                        <SecondaryButton type="button" onClick={addItem}>
+                                        <SecondaryButton type="button" onClick={addItem} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Adicionar mais um produto
                                         </SecondaryButton>
-                                        <PrimaryButton type="button" onClick={() => setCurrentStep(totalSteps - 1)}>
+                                        <PrimaryButton type="button" onClick={() => setCurrentStep(totalSteps - 1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
                                             Ir para pagamento
                                         </PrimaryButton>
                                     </>

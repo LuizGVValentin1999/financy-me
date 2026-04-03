@@ -4,7 +4,15 @@ describe('Financial flow', () => {
         const updatedName = `${baseName} atualizado`;
 
         const withinModal = (title: string, callback: () => void) => {
-            cy.contains('h2', title).should('be.visible').closest('div.p-5').within(callback);
+            cy.get('.ant-modal-wrap', { timeout: 10000 })
+                .filter(':visible')
+                .last()
+                .within(() => {
+                    cy.contains('h2', title, { timeout: 10000 })
+                        .should('be.visible')
+                        .closest('div.p-4, div.p-5')
+                        .within(callback);
+                });
         };
 
         cy.registerAndLogin();

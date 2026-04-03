@@ -21,7 +21,7 @@ export function ResponsiveCard({
             type={onClick ? 'button' : undefined}
             onClick={onClick}
             className={joinClasses(
-                'block w-full rounded-[28px] border border-white/80 p-4 text-left shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] transition duration-200',
+                'block w-full rounded-[28px] border border-white/80 p-3 text-left shadow-[0_24px_60px_-42px_rgba(15,23,42,0.45)] transition duration-200 sm:p-4',
                 onClick && 'active:scale-[0.99] hover:-translate-y-0.5',
                 tone === 'default' && 'bg-white',
                 tone === 'muted' && 'bg-[rgba(248,250,252,0.92)]',
@@ -74,7 +74,7 @@ export function ResponsiveCardHeader({
 }
 
 export function ResponsiveCardPills({ children }: PropsWithChildren) {
-    return <div className="mt-3 flex flex-wrap gap-2">{children}</div>;
+    return <div className="mt-2.5 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">{children}</div>;
 }
 
 export function ResponsiveCardPill({
@@ -103,7 +103,7 @@ export function ResponsiveCardFields({
     return (
         <div
             className={joinClasses(
-                'mt-4 gap-2.5 text-sm text-slate-600',
+                'mt-3 gap-2 text-sm text-slate-600 sm:mt-4 sm:gap-2.5',
                 columns === 2 ? 'grid grid-cols-2' : 'space-y-2',
                 className,
             )}
@@ -127,7 +127,7 @@ export function ResponsiveCardField({
     return (
         <p
             className={joinClasses(
-                'rounded-2xl border border-slate-100 px-3 py-2.5 leading-5 [overflow-wrap:anywhere]',
+                'rounded-2xl border border-slate-100 px-3 py-2 leading-5 [overflow-wrap:anywhere] sm:py-2.5',
                 colSpan === 2 && 'col-span-2',
                 tone === 'default' && 'bg-slate-50/85',
                 tone === 'danger' && 'bg-[#fff1ec] text-[#be3d2a]',
