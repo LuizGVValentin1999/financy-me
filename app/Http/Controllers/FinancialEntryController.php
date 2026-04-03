@@ -46,7 +46,7 @@ class FinancialEntryController extends Controller
                     'direction' => $entry->direction,
                     'origin' => $entry->origin,
                     'amount' => (float) $entry->amount,
-                    'moved_at' => $entry->moved_at,
+                    'moved_at' => $entry->moved_at?->toDateString(),
                     'description' => $entry->description,
                     'created_at' => $entry->created_at?->toDateString(),
                 ]),

@@ -49,4 +49,41 @@ describe('Financial flow', () => {
 
         cy.contains('tr', updatedName, { timeout: 10000 }).should('not.exist');
     });
+
+    it('mantem a mesma data exibida para conta e lancamento manual', () => {
+        const dateLabel = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date());
+        const accountName = `Conta Data E2E ${Date.now()}`;
+        const accountCode = `DT-${Date.now()}`;
+        const entryName = `Data sem fuso ${Date.now()}`;
+
+        cy.registerAndLogin();
+
+        cy.visit('/accounts');
+        cy.createAccountViaUi({
+            name: accountName,
+            code: accountCode,
+            initialBalance: '350',
+        });
+
+        cy.contains('tr', accountName, { timeout: 10000 })
+            .should('be.visible')
+            .and('contain.text', dateLabel);
+
+        cy.visit('/financial');
+        cy.contains('button', 'Novo lançamento').click();
+
+        cy.intercept('POST', '**/financial').as('storeFinancialWithDate');
+        cy.get('input#amount', { timeout: 10000 }).should('be.visible');
+        cy.get('input#amount').clear().type('89.90');
+        cy.get('input#description').clear().type(entryName);
+        cy.contains('button', 'Criar lançamento').click();
+
+        cy.wait('@storeFinancialWithDate')
+            .its('response.statusCode')
+            .should('be.oneOf', [200, 302, 303]);
+
+        cy.contains('tr', entryName, { timeout: 10000 })
+            .should('be.visible')
+            .and('contain.text', dateLabel);
+    });
 });

@@ -750,8 +750,8 @@ export default function Dashboard({
             dataIndex: 'purchased_at',
             key: 'purchased_at',
             sorter: (a, b) =>
-                new Date(a.purchased_at ?? '').getTime() -
-                new Date(b.purchased_at ?? '').getTime(),
+                dayjs(a.purchased_at ?? '').valueOf() -
+                dayjs(b.purchased_at ?? '').valueOf(),
             render: (_value, record) => formatDate(record.purchased_at),
         },
     ];

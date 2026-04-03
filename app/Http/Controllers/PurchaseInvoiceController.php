@@ -40,7 +40,7 @@ class PurchaseInvoiceController extends Controller
                 'series' => $invoice->series,
                 'access_key' => $invoice->access_key,
                 'receipt_url' => $invoice->receipt_url,
-                'issued_at' => $invoice->issued_at,
+                'issued_at' => $invoice->issued_at?->toDateString(),
                 'items_count' => (int) $invoice->items_count,
                 'gross_amount' => (float) $invoice->gross_amount,
                 'discount_amount' => (float) $invoice->discount_amount,

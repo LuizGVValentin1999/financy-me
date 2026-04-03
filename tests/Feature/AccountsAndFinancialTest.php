@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Carbon\Carbon;
 
 test('account code uniqueness is scoped per house', function () {
     $firstUser = User::factory()->create();
@@ -148,4 +149,43 @@ test('bulk delete in financial removes only manual entries', function () {
 
     expect($user->financialEntries()->whereKey($manual->id)->exists())->toBeFalse();
     expect($user->financialEntries()->whereKey($auto->id)->exists())->toBeTrue();
+});
+
+test('account and financial dates are serialized as plain local dates for inertia', function () {
+    Carbon::setTestNow('2026-04-03 01:30:00');
+
+    $user = User::factory()->create();
+
+    $account = $user->accounts()->create([
+        'code' => 'ACC-001',
+        'name' => 'Main account',
+        'initial_balance' => 500,
+        'initial_balance_date' => '2026-04-03',
+    ]);
+
+    $user->financialEntries()->create([
+        'account_id' => $account->id,
+        'category_id' => null,
+        'purchase_entry_id' => null,
+        'purchase_invoice_id' => null,
+        'direction' => 'inflow',
+        'origin' => 'manual',
+        'amount' => 120,
+        'moved_at' => '2026-04-03',
+        'description' => 'Ajuste de saldo',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('accounts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('Accounts/Index')
+            ->where('accounts.0.initial_balance_date', '2026-04-03'));
+
+    $this->actingAs($user)
+        ->get(route('financial.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('Financial/Index')
+            ->where('entries.0.moved_at', '2026-04-03'));
+
+    Carbon::setTestNow();
 });

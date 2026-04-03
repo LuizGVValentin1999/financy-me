@@ -82,7 +82,7 @@ class PurchaseEntryController extends Controller
                     'source' => $entry->source,
                     'invoice_reference' => $entry->invoice_reference,
                     'notes' => $entry->notes,
-                    'purchased_at' => $entry->purchased_at,
+                    'purchased_at' => $entry->purchased_at?->toDateString(),
                     'created_at' => $entry->created_at?->toDateString(),
                 ]),
         ]);

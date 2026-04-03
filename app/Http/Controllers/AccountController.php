@@ -22,7 +22,7 @@ class AccountController extends Controller
                 'code' => $account->code,
                 'name' => $account->name,
                 'initial_balance' => (float) $account->initial_balance,
-                'initial_balance_date' => $account->initial_balance_date,
+                'initial_balance_date' => $account->initial_balance_date?->toDateString(),
                 'created_at' => $account->created_at?->format('Y-m-d H:i'),
             ]);
 

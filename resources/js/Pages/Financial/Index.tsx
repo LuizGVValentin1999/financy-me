@@ -16,6 +16,7 @@ import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import FinancialEntryModal from '@/Pages/Financial/components/FinancialEntryModal';
 import type { EntryRow, EntryTableRecord, FinancialPageProps } from '@/Pages/Financial/types';
+import { todayDateInputValue } from '@/lib/date';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Button, Checkbox, DatePicker, Select, Space, Tag } from 'antd';
@@ -37,7 +38,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
         category_id: '',
         direction: 'outflow' as 'inflow' | 'outflow',
         amount: '0',
-        moved_at: new Date().toISOString().slice(0, 10),
+        moved_at: todayDateInputValue(),
         description: '',
     });
 
@@ -95,7 +96,7 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             category_id: entry.category_id ? String(entry.category_id) : '',
             direction: entry.direction,
             amount: String(entry.amount),
-            moved_at: entry.moved_at ?? new Date().toISOString().slice(0, 10),
+            moved_at: entry.moved_at ?? todayDateInputValue(),
             description: entry.description ?? '',
         });
         clearEditErrors();

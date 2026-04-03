@@ -22,6 +22,13 @@ type CreateProductOptions = {
 	type?: AntdSelectOption;
 };
 
+type CreateAccountOptions = {
+	name: string;
+	code: string;
+	initialBalance?: string;
+	initialBalanceDate?: string;
+};
+
 type CreateManualPurchaseOptions = {
 	productName: string;
 	accountLabel?: string;
@@ -82,7 +89,7 @@ Cypress.Commands.add('registerAndLogin', (options: RegisterUserOptions = {}) => 
 	cy.get('input#house_code').clear().type(payload.houseCode);
 	cy.get('input#house_password').clear().type(payload.housePassword);
 
-	cy.contains('button', 'Criar conta').click();
+	cy.contains('button', 'Criar conta').should('not.be.disabled').click({ force: true });
 	cy.url({ timeout: 20000 }).should('not.include', '/register');
 
 	return cy.wrap(
@@ -200,6 +207,31 @@ Cypress.Commands.add('createProductViaUi', (options: CreateProductOptions) => {
 	cy.assertNoVisibleModal();
 });
 
+Cypress.Commands.add('createAccountViaUi', (options: CreateAccountOptions) => {
+	cy.contains('button', 'Nova conta').click();
+	cy.intercept('POST', '**/accounts').as('storeAccount');
+	cy.get('input#name', { timeout: 10000 }).clear().type(options.name, {
+		force: true,
+	});
+	cy.get('input#code').clear().type(options.code, { force: true });
+	cy.get('input#initial_balance').clear().type(options.initialBalance ?? '0', {
+		force: true,
+	});
+
+	if (options.initialBalanceDate) {
+		cy.get('input#initial_balance_date')
+			.clear({ force: true })
+			.type(options.initialBalanceDate, { force: true })
+			.type('{enter}', { force: true });
+	}
+
+	cy.contains('button', 'Criar conta').click();
+	cy.wait('@storeAccount')
+		.its('response.statusCode')
+		.should('be.oneOf', [200, 302, 303]);
+	cy.assertNoVisibleModal();
+});
+
 Cypress.Commands.add(
 	'createManualPurchaseViaUi',
 	({ productName, accountLabel, quantity, unitPrice }: CreateManualPurchaseOptions) => {
@@ -270,6 +302,7 @@ declare global {
 			): Chainable<void>;
 			assertNoVisibleModal(): Chainable<void>;
 			createProductViaUi(options: CreateProductOptions): Chainable<void>;
+			createAccountViaUi(options: CreateAccountOptions): Chainable<void>;
 			createManualPurchaseViaUi(
 				options: CreateManualPurchaseOptions,
 			): Chainable<void>;

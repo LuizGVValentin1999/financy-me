@@ -13,6 +13,7 @@ import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AccountModal from '@/Pages/Accounts/components/AccountModal';
 import type { AccountRow, AccountsPageProps, AccountTableRecord } from '@/Pages/Accounts/types';
+import { todayDateInputValue } from '@/lib/date';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Checkbox, Tag } from 'antd';
@@ -29,7 +30,7 @@ export default function AccountsIndex({ accounts }: AccountsPageProps) {
         code: '',
         name: '',
         initial_balance: '0',
-        initial_balance_date: new Date().toISOString().split('T')[0],
+        initial_balance_date: todayDateInputValue(),
     });
 
     const {

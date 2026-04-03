@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useAntdApp } from '@/hooks/useAntdApp';
 import { useDependencyErrorNotification } from '@/hooks/useDependencyErrorNotification';
+import { todayDateInputValue } from '@/lib/date';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import ProductFormFields from '@/Pages/Products/components/ProductFormFields';
@@ -81,7 +82,7 @@ const buildInitialPayment = (preview: Preview, firstAccountId: string): PaymentF
     account_id: firstAccountId,
     type: 'cash',
     principal_amount: String(preview.amount_paid || 0),
-    first_due_date: preview.issued_at ?? new Date().toISOString().slice(0, 10),
+    first_due_date: preview.issued_at ?? todayDateInputValue(),
     installments: '12',
     interest_type: 'rate',
     interest_rate: '1',
@@ -120,7 +121,7 @@ export default function ImportPreviewSection({
         code: '',
         name: '',
         initial_balance: '0',
-        initial_balance_date: preview.issued_at ?? new Date().toISOString().slice(0, 10),
+        initial_balance_date: preview.issued_at ?? todayDateInputValue(),
     });
     const [accountModalErrors, setAccountModalErrors] = useState<Record<string, string | undefined>>({});
     const [isCreatingAccount, setIsCreatingAccount] = useState(false);
@@ -285,7 +286,7 @@ export default function ImportPreviewSection({
             code: '',
             name: '',
             initial_balance: '0',
-            initial_balance_date: preview.issued_at ?? new Date().toISOString().slice(0, 10),
+            initial_balance_date: preview.issued_at ?? todayDateInputValue(),
         });
         setIsAccountModalOpen(true);
     };

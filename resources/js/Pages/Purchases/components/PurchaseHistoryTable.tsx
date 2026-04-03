@@ -11,6 +11,7 @@ import {
 import SectionCard from '@/Components/SectionCard';
 import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import { useAntdApp } from '@/hooks/useAntdApp';
+import { todayDateInputValue } from '@/lib/date';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import type { PurchaseEntryRow, PurchasesPageProps } from '@/Pages/Purchases/types';
 import { router, useForm } from '@inertiajs/react';
@@ -53,7 +54,7 @@ export default function PurchaseHistoryTable({
         account_id: '',
         quantity: '1',
         unit_price: '0',
-        purchased_at: new Date().toISOString().slice(0, 10),
+        purchased_at: todayDateInputValue(),
         source: sources[0]?.value ?? 'manual',
         invoice_reference: '',
         notes: '',
@@ -72,7 +73,7 @@ export default function PurchaseHistoryTable({
             account_id: entry.account_id ? String(entry.account_id) : '',
             quantity: String(entry.quantity),
             unit_price: String(entry.unit_price),
-            purchased_at: entry.purchased_at ?? new Date().toISOString().slice(0, 10),
+            purchased_at: entry.purchased_at ?? todayDateInputValue(),
             source: entry.source,
             invoice_reference: entry.invoice_reference ?? '',
             notes: entry.notes ?? '',

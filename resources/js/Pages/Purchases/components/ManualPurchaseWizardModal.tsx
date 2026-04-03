@@ -6,6 +6,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useAntdApp } from '@/hooks/useAntdApp';
 import { useDependencyErrorNotification } from '@/hooks/useDependencyErrorNotification';
+import { todayDateInputValue } from '@/lib/date';
 import { formatCurrency } from '@/lib/format';
 import AccountModal from '@/Pages/Accounts/components/AccountModal';
 import CategoryModal from '@/Pages/Categories/components/CategoryModal';
@@ -157,7 +158,7 @@ export default function ManualPurchaseWizardModal({
         code: '',
         name: '',
         initial_balance: '0',
-        initial_balance_date: new Date().toISOString().slice(0, 10),
+        initial_balance_date: todayDateInputValue(),
     });
     const [categoryModalData, setCategoryModalData] = useState({
         code: '',
@@ -169,7 +170,7 @@ export default function ManualPurchaseWizardModal({
     const [categoryModalErrors, setCategoryModalErrors] = useState<Record<string, string | undefined>>({});
 
     const firstAccountId = accountsCatalog[0] ? String(accountsCatalog[0].id) : '';
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayDateInputValue();
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         invoice: {
@@ -198,7 +199,7 @@ export default function ManualPurchaseWizardModal({
     }, [accounts]);
 
     const resetWizard = () => {
-        const issuedAt = new Date().toISOString().slice(0, 10);
+        const issuedAt = todayDateInputValue();
 
         reset();
         setData({

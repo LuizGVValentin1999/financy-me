@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Models\Product;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,7 +55,9 @@ class ProductController extends Controller
                         ]
                         : null,
                     'total_spent' => (float) ($product->total_spent ?? 0),
-                    'last_purchase_at' => $product->last_purchase_at,
+                    'last_purchase_at' => $product->last_purchase_at
+                        ? Carbon::parse($product->last_purchase_at)->toDateString()
+                        : null,
                 ]),
         ]);
     }
