@@ -101,4 +101,13 @@ class User extends Authenticatable
             ? $house->financialEntries()
             : FinancialEntry::query()->whereRaw('1 = 0');
     }
+
+    public function stockMovements()
+    {
+        $house = $this->getCurrentHouse();
+
+        return $house
+            ? $house->stockMovements()
+            : StockMovement::query()->whereRaw('1 = 0');
+    }
 }

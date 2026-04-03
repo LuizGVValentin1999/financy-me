@@ -61,7 +61,11 @@ export function ResponsiveCardHeader({
                 >
                     {title}
                 </p>
-                {subtitle ? <p className="mt-1 text-sm leading-5 text-slate-500">{subtitle}</p> : null}
+                {subtitle ? (
+                    <p className="mt-1 text-sm leading-5 text-slate-500 [overflow-wrap:anywhere]">
+                        {subtitle}
+                    </p>
+                ) : null}
             </div>
 
             {trailing ? <div className="shrink-0">{trailing}</div> : null}
@@ -123,7 +127,7 @@ export function ResponsiveCardField({
     return (
         <p
             className={joinClasses(
-                'rounded-2xl border border-slate-100 px-3 py-2.5 leading-5',
+                'rounded-2xl border border-slate-100 px-3 py-2.5 leading-5 [overflow-wrap:anywhere]',
                 colSpan === 2 && 'col-span-2',
                 tone === 'default' && 'bg-slate-50/85',
                 tone === 'danger' && 'bg-[#fff1ec] text-[#be3d2a]',

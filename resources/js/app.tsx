@@ -23,10 +23,28 @@ createInertiaApp({
             <ConfigProvider
                 theme={{
                     token: {
-                        colorPrimary: '#0f172a',
-                        colorInfo: '#0f172a',
+                        colorPrimary: '#6f8ea8',
+                        colorPrimaryHover: '#7f9cb4',
+                        colorPrimaryActive: '#5b7891',
+                        colorPrimaryBg: '#edf3f7',
+                        colorPrimaryBgHover: '#e5eef4',
+                        colorPrimaryBorder: '#bfd0dc',
+                        colorPrimaryBorderHover: '#9db6c7',
+                        colorPrimaryText: '#5b7891',
+                        colorPrimaryTextHover: '#506d86',
+                        colorPrimaryTextActive: '#435d74',
+                        colorInfo: '#6f8ea8',
+                        colorLink: '#6f8ea8',
+                        colorLinkHover: '#7f9cb4',
+                        colorLinkActive: '#5b7891',
                         colorSuccess: '#1e7a8a',
                         colorError: '#be3d2a',
+                        colorBorder: '#e8ddd0',
+                        colorBorderSecondary: '#efe6da',
+                        colorBgContainer: '#ffffff',
+                        colorBgElevated: '#ffffff',
+                        colorText: '#334155',
+                        colorTextPlaceholder: '#94a3b8',
                         borderRadius: 16,
                         fontFamily: 'Manrope, sans-serif',
                     },
@@ -36,7 +54,7 @@ createInertiaApp({
                             controlHeight: 48,
                             fontWeight: 600,
                             primaryShadow:
-                                '0 16px 40px -18px rgba(15, 23, 42, 0.85)',
+                                '0 16px 40px -18px rgba(91, 120, 145, 0.45)',
                             dangerShadow:
                                 '0 14px 30px -18px rgba(190, 61, 42, 0.75)',
                         },
@@ -44,11 +62,20 @@ createInertiaApp({
                             borderRadiusLG: 16,
                             controlHeightLG: 48,
                         },
+                        DatePicker: {
+                            borderRadiusLG: 16,
+                            controlHeightLG: 48,
+                        },
                         Select: {
                             borderRadiusLG: 16,
                             controlHeightLG: 48,
-                            optionSelectedBg:
-                                'rgb(100 116 139 / var(--tw-text-opacity, 1))',
+                            optionSelectedBg: 'rgba(111, 142, 168, 0.14)',
+                        },
+                        Tabs: {
+                            inkBarColor: '#6f8ea8',
+                            itemActiveColor: '#5b7891',
+                            itemHoverColor: '#7f9cb4',
+                            itemSelectedColor: '#5b7891',
                         },
                         Modal: {
                             borderRadiusLG: 24,

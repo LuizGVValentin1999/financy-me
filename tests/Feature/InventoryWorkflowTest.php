@@ -154,3 +154,92 @@ test('dashboard includes entries created on the selected end date even when stor
             ->where('entries.0.product_name', 'Servico de limpeza')
         );
 });
+
+test('dashboard returns stock consumption and account movement data for the filtered period', function () {
+    $user = User::factory()->create();
+
+    $category = $user->categories()->create([
+        'code' => 'CAT-ALIM',
+        'name' => 'Alimentos',
+        'color' => '#1F7A8C',
+        'description' => 'Alimentos da casa',
+    ]);
+
+    $account = $user->accounts()->create([
+        'code' => 'ACC-CASA',
+        'name' => 'Conta da casa',
+        'initial_balance' => 100,
+        'initial_balance_date' => '2026-04-01',
+    ]);
+
+    $product = $user->products()->create([
+        'category_id' => $category->id,
+        'name' => 'Arroz',
+        'brand' => 'Bom Grao',
+        'sku' => 'ARZ-01',
+        'unit' => 'kg',
+        'type' => 'stockable',
+        'minimum_stock' => 1,
+        'current_stock' => 4,
+        'notes' => null,
+    ]);
+
+    $entry = $user->purchaseEntries()->create([
+        'product_id' => $product->id,
+        'account_id' => $account->id,
+        'quantity' => 5,
+        'unit_price' => 6,
+        'total_amount' => 30,
+        'purchased_at' => '2026-04-02 09:00:00',
+        'source' => 'manual',
+        'invoice_reference' => 'NF-ARROZ-1',
+        'notes' => 'Compra do mes',
+    ]);
+
+    $user->stockMovements()->create([
+        'product_id' => $product->id,
+        'direction' => 'outflow',
+        'origin' => 'manual_withdrawal',
+        'quantity' => 1,
+        'moved_at' => '2026-04-03 10:00:00',
+        'notes' => 'Consumo do almoco',
+    ]);
+
+    $user->financialEntries()->create([
+        'account_id' => $account->id,
+        'category_id' => $category->id,
+        'purchase_entry_id' => $entry->id,
+        'direction' => 'outflow',
+        'origin' => 'manual_purchase',
+        'amount' => 30,
+        'moved_at' => '2026-04-02 09:00:00',
+        'description' => 'Compra de arroz',
+    ]);
+
+    $user->financialEntries()->create([
+        'account_id' => $account->id,
+        'category_id' => $category->id,
+        'direction' => 'inflow',
+        'origin' => 'manual',
+        'amount' => 15,
+        'moved_at' => '2026-04-04 12:00:00',
+        'description' => 'Reembolso do mercado',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard', [
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-10',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard')
+            ->has('stockMovements', 2)
+            ->where('stockMovements.0.direction', 'outflow')
+            ->where('stockMovements.1.direction', 'inflow')
+            ->has('accountMovements', 2)
+            ->where('accountMovements.0.direction', 'inflow')
+            ->where('accountMovements.1.direction', 'outflow')
+            ->where('accounts.0.current_balance', 85)
+        );
+});

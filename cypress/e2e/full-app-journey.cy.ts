@@ -209,7 +209,7 @@ describe('Full app journey', () => {
         cy.contains(serviceName).should('be.visible');
         cy.contains(quickServiceName).should('be.visible');
 
-        cy.contains('button', 'Filtros avancados').click();
+        cy.contains('button', 'Filtros').click();
         cy.selectAntdOption('filter-categories', servicesCategory);
         cy.selectAntdOption('filter-accounts', `${accountBCode} - ${accountBName}`);
         cy.selectAntdOption('filter-products', `${quickServiceName} (servico)`, true);

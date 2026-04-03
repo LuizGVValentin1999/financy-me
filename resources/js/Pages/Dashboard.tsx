@@ -1,7 +1,9 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import InputLabel from '@/Components/InputLabel';
+import Modal from '@/Components/Modal';
 import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
 import {
+    ResponsiveCard,
     ResponsiveCardField,
     ResponsiveCardFields,
     ResponsiveCardHeader,
@@ -14,7 +16,7 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatCurrency, formatDate, formatQuantity } from '@/lib/format';
 import { Head, Link, router } from '@inertiajs/react';
-import { Button, DatePicker, Input, Select, Space, Tag } from 'antd';
+import { Button, DatePicker, Input, Select, Space, Tabs, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { FormEvent, Key, useEffect, useMemo, useState } from 'react';
@@ -42,6 +44,7 @@ interface DashboardProps {
     };
     entries: Array<{
         id: number;
+        product_id: number | null;
         product_name: string;
         product_type: 'stockable' | 'non_stockable';
         category: { id: number; name: string; color: string } | null;
@@ -75,6 +78,7 @@ interface DashboardProps {
         id: number;
         code: string;
         name: string;
+        current_balance: number;
     }>;
     products: Array<{
         id: number;
@@ -90,10 +94,67 @@ interface DashboardProps {
         quantity: number;
         entries_count: number;
     }>;
+    stockMovements: Array<{
+        id: string;
+        product_id: number | null;
+        product_name: string | null;
+        brand: string | null;
+        sku: string | null;
+        unit: string;
+        category: { id: number; name: string; color: string } | null;
+        current_stock: number;
+        direction: 'inflow' | 'outflow';
+        origin: 'manual_purchase' | 'invoice_purchase' | 'manual_withdrawal' | string;
+        quantity: number;
+        moved_at: string | null;
+        notes: string | null;
+        reference: string | null;
+    }>;
+    accountMovements: Array<{
+        id: number;
+        account_id: number | null;
+        account: { id: number; code: string; name: string } | null;
+        category: { id: number; name: string; color: string } | null;
+        direction: 'inflow' | 'outflow';
+        origin: string;
+        amount: number;
+        moved_at: string | null;
+        description: string | null;
+        reference: string | null;
+        related_items: string[];
+    }>;
 }
 
 type DashboardEntry = DashboardProps['entries'][number];
 type DashboardTableRecord = DashboardEntry & { key: string };
+type StockMovementRow = DashboardProps['stockMovements'][number];
+type AccountMovementRow = DashboardProps['accountMovements'][number];
+type ConsumptionSummaryRow = {
+    key: string;
+    product_id: number;
+    product_name: string;
+    brand: string | null;
+    sku: string | null;
+    unit: string;
+    category: StockMovementRow['category'];
+    current_stock: number;
+    total_output: number;
+    withdrawals_count: number;
+    first_output_at: string | null;
+    last_output_at: string | null;
+};
+type AccountMovementSummaryRow = {
+    key: string;
+    account_id: number;
+    account_code: string;
+    account_name: string;
+    current_balance: number;
+    total_inflow: number;
+    total_outflow: number;
+    movements_count: number;
+    first_moved_at: string | null;
+    last_moved_at: string | null;
+};
 
 type FilterDraftState = {
     start_date: string;
@@ -109,6 +170,44 @@ const sourceLabel = (source: 'manual' | 'invoice') =>
 const typeLabel = (type: 'stockable' | 'non_stockable') =>
     type === 'non_stockable' ? 'Servico' : 'Produto';
 
+const stockMovementOriginLabel = (origin: StockMovementRow['origin']) => {
+    if (origin === 'manual_purchase') return 'Compra manual';
+    if (origin === 'invoice_purchase') return 'Compra importada';
+    if (origin === 'manual_withdrawal') return 'Saida manual';
+
+    return origin;
+};
+
+const stockMovementDirectionLabel = (direction: StockMovementRow['direction']) =>
+    direction === 'inflow' ? 'Entrada' : 'Saida';
+
+const accountMovementOriginLabel = (origin: string) => {
+    if (origin === 'manual') return 'Lancamento manual';
+    if (origin === 'manual_purchase') return 'Compra manual';
+    if (origin === 'invoice_purchase') return 'Compra importada';
+
+    return origin;
+};
+
+const accountMovementDirectionLabel = (direction: AccountMovementRow['direction']) =>
+    direction === 'inflow' ? 'Entrada' : 'Saida';
+
+const formatMovementMoment = (value: string | null) => {
+    if (!value) {
+        return '--';
+    }
+
+    const parsed = dayjs(value);
+
+    if (!parsed.isValid()) {
+        return '--';
+    }
+
+    return parsed.hour() === 0 && parsed.minute() === 0
+        ? parsed.format('DD/MM/YYYY')
+        : parsed.format('DD/MM/YYYY HH:mm');
+};
+
 const truncateText = (value: string, maxLength = 46) =>
     value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 
@@ -121,10 +220,15 @@ export default function Dashboard({
     accounts,
     products,
     categoryBreakdown,
+    stockMovements,
+    accountMovements,
 }: DashboardProps) {
+    const [activeTab, setActiveTab] = useState<'expenses' | 'consumption' | 'accounts'>('expenses');
     const [search, setSearch] = useState('');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isApplyingFilters, setIsApplyingFilters] = useState(false);
+    const [selectedConsumptionProduct, setSelectedConsumptionProduct] = useState<ConsumptionSummaryRow | null>(null);
+    const [selectedAccountSummary, setSelectedAccountSummary] = useState<AccountMovementSummaryRow | null>(null);
     const [draftFilters, setDraftFilters] = useState<FilterDraftState>({
         start_date: filters.start_date,
         end_date: filters.end_date,
@@ -257,33 +361,195 @@ export default function Dashboard({
         key: String(entry.id),
     }));
 
+    const filteredConsumptionMovements = useMemo(
+        () =>
+            stockMovements.filter((movement) => {
+                if (movement.direction !== 'outflow' || !movement.product_id) {
+                    return false;
+                }
+
+                if (!normalizedSearch) {
+                    return true;
+                }
+
+                const searchable = [
+                    movement.product_name ?? '',
+                    movement.brand ?? '',
+                    movement.sku ?? '',
+                    movement.category?.name ?? '',
+                    movement.notes ?? '',
+                    stockMovementOriginLabel(movement.origin),
+                ]
+                    .join(' ')
+                    .toLowerCase();
+
+                return searchable.includes(normalizedSearch);
+            }),
+        [normalizedSearch, stockMovements],
+    );
+
+    const consumptionSummary = useMemo<ConsumptionSummaryRow[]>(() => {
+        const grouped = new Map<number, ConsumptionSummaryRow>();
+
+        for (const movement of filteredConsumptionMovements) {
+            if (!movement.product_id) {
+                continue;
+            }
+
+            const current = grouped.get(movement.product_id);
+
+            if (!current) {
+                grouped.set(movement.product_id, {
+                    key: String(movement.product_id),
+                    product_id: movement.product_id,
+                    product_name: movement.product_name ?? 'Produto removido',
+                    brand: movement.brand,
+                    sku: movement.sku,
+                    unit: movement.unit,
+                    category: movement.category,
+                    current_stock: movement.current_stock,
+                    total_output: movement.quantity,
+                    withdrawals_count: 1,
+                    first_output_at: movement.moved_at,
+                    last_output_at: movement.moved_at,
+                });
+
+                continue;
+            }
+
+            current.total_output += movement.quantity;
+            current.withdrawals_count += 1;
+            current.current_stock = movement.current_stock;
+
+            if (movement.moved_at && (!current.first_output_at || dayjs(movement.moved_at).isBefore(dayjs(current.first_output_at)))) {
+                current.first_output_at = movement.moved_at;
+            }
+
+            if (movement.moved_at && (!current.last_output_at || dayjs(movement.moved_at).isAfter(dayjs(current.last_output_at)))) {
+                current.last_output_at = movement.moved_at;
+            }
+        }
+
+        return [...grouped.values()].sort((a, b) => {
+            if (b.total_output !== a.total_output) {
+                return b.total_output - a.total_output;
+            }
+
+            return a.product_name.localeCompare(b.product_name);
+        });
+    }, [filteredConsumptionMovements]);
+
+    const filteredAccountMovements = useMemo(
+        () =>
+            accountMovements.filter((movement) => {
+                if (!movement.account_id) {
+                    return false;
+                }
+
+                if (!normalizedSearch) {
+                    return true;
+                }
+
+                const searchable = [
+                    movement.account ? `${movement.account.code} ${movement.account.name}` : '',
+                    movement.category?.name ?? '',
+                    movement.description ?? '',
+                    movement.reference ?? '',
+                    movement.related_items.join(' '),
+                    accountMovementOriginLabel(movement.origin),
+                    accountMovementDirectionLabel(movement.direction),
+                ]
+                    .join(' ')
+                    .toLowerCase();
+
+                return searchable.includes(normalizedSearch);
+            }),
+        [accountMovements, normalizedSearch],
+    );
+
+    const accountSummary = useMemo<AccountMovementSummaryRow[]>(() => {
+        const accountsById = new Map(accounts.map((account) => [account.id, account]));
+        const grouped = new Map<number, AccountMovementSummaryRow>();
+
+        for (const movement of filteredAccountMovements) {
+            if (!movement.account_id || !movement.account) {
+                continue;
+            }
+
+            const current = grouped.get(movement.account_id);
+            const account = accountsById.get(movement.account_id);
+
+            if (!current) {
+                grouped.set(movement.account_id, {
+                    key: String(movement.account_id),
+                    account_id: movement.account_id,
+                    account_code: movement.account.code,
+                    account_name: movement.account.name,
+                    current_balance: account?.current_balance ?? 0,
+                    total_inflow: movement.direction === 'inflow' ? movement.amount : 0,
+                    total_outflow: movement.direction === 'outflow' ? movement.amount : 0,
+                    movements_count: 1,
+                    first_moved_at: movement.moved_at,
+                    last_moved_at: movement.moved_at,
+                });
+
+                continue;
+            }
+
+            current.movements_count += 1;
+            current.current_balance = account?.current_balance ?? current.current_balance;
+
+            if (movement.direction === 'inflow') {
+                current.total_inflow += movement.amount;
+            } else {
+                current.total_outflow += movement.amount;
+            }
+
+            if (movement.moved_at && (!current.first_moved_at || dayjs(movement.moved_at).isBefore(dayjs(current.first_moved_at)))) {
+                current.first_moved_at = movement.moved_at;
+            }
+
+            if (movement.moved_at && (!current.last_moved_at || dayjs(movement.moved_at).isAfter(dayjs(current.last_moved_at)))) {
+                current.last_moved_at = movement.moved_at;
+            }
+        }
+
+        return [...grouped.values()].sort((a, b) => {
+            const movementDelta = Math.max(b.total_inflow, b.total_outflow) - Math.max(a.total_inflow, a.total_outflow);
+
+            if (movementDelta !== 0) {
+                return movementDelta;
+            }
+
+            return a.account_name.localeCompare(b.account_name);
+        });
+    }, [accounts, filteredAccountMovements]);
+
     const topCategory = categoryBreakdown[0] ?? null;
 
     const mostConsumedProduct = useMemo(() => {
         const aggregateByProduct = new Map<
             string,
-            { name: string; quantity: number; spent: number; unit: string }
+            { name: string; quantity: number; unit: string }
         >();
 
-        for (const entry of entries) {
-            if (entry.product_type !== 'stockable') {
+        for (const movement of stockMovements) {
+            if (movement.direction !== 'outflow' || !movement.product_name) {
                 continue;
             }
 
-            const current = aggregateByProduct.get(entry.product_name);
+            const current = aggregateByProduct.get(movement.product_name);
 
             if (!current) {
-                aggregateByProduct.set(entry.product_name, {
-                    name: entry.product_name,
-                    quantity: entry.quantity,
-                    spent: entry.total_amount,
-                    unit: entry.unit,
+                aggregateByProduct.set(movement.product_name, {
+                    name: movement.product_name,
+                    quantity: movement.quantity,
+                    unit: movement.unit,
                 });
                 continue;
             }
 
-            current.quantity += entry.quantity;
-            current.spent += entry.total_amount;
+            current.quantity += movement.quantity;
         }
 
         return [...aggregateByProduct.values()].sort((a, b) => {
@@ -291,9 +557,29 @@ export default function Dashboard({
                 return b.quantity - a.quantity;
             }
 
-            return b.spent - a.spent;
+            return a.name.localeCompare(b.name);
         })[0] ?? null;
-    }, [entries]);
+    }, [stockMovements]);
+
+    const selectedConsumptionHistory = useMemo(
+        () =>
+            selectedConsumptionProduct
+                ? stockMovements
+                    .filter((movement) => movement.product_id === selectedConsumptionProduct.product_id)
+                    .sort((a, b) => dayjs(b.moved_at).valueOf() - dayjs(a.moved_at).valueOf())
+                : [],
+        [selectedConsumptionProduct, stockMovements],
+    );
+
+    const selectedAccountHistory = useMemo(
+        () =>
+            selectedAccountSummary
+                ? accountMovements
+                    .filter((movement) => movement.account_id === selectedAccountSummary.account_id)
+                    .sort((a, b) => dayjs(b.moved_at).valueOf() - dayjs(a.moved_at).valueOf())
+                : [],
+        [accountMovements, selectedAccountSummary],
+    );
 
     const getTextFilter = (
         dataIndex: keyof DashboardTableRecord,
@@ -470,6 +756,108 @@ export default function Dashboard({
         },
     ];
 
+    const consumptionColumns: ColumnsType<ConsumptionSummaryRow> = [
+        {
+            title: 'Produto',
+            dataIndex: 'product_name',
+            key: 'product_name',
+            sorter: (a, b) => a.product_name.localeCompare(b.product_name),
+            render: (_value, record) => (
+                <div>
+                    <p className="font-semibold text-slate-900">{record.product_name}</p>
+                    <p className="text-slate-500">
+                        {record.brand || 'Sem marca'}
+                        {record.sku ? ` • ${record.sku}` : ''}
+                    </p>
+                </div>
+            ),
+        },
+        {
+            title: 'Categoria',
+            dataIndex: 'category',
+            key: 'category',
+            render: (_value, record) =>
+                record.category ? <Tag color="cyan">{record.category.name}</Tag> : '--',
+        },
+        {
+            title: 'Saida no periodo',
+            dataIndex: 'total_output',
+            key: 'total_output',
+            align: 'right',
+            sorter: (a, b) => a.total_output - b.total_output,
+            render: (_value, record) => `${formatQuantity(record.total_output)} ${record.unit}`,
+        },
+        {
+            title: 'Movimentacoes',
+            dataIndex: 'withdrawals_count',
+            key: 'withdrawals_count',
+            align: 'right',
+            sorter: (a, b) => a.withdrawals_count - b.withdrawals_count,
+        },
+        {
+            title: 'Ultima saida',
+            dataIndex: 'last_output_at',
+            key: 'last_output_at',
+            sorter: (a, b) => dayjs(a.last_output_at).valueOf() - dayjs(b.last_output_at).valueOf(),
+            render: (value) => formatDate(value),
+        },
+        {
+            title: 'Estoque atual',
+            dataIndex: 'current_stock',
+            key: 'current_stock',
+            align: 'right',
+            render: (_value, record) => `${formatQuantity(record.current_stock)} ${record.unit}`,
+        },
+    ];
+
+    const accountMovementColumns: ColumnsType<AccountMovementSummaryRow> = [
+        {
+            title: 'Conta',
+            dataIndex: 'account_name',
+            key: 'account_name',
+            sorter: (a, b) => a.account_name.localeCompare(b.account_name),
+            render: (_value, record) => (
+                <div>
+                    <p className="font-semibold text-slate-900">
+                        {record.account_code} - {record.account_name}
+                    </p>
+                    <p className="text-slate-500">{record.movements_count} movimentacoes no periodo</p>
+                </div>
+            ),
+        },
+        {
+            title: 'Entradas',
+            dataIndex: 'total_inflow',
+            key: 'total_inflow',
+            align: 'right',
+            sorter: (a, b) => a.total_inflow - b.total_inflow,
+            render: (value) => <span className="font-semibold text-[#1e7a8a]">{formatCurrency(value)}</span>,
+        },
+        {
+            title: 'Saidas',
+            dataIndex: 'total_outflow',
+            key: 'total_outflow',
+            align: 'right',
+            sorter: (a, b) => a.total_outflow - b.total_outflow,
+            render: (value) => <span className="font-semibold text-[#be3d2a]">{formatCurrency(value)}</span>,
+        },
+        {
+            title: 'Saldo atual',
+            dataIndex: 'current_balance',
+            key: 'current_balance',
+            align: 'right',
+            sorter: (a, b) => a.current_balance - b.current_balance,
+            render: (value) => <span className="font-semibold text-slate-900">{formatCurrency(value)}</span>,
+        },
+        {
+            title: 'Ultima movimentacao',
+            dataIndex: 'last_moved_at',
+            key: 'last_moved_at',
+            sorter: (a, b) => dayjs(a.last_moved_at).valueOf() - dayjs(b.last_moved_at).valueOf(),
+            render: (value) => formatDate(value),
+        },
+    ];
+
     const maxCategorySpent = Math.max(
         ...categoryBreakdown.map((category) => category.spent),
         1,
@@ -493,7 +881,7 @@ export default function Dashboard({
                             onClick={() => setIsFilterModalOpen(true)}
                             className="inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 sm:w-auto"
                         >
-                            Filtros avancados
+                            Filtros
                         </button>
                         <Link
                             href={route('products.index')}
@@ -552,7 +940,7 @@ export default function Dashboard({
                         }
                         hint={
                             mostConsumedProduct
-                                ? `${truncateText(mostConsumedProduct.name)} • ${formatCurrency(mostConsumedProduct.spent)}`
+                                ? `${truncateText(mostConsumedProduct.name)} • consumo no periodo`
                                 : 'Sem consumo de produtos no periodo'
                         }
                         tone="bg-[#f3efe6]"
@@ -566,14 +954,27 @@ export default function Dashboard({
                 </div>
 
                 <SectionCard
-                    title="Gastos e consumos"
-                    description={`${filteredEntries.length} registros encontrados. Mesmo padrao da tela de estoque com produtos e servicos juntos.`}
+                    title="Painel analitico"
+                    description={
+                        activeTab === 'expenses'
+                            ? `${filteredEntries.length} gastos encontrados no periodo.`
+                            : activeTab === 'consumption'
+                              ? `${consumptionSummary.length} produtos com consumo no periodo.`
+                              : `${accountSummary.length} contas com movimentacoes no periodo.`
+                    }
                     actions={
                         <Input
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Pesquisar item, categoria, cartao/conta ou referencia"
+                            placeholder={
+                                activeTab === 'expenses'
+                                    ? 'Pesquisar item, categoria, cartao/conta ou referencia'
+                                    : activeTab === 'consumption'
+                                      ? 'Pesquisar produto, marca, SKU, categoria ou observacao'
+                                      : 'Pesquisar conta, categoria, descricao, referencia ou item'
+                            }
                             allowClear
+                            size="large"
                             className="w-full sm:w-96"
                         />
                     }
@@ -587,63 +988,210 @@ export default function Dashboard({
                                 </Tag>
                             ))
                         ) : (
-                            <Tag color="default">Sem filtros avancados</Tag>
+                            <Tag color="default">Sem filtros</Tag>
                         )}
                     </div>
 
-                    <ResponsiveDataTable<DashboardTableRecord>
-                        rowKey="key"
-                        columns={columns}
-                        dataSource={dataSource}
-                        pagination={{ pageSize: 12, showSizeChanger: true }}
-                        size="middle"
-                        scroll={{ x: 1200 }}
-                        mobileHint="No celular os gastos e consumos aparecem em cards. Use a busca e os filtros avancados para refinar a leitura."
-                        mobileRenderCard={(record) => (
-                            <article
-                                key={record.key}
-                                className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.4)]"
-                            >
-                                <ResponsiveCardHeader
-                                    title={record.product_name}
-                                    subtitle={`${sourceLabel(record.source)}${record.invoice_reference ? ` • ${record.invoice_reference}` : ''}`}
-                                    trailing={
-                                        <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
-                                            {formatCurrency(record.total_amount)}
-                                        </span>
-                                    }
-                                />
+                    <Tabs
+                        activeKey={activeTab}
+                        onChange={(key) => setActiveTab(key as 'expenses' | 'consumption' | 'accounts')}
+                        items={[
+                            {
+                                key: 'expenses',
+                                label: 'Gastos',
+                                children: (
+                                    <ResponsiveDataTable<DashboardTableRecord>
+                                        rowKey="key"
+                                        columns={columns}
+                                        dataSource={dataSource}
+                                        pagination={{ pageSize: 12, showSizeChanger: true }}
+                                        size="middle"
+                                        scroll={{ x: 1200 }}
+                                        mobileHint="Use a busca e os filtros para refinar a leitura."
+                                        mobileRenderCard={(record) => (
+                                            <ResponsiveCard key={record.key}>
+                                                <ResponsiveCardHeader
+                                                    title={record.product_name}
+                                                    subtitle={`${sourceLabel(record.source)}${record.invoice_reference ? ` • ${record.invoice_reference}` : ''}`}
+                                                    trailing={
+                                                        <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
+                                                            {formatCurrency(record.total_amount)}
+                                                        </span>
+                                                    }
+                                                />
 
-                                <ResponsiveCardPills>
-                                    <ResponsiveCardPill tone="warm">
-                                        {typeLabel(record.product_type)}
-                                    </ResponsiveCardPill>
-                                    <ResponsiveCardPill>
-                                        {record.category?.name ?? 'Sem categoria'}
-                                    </ResponsiveCardPill>
-                                </ResponsiveCardPills>
+                                                <ResponsiveCardPills>
+                                                    <ResponsiveCardPill tone="warm">
+                                                        {typeLabel(record.product_type)}
+                                                    </ResponsiveCardPill>
+                                                    <ResponsiveCardPill>
+                                                        {record.category?.name ?? 'Sem categoria'}
+                                                    </ResponsiveCardPill>
+                                                </ResponsiveCardPills>
 
-                                <ResponsiveCardFields columns={2}>
-                                    <ResponsiveCardField
-                                        label="Conta:"
-                                        value={
-                                            record.account
-                                                ? `${record.account.code} - ${record.account.name}`
-                                                : '--'
-                                        }
-                                        colSpan={2}
+                                                <ResponsiveCardFields columns={2}>
+                                                    <ResponsiveCardField
+                                                        label="Conta:"
+                                                        value={
+                                                            record.account
+                                                                ? `${record.account.code} - ${record.account.name}`
+                                                                : '--'
+                                                        }
+                                                        colSpan={2}
+                                                    />
+                                                    <ResponsiveCardField
+                                                        label="Quantidade:"
+                                                        value={`${formatQuantity(record.quantity)} ${record.unit}`}
+                                                    />
+                                                    <ResponsiveCardField
+                                                        label="Data:"
+                                                        value={formatDate(record.purchased_at)}
+                                                    />
+                                                </ResponsiveCardFields>
+                                            </ResponsiveCard>
+                                        )}
                                     />
-                                    <ResponsiveCardField
-                                        label="Quantidade:"
-                                        value={`${formatQuantity(record.quantity)} ${record.unit}`}
+                                ),
+                            },
+                            {
+                                key: 'consumption',
+                                label: 'Consumo',
+                                children: (
+                                    <ResponsiveDataTable<ConsumptionSummaryRow>
+                                        rowKey="key"
+                                        columns={consumptionColumns}
+                                        dataSource={consumptionSummary}
+                                        pagination={{ pageSize: 12, showSizeChanger: true }}
+                                        size="middle"
+                                        scroll={{ x: 1100 }}
+                                        rowClassName={() => 'cursor-pointer'}
+                                        onRow={(record) => ({
+                                            onClick: (event) => {
+                                                const target = event.target as HTMLElement;
+
+                                                if (target.closest('button, a, input, label, textarea, .ant-input, .ant-select')) {
+                                                    return;
+                                                }
+
+                                                setSelectedConsumptionProduct(record);
+                                            },
+                                        })}
+                                        mobileHint="Toque em um produto para ver o relatorio detalhado de entradas e saidas dentro do periodo filtrado."
+                                        mobileRenderCard={(record) => (
+                                            <button
+                                                key={record.key}
+                                                type="button"
+                                                onClick={() => setSelectedConsumptionProduct(record)}
+                                                className="block w-full text-left"
+                                            >
+                                                <ResponsiveCard tone="warm">
+                                                    <ResponsiveCardHeader
+                                                        title={record.product_name}
+                                                        subtitle={`${record.brand || 'Sem marca'}${record.sku ? ` • ${record.sku}` : ''}`}
+                                                        trailing={
+                                                            <span className="rounded-full bg-[#fff1ec] px-3 py-1 text-sm font-semibold text-[#be3d2a]">
+                                                                {formatQuantity(record.total_output)} {record.unit}
+                                                            </span>
+                                                        }
+                                                    />
+
+                                                    <ResponsiveCardPills>
+                                                        <ResponsiveCardPill tone="warm">
+                                                            {record.category?.name ?? 'Sem categoria'}
+                                                        </ResponsiveCardPill>
+                                                        <ResponsiveCardPill>
+                                                            {record.withdrawals_count} saidas
+                                                        </ResponsiveCardPill>
+                                                    </ResponsiveCardPills>
+
+                                                    <ResponsiveCardFields columns={2}>
+                                                        <ResponsiveCardField
+                                                            label="Consumo no periodo:"
+                                                            value={`${formatQuantity(record.total_output)} ${record.unit}`}
+                                                        />
+                                                        <ResponsiveCardField
+                                                            label="Estoque atual:"
+                                                            value={`${formatQuantity(record.current_stock)} ${record.unit}`}
+                                                        />
+                                                        <ResponsiveCardField
+                                                            label="Primeira saida:"
+                                                            value={formatDate(record.first_output_at)}
+                                                        />
+                                                        <ResponsiveCardField
+                                                            label="Ultima saida:"
+                                                            value={formatDate(record.last_output_at)}
+                                                        />
+                                                    </ResponsiveCardFields>
+                                                </ResponsiveCard>
+                                            </button>
+                                        )}
                                     />
-                                    <ResponsiveCardField
-                                        label="Data:"
-                                        value={formatDate(record.purchased_at)}
+                                ),
+                            },
+                            {
+                                key: 'accounts',
+                                label: 'Movimentacoes de conta',
+                                children: (
+                                    <ResponsiveDataTable<AccountMovementSummaryRow>
+                                        rowKey="key"
+                                        columns={accountMovementColumns}
+                                        dataSource={accountSummary}
+                                        pagination={{ pageSize: 12, showSizeChanger: true }}
+                                        size="middle"
+                                        scroll={{ x: 1050 }}
+                                        rowClassName={() => 'cursor-pointer'}
+                                        onRow={(record) => ({
+                                            onClick: (event) => {
+                                                const target = event.target as HTMLElement;
+
+                                                if (target.closest('button, a, input, label, textarea, .ant-input, .ant-select')) {
+                                                    return;
+                                                }
+
+                                                setSelectedAccountSummary(record);
+                                            },
+                                        })}
+                                        mobileHint="Toque em uma conta para ver entradas e saidas de saldo dentro do periodo filtrado."
+                                        mobileRenderCard={(record) => (
+                                            <button
+                                                key={record.key}
+                                                type="button"
+                                                onClick={() => setSelectedAccountSummary(record)}
+                                                className="block w-full text-left"
+                                            >
+                                                <ResponsiveCard>
+                                                    <ResponsiveCardHeader
+                                                        title={`${record.account_code} - ${record.account_name}`}
+                                                        subtitle={`${record.movements_count} movimentacoes no periodo`}
+                                                        trailing={
+                                                            <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
+                                                                {formatCurrency(record.current_balance)}
+                                                            </span>
+                                                        }
+                                                    />
+
+                                                    <ResponsiveCardPills>
+                                                        <ResponsiveCardPill>Entradas {formatCurrency(record.total_inflow)}</ResponsiveCardPill>
+                                                        <ResponsiveCardPill tone="warm">Saidas {formatCurrency(record.total_outflow)}</ResponsiveCardPill>
+                                                    </ResponsiveCardPills>
+
+                                                    <ResponsiveCardFields columns={2}>
+                                                        <ResponsiveCardField
+                                                            label="Primeira movimentacao:"
+                                                            value={formatDate(record.first_moved_at)}
+                                                        />
+                                                        <ResponsiveCardField
+                                                            label="Ultima movimentacao:"
+                                                            value={formatDate(record.last_moved_at)}
+                                                        />
+                                                    </ResponsiveCardFields>
+                                                </ResponsiveCard>
+                                            </button>
+                                        )}
                                     />
-                                </ResponsiveCardFields>
-                            </article>
-                        )}
+                                ),
+                            },
+                        ]}
                     />
                 </SectionCard>
 
@@ -730,13 +1278,174 @@ export default function Dashboard({
                 </div>
             </div>
 
+            <Modal
+                show={Boolean(selectedConsumptionProduct)}
+                onClose={() => setSelectedConsumptionProduct(null)}
+                maxWidth="2xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <p className="text-sm uppercase tracking-[0.25em] text-slate-400">Historico de consumo</p>
+                            <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                                {selectedConsumptionProduct?.product_name ?? '--'}
+                            </h2>
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                                Entradas e saidas do produto dentro do periodo filtrado da dashboard.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedConsumptionProduct(null)}
+                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+
+                    <div className="mt-6 space-y-3">
+                        {selectedConsumptionHistory.length > 0 ? (
+                            selectedConsumptionHistory.map((movement) => (
+                                <ResponsiveCard key={movement.id} tone={movement.direction === 'inflow' ? 'default' : 'warm'}>
+                                    <ResponsiveCardHeader
+                                        eyebrow={formatMovementMoment(movement.moved_at)}
+                                        title={movement.product_name ?? 'Produto removido'}
+                                        subtitle={`${stockMovementOriginLabel(movement.origin)}${movement.reference ? ` • ${movement.reference}` : ''}`}
+                                        trailing={
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                                                    movement.direction === 'inflow'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-[#fff1ec] text-[#be3d2a]'
+                                                }`}
+                                            >
+                                                {movement.direction === 'inflow' ? '+' : '-'} {formatQuantity(movement.quantity)} {movement.unit}
+                                            </span>
+                                        }
+                                    />
+
+                                    <ResponsiveCardPills>
+                                        <ResponsiveCardPill tone={movement.direction === 'inflow' ? 'default' : 'warm'}>
+                                            {stockMovementDirectionLabel(movement.direction)}
+                                        </ResponsiveCardPill>
+                                        <ResponsiveCardPill>{stockMovementOriginLabel(movement.origin)}</ResponsiveCardPill>
+                                    </ResponsiveCardPills>
+
+                                    <ResponsiveCardFields>
+                                        <ResponsiveCardField
+                                            label="Observacoes:"
+                                            value={movement.notes || 'Sem observacoes.'}
+                                        />
+                                    </ResponsiveCardFields>
+                                </ResponsiveCard>
+                            ))
+                        ) : (
+                            <div className="rounded-[24px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
+                                Nenhuma movimentacao encontrada para este produto no periodo filtrado.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                show={Boolean(selectedAccountSummary)}
+                onClose={() => setSelectedAccountSummary(null)}
+                maxWidth="2xl"
+            >
+                <div className="p-5 sm:p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <p className="text-sm uppercase tracking-[0.25em] text-slate-400">Historico da conta</p>
+                            <h2 className="mt-2 text-3xl font-semibold text-slate-900">
+                                {selectedAccountSummary
+                                    ? `${selectedAccountSummary.account_code} - ${selectedAccountSummary.account_name}`
+                                    : '--'}
+                            </h2>
+                            <p className="mt-2 text-sm leading-6 text-slate-500">
+                                Entradas e saidas de saldo registradas no periodo filtrado.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedAccountSummary(null)}
+                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+
+                    <div className="mt-6 space-y-3">
+                        {selectedAccountHistory.length > 0 ? (
+                            selectedAccountHistory.map((movement) => (
+                                <ResponsiveCard key={movement.id} tone={movement.direction === 'inflow' ? 'default' : 'warm'}>
+                                    <ResponsiveCardHeader
+                                        eyebrow={formatMovementMoment(movement.moved_at)}
+                                        title={
+                                            movement.description ||
+                                            movement.related_items[0] ||
+                                            'Movimentacao sem descricao'
+                                        }
+                                        subtitle={`${accountMovementOriginLabel(movement.origin)}${movement.reference ? ` • ${movement.reference}` : ''}`}
+                                        trailing={
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                                                    movement.direction === 'inflow'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-[#fff1ec] text-[#be3d2a]'
+                                                }`}
+                                            >
+                                                {movement.direction === 'inflow' ? '+' : '-'} {formatCurrency(movement.amount)}
+                                            </span>
+                                        }
+                                    />
+
+                                    <ResponsiveCardPills>
+                                        <ResponsiveCardPill tone={movement.direction === 'inflow' ? 'default' : 'warm'}>
+                                            {accountMovementDirectionLabel(movement.direction)}
+                                        </ResponsiveCardPill>
+                                        <ResponsiveCardPill>{movement.category?.name ?? 'Sem categoria'}</ResponsiveCardPill>
+                                    </ResponsiveCardPills>
+
+                                    <ResponsiveCardFields columns={2}>
+                                        <ResponsiveCardField
+                                            label="Origem:"
+                                            value={accountMovementOriginLabel(movement.origin)}
+                                        />
+                                        <ResponsiveCardField
+                                            label="Referencia:"
+                                            value={movement.reference || 'Sem referencia'}
+                                        />
+                                        <ResponsiveCardField
+                                            label="Itens relacionados:"
+                                            value={
+                                                movement.related_items.length > 0
+                                                    ? movement.related_items.join(', ')
+                                                    : 'Sem item relacionado'
+                                            }
+                                            colSpan={2}
+                                        />
+                                    </ResponsiveCardFields>
+                                </ResponsiveCard>
+                            ))
+                        ) : (
+                            <div className="rounded-[24px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
+                                Nenhuma movimentacao encontrada para esta conta no periodo filtrado.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+
             <FormEntityModal
                 isOpen={isFilterModalOpen}
                 onClose={() => setIsFilterModalOpen(false)}
                 onSubmit={submitFilters}
                 processing={isApplyingFilters}
                 sectionLabel="Dashboard"
-                title="Filtros avancados"
+                title="Filtros"
                 description="Filtre por periodo, categorias, cartoes/contas e produtos ou servicos para analisar gastos e consumos da casa."
                 saveLabel="Aplicar filtros"
                 maxWidth="2xl"

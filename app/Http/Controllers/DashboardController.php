@@ -48,7 +48,7 @@ class DashboardController extends Controller
             ->where('house_id', $house->id)
             ->whereBetween('purchased_at', [$startDateTime, $endDateTime])
             ->with([
-                'product:id,name,unit,type,category_id',
+                'product:id,name,brand,sku,unit,type,category_id,current_stock',
                 'product.category:id,name,color',
                 'account:id,code,name',
             ]);
@@ -73,6 +73,7 @@ class DashboardController extends Controller
 
         $tableEntries = $entries->map(fn (PurchaseEntry $entry) => [
             'id' => $entry->id,
+            'product_id' => $entry->product_id,
             'product_name' => $entry->product?->name ?? 'Item removido',
             'product_type' => $entry->product?->type ?? 'stockable',
             'category' => $entry->product?->category
@@ -98,6 +99,84 @@ class DashboardController extends Controller
                 ? Carbon::parse($entry->purchased_at)->toDateString()
                 : null,
         ])->values();
+
+        $stockMovements = $entries
+            ->filter(fn (PurchaseEntry $entry) => ($entry->product?->type ?? 'stockable') === 'stockable')
+            ->map(fn (PurchaseEntry $entry) => [
+                'id' => 'purchase-'.$entry->id,
+                'product_id' => $entry->product_id,
+                'product_name' => $entry->product?->name ?? 'Item removido',
+                'brand' => $entry->product?->brand,
+                'sku' => $entry->product?->sku,
+                'unit' => $entry->product?->unit ?? 'un',
+                'category' => $entry->product?->category
+                    ? [
+                        'id' => $entry->product->category->id,
+                        'name' => $entry->product->category->name,
+                        'color' => $entry->product->category->color,
+                    ]
+                    : null,
+                'current_stock' => (float) ($entry->product?->current_stock ?? 0),
+                'direction' => 'inflow',
+                'origin' => $entry->source === 'invoice' ? 'invoice_purchase' : 'manual_purchase',
+                'quantity' => (float) $entry->quantity,
+                'moved_at' => $entry->purchased_at
+                    ? Carbon::parse($entry->purchased_at)->toDateTimeString()
+                    : null,
+                'notes' => $entry->notes,
+                'reference' => $entry->invoice_reference,
+            ])
+            ->concat(
+                $house->stockMovements()
+                    ->where('direction', 'outflow')
+                    ->whereBetween('moved_at', [$startDateTime, $endDateTime])
+                    ->whereHas('product', function ($query) use ($selectedCategoryIds, $selectedProductIds) {
+                        $query->where('type', 'stockable');
+
+                        if ($selectedCategoryIds !== []) {
+                            $query->whereIn('category_id', $selectedCategoryIds);
+                        }
+
+                        if ($selectedProductIds !== []) {
+                            $query->whereIn('id', $selectedProductIds);
+                        }
+                    })
+                    ->with([
+                        'product:id,name,brand,sku,unit,type,category_id,current_stock',
+                        'product.category:id,name,color',
+                    ])
+                    ->latest('moved_at')
+                    ->latest('id')
+                    ->get()
+                    ->map(fn ($movement) => [
+                        'id' => 'movement-'.$movement->id,
+                        'product_id' => $movement->product_id,
+                        'product_name' => $movement->product?->name ?? 'Item removido',
+                        'brand' => $movement->product?->brand,
+                        'sku' => $movement->product?->sku,
+                        'unit' => $movement->product?->unit ?? 'un',
+                        'category' => $movement->product?->category
+                            ? [
+                                'id' => $movement->product->category->id,
+                                'name' => $movement->product->category->name,
+                                'color' => $movement->product->category->color,
+                            ]
+                            : null,
+                        'current_stock' => (float) ($movement->product?->current_stock ?? 0),
+                        'direction' => $movement->direction,
+                        'origin' => $movement->origin,
+                        'quantity' => (float) $movement->quantity,
+                        'moved_at' => $movement->moved_at?->toDateTimeString(),
+                        'notes' => $movement->notes,
+                        'reference' => null,
+                    ])
+            )
+            ->sortByDesc(fn (array $movement) => sprintf(
+                '%s-%s',
+                $movement['moved_at'] ?? '0000-00-00 00:00:00',
+                $movement['id'],
+            ))
+            ->values();
 
         $periodOutflowQuery = FinancialEntry::query()
             ->where('house_id', $house->id)
@@ -317,14 +396,100 @@ class DashboardController extends Controller
             ->sortByDesc('spent')
             ->values();
 
-        $accountsBalance = $house->accounts()
-            ->get()
-            ->sum(function ($account) {
-                $income = (float) $account->financialEntries()->where('direction', 'inflow')->sum('amount');
-                $expense = (float) $account->financialEntries()->where('direction', 'outflow')->sum('amount');
+        $accounts = $house->accounts()
+            ->orderBy('name')
+            ->get();
 
-                return (float) $account->initial_balance + $income - $expense;
+        $accountBalances = $accounts->mapWithKeys(function ($account) {
+            $income = (float) $account->financialEntries()->where('direction', 'inflow')->sum('amount');
+            $expense = (float) $account->financialEntries()->where('direction', 'outflow')->sum('amount');
+
+            return [
+                $account->id => (float) round((float) $account->initial_balance + $income - $expense, 2),
+            ];
+        });
+
+        $accountsBalance = (float) $accountBalances->sum();
+
+        $accountMovementsQuery = FinancialEntry::query()
+            ->where('house_id', $house->id)
+            ->whereBetween('moved_at', [$startDateTime, $endDateTime])
+            ->with([
+                'account:id,code,name',
+                'category:id,name,color',
+                'purchaseEntry.product:id,name',
+                'purchaseInvoice:id,store_name,invoice_number',
+                'purchaseInvoice.purchaseEntries:id,purchase_invoice_id,product_id',
+                'purchaseInvoice.purchaseEntries.product:id,name',
+            ]);
+
+        if ($selectedAccountIds !== []) {
+            $accountMovementsQuery->whereIn('account_id', $selectedAccountIds);
+        }
+
+        if ($selectedCategoryIds !== []) {
+            $accountMovementsQuery->where(function ($query) use ($selectedCategoryIds) {
+                $query->whereIn('category_id', $selectedCategoryIds)
+                    ->orWhereHas('purchaseEntry.product', fn ($relation) => $relation
+                        ->whereIn('category_id', $selectedCategoryIds))
+                    ->orWhereHas('purchaseInvoice.purchaseEntries.product', fn ($relation) => $relation
+                        ->whereIn('category_id', $selectedCategoryIds));
             });
+        }
+
+        if ($selectedProductIds !== []) {
+            $accountMovementsQuery->where(function ($query) use ($selectedProductIds) {
+                $query->whereHas('purchaseEntry', fn ($relation) => $relation
+                    ->whereIn('product_id', $selectedProductIds))
+                    ->orWhereHas('purchaseInvoice.purchaseEntries', fn ($relation) => $relation
+                        ->whereIn('product_id', $selectedProductIds));
+            });
+        }
+
+        $accountMovements = $accountMovementsQuery
+            ->latest('moved_at')
+            ->latest('id')
+            ->get()
+            ->map(function (FinancialEntry $entry) {
+                $invoiceProducts = $entry->purchaseInvoice?->purchaseEntries
+                    ? $entry->purchaseInvoice->purchaseEntries
+                        ->pluck('product.name')
+                        ->filter()
+                        ->unique()
+                        ->values()
+                    : collect();
+
+                return [
+                    'id' => $entry->id,
+                    'account_id' => $entry->account_id,
+                    'account' => $entry->account
+                        ? [
+                            'id' => $entry->account->id,
+                            'code' => $entry->account->code,
+                            'name' => $entry->account->name,
+                        ]
+                        : null,
+                    'category' => $entry->category
+                        ? [
+                            'id' => $entry->category->id,
+                            'name' => $entry->category->name,
+                            'color' => $entry->category->color,
+                        ]
+                        : null,
+                    'direction' => $entry->direction,
+                    'origin' => $entry->origin,
+                    'amount' => (float) $entry->amount,
+                    'moved_at' => $entry->moved_at?->toDateTimeString(),
+                    'description' => $entry->description,
+                    'reference' => $entry->purchaseInvoice?->invoice_number
+                        ? 'NF '.$entry->purchaseInvoice->invoice_number
+                        : null,
+                    'related_items' => $entry->purchaseEntry?->product?->name
+                        ? [$entry->purchaseEntry->product->name]
+                        : $invoiceProducts->all(),
+                ];
+            })
+            ->values();
 
         return Inertia::render('Dashboard', [
             'filters' => [
@@ -363,13 +528,12 @@ class DashboardController extends Controller
                     'name' => $category->name,
                     'color' => $category->color,
                 ]),
-            'accounts' => $house->accounts()
-                ->orderBy('name')
-                ->get()
+            'accounts' => $accounts
                 ->map(fn ($account) => [
                     'id' => $account->id,
                     'code' => $account->code,
                     'name' => $account->name,
+                    'current_balance' => (float) ($accountBalances[$account->id] ?? 0),
                 ]),
             'products' => $house->products()
                 ->with('category:id,name,color')
@@ -388,6 +552,8 @@ class DashboardController extends Controller
                         : null,
                 ]),
             'categoryBreakdown' => $categorySpend,
+            'stockMovements' => $stockMovements,
+            'accountMovements' => $accountMovements,
         ]);
     }
 }
