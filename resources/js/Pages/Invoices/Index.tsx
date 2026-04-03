@@ -12,6 +12,14 @@ interface InvoicesPageProps {
         discount_amount: number;
         paid_amount: number;
     };
+    pagination: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
     invoices: Array<{
         id: number;
         store_name: string;
@@ -39,8 +47,19 @@ interface InvoicesPageProps {
     }>;
 }
 
-export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
+const buildPageNumbers = (currentPage: number, lastPage: number) => {
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(lastPage, currentPage + 2);
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+};
+
+export default function InvoicesIndex({ stats, invoices, pagination }: InvoicesPageProps) {
     const { message, modal } = useAntdApp();
+    const pageNumbers = buildPageNumbers(
+        pagination.current_page,
+        pagination.last_page,
+    );
 
     const deleteInvoice = (invoiceId: number) => {
         modal.confirm({
@@ -119,6 +138,15 @@ export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
                 >
                     {invoices.length > 0 ? (
                         <div className="space-y-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                <span>
+                                    Mostrando {pagination.from ?? 0} a {pagination.to ?? 0} de {pagination.total} notas.
+                                </span>
+                                <span>
+                                    {pagination.per_page} por pagina
+                                </span>
+                            </div>
+
                             {invoices.map((invoice) => (
                                 <details
                                     key={invoice.id}
@@ -289,6 +317,109 @@ export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
                                     </div>
                                 </details>
                             ))}
+
+                            {pagination.last_page > 1 ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-4">
+                                    <div className="text-sm text-slate-500">
+                                        Pagina {pagination.current_page} de {pagination.last_page}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            disabled={pagination.current_page === 1}
+                                            onClick={() =>
+                                                router.get(
+                                                    route('invoices.index'),
+                                                    { page: pagination.current_page - 1 },
+                                                    { preserveScroll: true, preserveState: true },
+                                                )
+                                            }
+                                            className="inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            Anterior
+                                        </button>
+
+                                        {pageNumbers[0] > 1 ? (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        router.get(
+                                                            route('invoices.index'),
+                                                            { page: 1 },
+                                                            { preserveScroll: true, preserveState: true },
+                                                        )
+                                                    }
+                                                    className="inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-slate-200 px-3 text-sm font-semibold text-slate-600"
+                                                >
+                                                    1
+                                                </button>
+                                                {pageNumbers[0] > 2 ? (
+                                                    <span className="px-1 text-slate-400">...</span>
+                                                ) : null}
+                                            </>
+                                        ) : null}
+
+                                        {pageNumbers.map((page) => (
+                                            <button
+                                                key={page}
+                                                type="button"
+                                                onClick={() =>
+                                                    router.get(
+                                                        route('invoices.index'),
+                                                        { page },
+                                                        { preserveScroll: true, preserveState: true },
+                                                    )
+                                                }
+                                                className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-semibold transition ${
+                                                    page === pagination.current_page
+                                                        ? 'bg-slate-900 text-white'
+                                                        : 'border border-slate-200 text-slate-600'
+                                                }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+
+                                        {pageNumbers[pageNumbers.length - 1] < pagination.last_page ? (
+                                            <>
+                                                {pageNumbers[pageNumbers.length - 1] < pagination.last_page - 1 ? (
+                                                    <span className="px-1 text-slate-400">...</span>
+                                                ) : null}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        router.get(
+                                                            route('invoices.index'),
+                                                            { page: pagination.last_page },
+                                                            { preserveScroll: true, preserveState: true },
+                                                        )
+                                                    }
+                                                    className="inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-slate-200 px-3 text-sm font-semibold text-slate-600"
+                                                >
+                                                    {pagination.last_page}
+                                                </button>
+                                            </>
+                                        ) : null}
+
+                                        <button
+                                            type="button"
+                                            disabled={pagination.current_page === pagination.last_page}
+                                            onClick={() =>
+                                                router.get(
+                                                    route('invoices.index'),
+                                                    { page: pagination.current_page + 1 },
+                                                    { preserveScroll: true, preserveState: true },
+                                                )
+                                            }
+                                            className="inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            Proxima
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     ) : (
                         <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-sm text-slate-500">

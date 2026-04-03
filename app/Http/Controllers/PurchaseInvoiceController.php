@@ -15,8 +15,9 @@ class PurchaseInvoiceController extends Controller
     public function index(Request $request): Response
     {
         $house = $request->user()->getCurrentHouse();
+        $perPage = 12;
 
-        $invoices = PurchaseInvoice::query()
+        $invoicePage = PurchaseInvoice::query()
             ->where('house_id', $house->id)
             ->with([
                 'purchaseEntries' => fn ($query) => $query
@@ -26,7 +27,10 @@ class PurchaseInvoiceController extends Controller
             ])
             ->latest('issued_at')
             ->latest()
-            ->get()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $invoices = collect($invoicePage->items())
             ->map(fn (PurchaseInvoice $invoice) => [
                 'id' => $invoice->id,
                 'store_name' => $invoice->store_name,
@@ -50,16 +54,33 @@ class PurchaseInvoiceController extends Controller
                     'total_amount' => (float) $entry->total_amount,
                     'is_discount' => (float) $entry->total_amount < 0,
                     'notes' => $entry->notes,
-                ]),
-            ]);
+                ])->values(),
+            ])
+            ->values();
+
+        $allInvoices = PurchaseInvoice::query()
+            ->where('house_id', $house->id)
+            ->selectRaw('COUNT(*) as count')
+            ->selectRaw('COALESCE(SUM(gross_amount), 0) as gross_amount')
+            ->selectRaw('COALESCE(SUM(discount_amount), 0) as discount_amount')
+            ->selectRaw('COALESCE(SUM(paid_amount), 0) as paid_amount')
+            ->first();
 
         return Inertia::render('Invoices/Index', [
             'invoices' => $invoices,
+            'pagination' => [
+                'current_page' => $invoicePage->currentPage(),
+                'last_page' => $invoicePage->lastPage(),
+                'per_page' => $invoicePage->perPage(),
+                'total' => $invoicePage->total(),
+                'from' => $invoicePage->firstItem(),
+                'to' => $invoicePage->lastItem(),
+            ],
             'stats' => [
-                'count' => $invoices->count(),
-                'gross_amount' => round($invoices->sum('gross_amount'), 2),
-                'discount_amount' => round($invoices->sum('discount_amount'), 2),
-                'paid_amount' => round($invoices->sum('paid_amount'), 2),
+                'count' => (int) ($allInvoices->count ?? 0),
+                'gross_amount' => round((float) ($allInvoices->gross_amount ?? 0), 2),
+                'discount_amount' => round((float) ($allInvoices->discount_amount ?? 0), 2),
+                'paid_amount' => round((float) ($allInvoices->paid_amount ?? 0), 2),
             ],
         ]);
     }

@@ -1,4 +1,5 @@
 import DangerButton from '@/Components/DangerButton';
+import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
 import {
@@ -17,15 +18,19 @@ import FinancialEntryModal from '@/Pages/Financial/components/FinancialEntryModa
 import type { EntryRow, EntryTableRecord, FinancialPageProps } from '@/Pages/Financial/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Checkbox, Tag } from 'antd';
+import { Button, Checkbox, DatePicker, Select, Space, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
+import dayjs from 'dayjs';
 import { FormEvent, Key, useMemo, useState } from 'react';
 
 export default function FinancialIndex({ accounts, categories, entries }: FinancialPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingEntry, setEditingEntry] = useState<EntryRow | null>(null);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+    const [periodStartDate, setPeriodStartDate] = useState('');
+    const [periodEndDate, setPeriodEndDate] = useState('');
     const { message, modal } = useAntdApp();
+    const { RangePicker } = DatePicker;
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         account_id: '',
@@ -219,7 +224,29 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             String(record[dataIndex] ?? '').toLowerCase().includes(String(value).toLowerCase()),
     });
 
-    const dataSource: EntryTableRecord[] = entries.map((entry) => ({
+    const filteredEntries = useMemo(
+        () =>
+            entries.filter((entry) => {
+                if (!entry.moved_at) {
+                    return !periodStartDate && !periodEndDate;
+                }
+
+                const movedAt = dayjs(entry.moved_at).format('YYYY-MM-DD');
+
+                if (periodStartDate && movedAt < periodStartDate) {
+                    return false;
+                }
+
+                if (periodEndDate && movedAt > periodEndDate) {
+                    return false;
+                }
+
+                return true;
+            }),
+        [entries, periodEndDate, periodStartDate],
+    );
+
+    const dataSource: EntryTableRecord[] = filteredEntries.map((entry) => ({
         ...entry,
         key: String(entry.id),
     }));
@@ -255,6 +282,39 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
             dataIndex: 'account',
             key: 'account',
             render: (_: unknown, record) => (record.account ? `${record.account.code} - ${record.account.name}` : '--'),
+            filterDropdown: ({ selectedKeys, setSelectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
+                <div className="w-72 p-3">
+                    <Select
+                        mode="multiple"
+                        value={selectedKeys.map(String)}
+                        placeholder="Filtrar contas"
+                        className="w-full"
+                        onChange={(values: string[]) => setSelectedKeys(values)}
+                        options={accounts.map((account) => ({
+                            value: String(account.id),
+                            label: `${account.code} - ${account.name}`,
+                        }))}
+                        allowClear
+                        maxTagCount="responsive"
+                    />
+                    <Space className="mt-3">
+                        <Button type="primary" size="small" onClick={() => confirm()}>
+                            Aplicar
+                        </Button>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                clearFilters?.();
+                                confirm();
+                            }}
+                        >
+                            Limpar
+                        </Button>
+                    </Space>
+                </div>
+            ),
+            onFilter: (value: Key | boolean, record: EntryTableRecord) =>
+                String(record.account?.id ?? '') === String(value),
         },
         {
             title: 'Categoria',
@@ -306,13 +366,34 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
 
             <SectionCard
                 title="Lançamentos financeiros"
-                description={`${entries.length} lançamentos no histórico.`}
+                description={`${filteredEntries.length} lançamentos no histórico${periodStartDate || periodEndDate ? ' no período filtrado' : ''}.`}
                 actions={
-                    selectedRowKeys.length > 0 ? (
-                        <DangerButton type="button" onClick={deleteSelectedEntries}>
-                            Excluir selecionados ({selectedRowKeys.length})
-                        </DangerButton>
-                    ) : null
+                    <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:flex-wrap lg:items-end lg:justify-end">
+                        <div className="w-full lg:w-auto">
+                            <InputLabel value="Período" />
+                            <RangePicker
+                                value={[
+                                    periodStartDate ? dayjs(periodStartDate) : null,
+                                    periodEndDate ? dayjs(periodEndDate) : null,
+                                ]}
+                                format="DD/MM/YYYY"
+                                size="large"
+                                allowEmpty={[true, true]}
+                                onChange={(dates) => {
+                                    setPeriodStartDate(dates?.[0] ? dates[0].format('YYYY-MM-DD') : '');
+                                    setPeriodEndDate(dates?.[1] ? dates[1].format('YYYY-MM-DD') : '');
+                                }}
+                                className="mt-2 w-full min-w-0 lg:min-w-[336px]"
+                                placeholder={['De', 'Até']}
+                            />
+                        </div>
+
+                        {selectedRowKeys.length > 0 ? (
+                            <DangerButton type="button" onClick={deleteSelectedEntries}>
+                                Excluir selecionados ({selectedRowKeys.length})
+                            </DangerButton>
+                        ) : null}
+                    </div>
                 }
             >
                 <ResponsiveDataTable<EntryTableRecord>
