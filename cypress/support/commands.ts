@@ -203,16 +203,30 @@ Cypress.Commands.add('createProductViaUi', (options: CreateProductOptions) => {
 Cypress.Commands.add(
 	'createManualPurchaseViaUi',
 	({ productName, accountLabel, quantity, unitPrice }: CreateManualPurchaseOptions) => {
+		const generatedAccountName = `Conta Compra E2E ${Date.now()}`;
+		const generatedAccountCode = `CP-${Date.now()}`;
+
 		cy.contains('button', 'Nova compra manual').click();
-		cy.selectAntdOption('product_id', productName, true);
+		cy.contains('button', 'Avancar para produtos').click();
+		cy.selectAntdOption('manual_item_0_product_id', productName, true);
+		cy.get('input#manual_item_0_quantity').clear().type(quantity);
+		cy.get('input#manual_item_0_unit_price').clear().type(unitPrice);
+		cy.contains('button', 'Ir para pagamento').click();
 
 		if (accountLabel) {
-			cy.selectAntdOption('account_id', accountLabel);
+			cy.selectAntdOption('manual_payments_0_account_id', accountLabel);
+		} else {
+			cy.contains('button', 'Nova conta').click();
+			cy.intercept('POST', '**/accounts').as('storeManualPurchaseAccount');
+			cy.get('input#manual_purchase_account_name').type(generatedAccountName);
+			cy.get('input#manual_purchase_account_code').type(generatedAccountCode);
+			cy.contains('button', 'Criar conta').click();
+			cy.wait('@storeManualPurchaseAccount')
+				.its('response.statusCode')
+				.should('eq', 201);
 		}
 
 		cy.intercept('POST', '**/purchases').as('storePurchase');
-		cy.get('input#quantity').clear().type(quantity);
-		cy.get('input#unit_price').clear().type(unitPrice);
 		cy.contains('button', 'Registrar compra').click();
 		cy.wait('@storePurchase')
 			.its('response.statusCode')

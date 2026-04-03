@@ -67,7 +67,7 @@ export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
                             Notas fiscais
                         </p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">
-                            Historico das NFC-e importadas.
+                            Historico das NFC-e fiscais.
                         </h1>
                         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
                             Consulte estabelecimento, itens, valor bruto,
@@ -89,7 +89,7 @@ export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
             <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <StatCard
-                        label="Notas importadas"
+                        label="Notas fiscais"
                         value={String(stats.count)}
                         hint="NFC-e salvas no sistema."
                     />
@@ -115,7 +115,7 @@ export default function InvoicesIndex({ stats, invoices }: InvoicesPageProps) {
 
                 <SectionCard
                     title="Notas registradas"
-                    description="Cada card mostra o resumo da nota e os itens que foram lancados na importacao."
+                    description="Cada card mostra o resumo da nota e os itens que foram lancados."
                 >
                     {invoices.length > 0 ? (
                         <div className="space-y-4">

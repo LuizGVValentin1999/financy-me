@@ -2,6 +2,22 @@ describe('Full app journey', () => {
     const nfceUrl =
         'https://www.fazenda.pr.gov.br/nfce/qrcode?p=41260376189406004628651260003094931004085409|2|1|1|32D7052D8E169C149194A35193D5187134762527';
 
+    const advanceImportWizardToEnd = (): void => {
+        cy.get('body').then(($body) => {
+            const importButton = $body
+                .find('button')
+                .toArray()
+                .find((button) => button.textContent?.includes('Importar nota fiscal'));
+
+            if (importButton) {
+                return;
+            }
+
+            cy.contains('button', 'Avancar').click();
+            advanceImportWizardToEnd();
+        });
+    };
+
     const assertStatCard = (label: string, expectedText: string) => {
         cy.contains('p', label)
             .parent()
@@ -99,18 +115,19 @@ describe('Full app journey', () => {
             .its('response.statusCode')
             .should('be.oneOf', [200, 302, 303]);
 
-        cy.contains('Revisar NFC-e importada', { timeout: 10000 }).should(
+        cy.contains('Revisar nota fiscal', { timeout: 10000 }).should(
             'be.visible',
         );
-        cy.contains('Pagamento da nota').should('be.visible');
-        cy.contains('Confirmar NFC-e').should('be.visible');
-        cy.assertNoVisibleModal();
+        cy.contains('Definicao de pagamento').should('be.visible');
         cy.selectAntdOption('payments.0.account_id', `${accountACode} - ${accountAName}`);
-        cy.selectAntdOption('items.0.category_id', marketCategory);
-        cy.selectAntdOption('items.1.category_id', marketCategory);
+        cy.contains('button', 'Avancar').click();
+        cy.selectAntdOption('import_item_0_category_id', marketCategory);
+        cy.contains('button', 'Avancar').click();
+        cy.selectAntdOption('import_item_1_category_id', marketCategory);
+        advanceImportWizardToEnd();
 
         cy.intercept('POST', '**/purchases/import-confirm').as('confirmImport');
-        cy.contains('button', 'Confirmar NFC-e').click();
+        cy.contains('button', 'Importar nota fiscal').click();
         cy.wait('@confirmImport')
             .its('response.statusCode')
             .should('be.oneOf', [200, 302, 303]);
@@ -143,39 +160,19 @@ describe('Full app journey', () => {
         cy.visit('/purchases');
 
         cy.contains('button', 'Nova compra manual').click();
-        cy.get('input#product_id').clear({ force: true }).type(quickServiceName, {
+        cy.contains('button', 'Avancar para produtos').click();
+        cy.get('input#manual_item_0_name').type(quickServiceName, { force: true });
+        cy.selectAntdOption('manual_item_0_category_id', servicesCategory);
+        cy.selectAntdOption('manual_item_0_type', /N[aã]o estoc[aá]vel/);
+        cy.get('input#manual_item_0_quantity').clear({ force: true }).type('1', {
             force: true,
         });
-        cy.contains('button', 'Cadastrar novo produto agora').click();
-        cy.intercept('POST', '**/products/quick').as('quickStoreService');
-        cy.get('input#quick_product_name').should('have.value', quickServiceName);
-        cy.selectAntdOption('quick_product_category', servicesCategory);
-        cy.selectAntdOption('quick_product_type', /N[aã]o estoc[aá]vel/);
-        cy.contains('button', 'Criar produto').click();
-        cy.wait('@quickStoreService')
-            .its('response.statusCode')
-            .should('eq', 201);
-        cy.get('.ant-modal-wrap:visible', { timeout: 10000 }).should(
-            'have.length',
-            1,
-        );
-        cy.get('.ant-modal-wrap:visible')
-            .last()
-            .within(() => {
-                cy.get('input#account_id', { timeout: 10000 }).should('exist');
-            });
-        cy.selectAntdOption('account_id', `${accountBCode} - ${accountBName}`);
+        cy.get('input#manual_item_0_unit_price').clear({ force: true }).type('18.00', {
+            force: true,
+        });
+        cy.contains('button', 'Ir para pagamento').click();
+        cy.selectAntdOption('manual_payments_0_account_id', `${accountBCode} - ${accountBName}`);
         cy.intercept('POST', '**/purchases').as('storeQuickServicePurchase');
-        cy.get('.ant-modal-wrap:visible')
-            .last()
-            .within(() => {
-                cy.get('input#quantity').clear({ force: true }).type('1', {
-                    force: true,
-                });
-                cy.get('input#unit_price').clear({ force: true }).type('18.00', {
-                    force: true,
-                });
-            });
         cy.contains('button', 'Registrar compra').click();
         cy.wait('@storeQuickServicePurchase')
             .its('response.statusCode')
