@@ -83,7 +83,7 @@ export default function ImportPreviewItemCard({
                         )}
                         {!isIncluded && (
                             <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700">
-                                Excluido do lancamento
+                                Excluido do lançamento
                             </span>
                         )}
                         {isIncluded && hasExistingProduct && (
@@ -100,11 +100,11 @@ export default function ImportPreviewItemCard({
                     <p className="mt-1 text-sm text-slate-500">
                         Nota: {formatQuantity(item.quantity)} {item.unit}{' '}
                         • {formatCurrency(item.unit_price)} cada
-                        {item.code ? ` • codigo ${item.code}` : ''}
+                        {item.code ? ` • código ${item.code}` : ''}
                     </p>
                     {item.suggested_product_id && (
                         <p className="mt-2 text-sm text-slate-600">
-                            Produto mais proximo encontrado:{' '}
+                            Produto mais próximo encontrado:{' '}
                             <span className="font-semibold text-slate-900">
                                 {item.suggested_product_name}
                             </span>
@@ -135,7 +135,7 @@ export default function ImportPreviewItemCard({
                             onUpdateItem(index, 'include', event.target.checked)
                         }
                     />
-                    Incluir este item no lancamento
+                    Incluir este item no lançamento
                 </label>
 
                 <SecondaryButton
@@ -143,7 +143,7 @@ export default function ImportPreviewItemCard({
                     className="px-4 py-2 text-xs"
                     onClick={() => onUpdateItem(index, 'include', !isIncluded)}
                 >
-                    {isIncluded ? 'Remover do lancamento' : 'Reincluir no lancamento'}
+                    {isIncluded ? 'Remover do lançamento' : 'Reincluir no lançamento'}
                 </SecondaryButton>
             </div>
 
@@ -284,7 +284,7 @@ export default function ImportPreviewItemCard({
                                     },
                                     {
                                         value: 'non_stockable',
-                                        label: 'Nao estocavel',
+                                        label: 'Não estocavel',
                                     },
                                 ]}
                             />

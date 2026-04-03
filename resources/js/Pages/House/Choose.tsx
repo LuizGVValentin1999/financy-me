@@ -50,7 +50,7 @@ export default function ChooseHouse() {
                     </div>
 
                     <div className="mt-4">
-                        <InputLabel htmlFor="code" value="Codigo" />
+                        <InputLabel htmlFor="code" value="Código" />
                         <TextInput
                             id="code"
                             value={createForm.data.code}
@@ -95,7 +95,7 @@ export default function ChooseHouse() {
                     <h2 className="text-lg font-semibold text-slate-900">Entrar em casa</h2>
 
                     <div className="mt-4">
-                        <InputLabel htmlFor="join_code" value="Codigo" />
+                        <InputLabel htmlFor="join_code" value="Código" />
                         <TextInput
                             id="join_code"
                             value={joinForm.data.code}

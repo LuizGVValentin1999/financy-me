@@ -92,8 +92,8 @@ export default function DeleteUserForm({
 
                     <p className="mt-1 text-sm text-gray-600">
                         {isDeletingHouse
-                            ? 'Essa acao remove sua conta e todos os dados da casa ativa. Ela so funciona quando voce e o unico usuario vinculado a essa casa. Informe sua senha para confirmar.'
-                            : 'Essa acao remove sua conta permanentemente. Informe sua senha para confirmar.'}
+                            ? 'Essa ação remove sua conta e todos os dados da casa ativa. Ela so funciona quando voce e o único usuario vinculado a essa casa. Informe sua senha para confirmar.'
+                            : 'Essa ação remove sua conta permanentemente. Informe sua senha para confirmar.'}
                     </p>
 
                     <div className="mt-6">

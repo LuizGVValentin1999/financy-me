@@ -1,7 +1,5 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import LabeledInputField from '@/Components/form-fields/LabeledInputField';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
 import { FormEventHandler } from 'react';
 
 interface JoinHouseModalProps {
@@ -34,21 +32,14 @@ export default function JoinHouseModal({
             processing={isLoading}
             sectionLabel="Casas"
             title="Entrar em Casa"
-            description="Informe o codigo e a senha da casa para solicitar entrada."
+            description="Informe o código e a senha da casa para solicitar entrada."
+            saveLabel="Entrar"
             maxWidth="xl"
-            actions={
-                <div className="flex justify-end gap-3">
-                    <SecondaryButton type="button" onClick={onClose} disabled={isLoading}>
-                        Cancelar
-                    </SecondaryButton>
-                    <PrimaryButton disabled={isLoading}>Entrar</PrimaryButton>
-                </div>
-            }
         >
             <div>
                 <LabeledInputField
                     id="join_code"
-                    label="Codigo da Casa"
+                    label="Código da Casa"
                     value={data.code}
                     onChange={(value) =>
                         setData({
@@ -59,7 +50,7 @@ export default function JoinHouseModal({
                     placeholder="Ex: praia-2024"
                     error={errors.code}
                 />
-                <p className="mt-1 text-xs text-slate-500">Peca o codigo da casa ao administrador.</p>
+                <p className="mt-1 text-xs text-slate-500">Peça o código da casa ao administrador.</p>
             </div>
 
             <LabeledInputField

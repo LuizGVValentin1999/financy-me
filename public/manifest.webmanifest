@@ -4,8 +4,6 @@
   "description": "Controle financeiro domestico e operacional.",
   "start_url": "/",
   "scope": "/",
-  "display": "fullscreen",
-  "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#f8f4ec",
   "theme_color": "#f8f4ec",

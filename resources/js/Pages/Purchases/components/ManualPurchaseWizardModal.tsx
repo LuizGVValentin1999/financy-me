@@ -16,6 +16,7 @@ import { useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { DatePicker, Grid, Select } from 'antd';
 import dayjs from 'dayjs';
+import { Check, ChevronLeft, ChevronRight, Plus, Wallet, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type ProductOption = PurchasesPageProps['products'][number];
@@ -422,7 +423,7 @@ export default function ManualPurchaseWizardModal({
                     }, {}),
                 );
             } else {
-                setAccountModalErrors({ code: 'Nao foi possivel criar a conta agora.' });
+                setAccountModalErrors({ code: 'Não foi possível criar a conta agora.' });
             }
         } finally {
             setIsCreatingAccount(false);
@@ -459,7 +460,7 @@ export default function ManualPurchaseWizardModal({
                     }, {}),
                 );
             } else {
-                setCategoryModalErrors({ code: 'Nao foi possivel criar a categoria agora.' });
+                setCategoryModalErrors({ code: 'Não foi possível criar a categoria agora.' });
             }
         } finally {
             setIsCreatingCategory(false);
@@ -565,7 +566,7 @@ export default function ManualPurchaseWizardModal({
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="manual_invoice_number" value="Numero da nota" />
+                                <InputLabel htmlFor="manual_invoice_number" value="Número da nota" />
                                 <input
                                     id="manual_invoice_number"
                                     type="text"
@@ -684,7 +685,7 @@ export default function ManualPurchaseWizardModal({
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Novo produto</p>
-                                <p className="mt-2 text-base font-semibold text-slate-900 sm:text-lg">Cadastre o produto durante o lancamento</p>
+                                <p className="mt-2 text-base font-semibold text-slate-900 sm:text-lg">Cadastre o produto durante o lançamento</p>
                             </div>
 
                             <SecondaryButton type="button" onClick={openCategoryModal} className={compactButtonClassName}>
@@ -914,7 +915,7 @@ export default function ManualPurchaseWizardModal({
                         <div className="flex items-start justify-between gap-2 sm:flex-wrap sm:gap-4">
                             <div>
                                 <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-sm sm:tracking-[0.24em]">Compra manual</p>
-                                <h2 className="mt-1 text-xl font-semibold text-slate-900 sm:mt-2 sm:text-3xl">Lancamento em etapas</h2>
+                                <h2 className="mt-1 text-xl font-semibold text-slate-900 sm:mt-2 sm:text-3xl">Lançamento em etapas</h2>
                                 <p className="mt-1 hidden text-sm leading-5 text-slate-500 sm:mt-2 sm:block sm:leading-6">
                                     Defina a compra, adicione os produtos um por um e finalize no pagamento.
                                 </p>
@@ -969,41 +970,76 @@ export default function ManualPurchaseWizardModal({
                                 )}
                             </div>
 
-                            <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
+                            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
                                 {isInvoiceStep ? (
                                     <>
                                         <SecondaryButton type="button" onClick={onClose} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Cancelar
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <X className="h-3 w-3" />
+                                                <span>Cancelar</span>
+                                            </span>
                                         </SecondaryButton>
                                         <PrimaryButton type="button" onClick={() => setCurrentStep(1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Avancar para produtos
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <ChevronRight className="h-3 w-3" />
+                                                <span>{isMobile ? 'Produtos' : 'Avançar para produtos'}</span>
+                                            </span>
                                         </PrimaryButton>
                                     </>
                                 ) : isPaymentStep ? (
                                     <>
                                         <SecondaryButton type="button" onClick={() => setCurrentStep(Math.max(data.items.length, 1))} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Voltar
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <ChevronLeft className="h-3 w-3" />
+                                                <span>Voltar</span>
+                                            </span>
                                         </SecondaryButton>
                                         <PrimaryButton disabled={processing} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Registrar compra
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <Check className="h-3 w-3" />
+                                                <span>{isMobile ? 'Registrar' : 'Registrar compra'}</span>
+                                            </span>
                                         </PrimaryButton>
                                     </>
                                 ) : (
                                     <>
-                                        <SecondaryButton type="button" onClick={() => setCurrentStep(Math.max(0, currentStep - 1))} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Voltar
-                                        </SecondaryButton>
-                                        {currentItemIndex < data.items.length - 1 ? (
-                                            <SecondaryButton type="button" onClick={() => setCurrentStep(currentStep + 1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                                Proximo produto
+                                        <div className="col-span-2 flex w-full items-center gap-2 sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
+                                            <SecondaryButton
+                                                type="button"
+                                                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                                                className={`w-9 min-w-9 !px-0 sm:w-auto sm:min-w-0 sm:!px-5 ${compactButtonClassName}`}
+                                            >
+                                                <span className="inline-flex items-center gap-1.5">
+                                                    <ChevronLeft className="h-3 w-3" />
+                                                    <span className="hidden sm:inline">Voltar</span>
+                                                </span>
                                             </SecondaryButton>
-                                        ) : null}
-                                        <SecondaryButton type="button" onClick={addItem} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Adicionar mais um produto
-                                        </SecondaryButton>
-                                        <PrimaryButton type="button" onClick={() => setCurrentStep(totalSteps - 1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
-                                            Ir para pagamento
-                                        </PrimaryButton>
+
+                                            <div className="grid flex-1 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
+                                                {currentItemIndex < data.items.length - 1 ? (
+                                                    <SecondaryButton type="button" onClick={() => setCurrentStep(currentStep + 1)} className={`col-span-2 w-full sm:col-auto sm:w-auto ${compactButtonClassName}`}>
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <ChevronRight className="h-3 w-3" />
+                                                            <span>{isMobile ? 'Próximo' : 'Próximo produto'}</span>
+                                                        </span>
+                                                    </SecondaryButton>
+                                                ) : null}
+
+                                                <SecondaryButton type="button" onClick={addItem} className={`w-full sm:w-auto ${compactButtonClassName}`}>
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <Plus className="h-3 w-3" />
+                                                        <span>{isMobile ? 'Adicionar' : 'Adicionar mais um produto'}</span>
+                                                    </span>
+                                                </SecondaryButton>
+
+                                                <PrimaryButton type="button" onClick={() => setCurrentStep(totalSteps - 1)} className={`w-full sm:w-auto ${compactButtonClassName}`}>
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <Wallet className="h-3 w-3" />
+                                                        <span>{isMobile ? 'Pagamento' : 'Ir para pagamento'}</span>
+                                                    </span>
+                                                </PrimaryButton>
+                                            </div>
+                                        </div>
                                     </>
                                 )}
                             </div>
@@ -1021,7 +1057,7 @@ export default function ManualPurchaseWizardModal({
                 errors={accountModalErrors}
                 onFieldChange={(field, value) => setAccountModalData((current) => ({ ...current, [field]: value }))}
                 title="Nova conta"
-                description="Crie uma conta sem sair do lancamento manual."
+                description="Crie uma conta sem sair do lançamento manual."
                 saveLabel="Criar conta"
                 idPrefix="manual_purchase_account"
             />

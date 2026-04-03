@@ -14,8 +14,9 @@ import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import ProductFormFields from '@/Pages/Products/components/ProductFormFields';
 import { router, useForm } from '@inertiajs/react';
 import axios from 'axios';
-import { DatePicker, Select } from 'antd';
+import { DatePicker, Grid, Select } from 'antd';
 import dayjs from 'dayjs';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import ImportPreviewSidebar from './importPreview/ImportPreviewSidebar';
 import {
@@ -111,6 +112,8 @@ export default function ImportPreviewSection({
     accounts: PurchasesPageProps['accounts'];
 }) {
     const { message, modal } = useAntdApp();
+    const screens = Grid.useBreakpoint();
+    const isMobile = !screens.sm;
     const [currentStep, setCurrentStep] = useState(0);
     const [productsCatalog, setProductsCatalog] = useState(products);
     const [categoriesCatalog, setCategoriesCatalog] = useState(categories);
@@ -191,6 +194,10 @@ export default function ImportPreviewSection({
     }, [errors]);
 
     const totalSteps = preview.items.length + 1;
+    const controlSize = isMobile ? 'middle' : 'large';
+    const inputClassName = 'mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm sm:px-4 sm:py-3';
+    const compactButtonClassName = 'h-9 px-3 text-[11px] sm:h-12 sm:px-5 sm:text-sm';
+
     const currentItemIndex = Math.max(currentStep - 1, 0);
     const currentPreviewItem = preview.items[currentItemIndex] ?? null;
     const currentItemState = data.items[currentItemIndex] ?? null;
@@ -245,13 +252,13 @@ export default function ImportPreviewSection({
     const clearDraft = () => {
         modal.confirm({
             title: 'Confirmar exclusao',
-            content: 'Excluir rascunho da importacao?',
+            content: 'Excluir rascunho da importação?',
             okText: 'Sim',
-            cancelText: 'Nao',
+            cancelText: 'Não',
             onOk: () => {
                 router.delete(route('purchases.import-clear'), {
                     preserveScroll: true,
-                    onSuccess: () => message.info('Rascunho da importacao removido.'),
+                    onSuccess: () => message.info('Rascunho da importação removido.'),
                     onError: () => message.error('Erro ao remover rascunho'),
                 });
             },
@@ -333,7 +340,7 @@ export default function ImportPreviewSection({
                     }, {}),
                 );
             } else {
-                setAccountModalErrors({ code: 'Nao foi possivel criar a conta agora.' });
+                setAccountModalErrors({ code: 'Não foi possível criar a conta agora.' });
             }
         } finally {
             setIsCreatingAccount(false);
@@ -370,7 +377,7 @@ export default function ImportPreviewSection({
                     }, {}),
                 );
             } else {
-                setCategoryModalErrors({ code: 'Nao foi possivel criar a categoria agora.' });
+                setCategoryModalErrors({ code: 'Não foi possível criar a categoria agora.' });
             }
         } finally {
             setIsCreatingCategory(false);
@@ -380,11 +387,11 @@ export default function ImportPreviewSection({
     return (
         <>
             <Modal show={true} onClose={clearDraft} maxWidth="screen">
-                <form noValidate onSubmit={submit} className="flex max-h-[92vh] flex-col overflow-hidden bg-white">
+                <form noValidate onSubmit={submit} className="flex max-h-[95dvh] flex-col overflow-hidden bg-white sm:max-h-[95vh]">
                     <div className="border-b border-slate-200 px-3 py-2.5 sm:px-6 sm:py-4">
                         <div className="flex items-start justify-between gap-2 sm:flex-wrap sm:gap-4">
                             <div>
-                                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-sm sm:tracking-[0.24em]">Importacao de NFC-e</p>
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-sm sm:tracking-[0.24em]">Importação de NFC-e</p>
                                 <h2 className="mt-1 text-xl font-semibold text-slate-900 sm:mt-2 sm:text-3xl">Revisar nota fiscal</h2>
                                 <p className="mt-1 hidden text-sm leading-5 text-slate-500 sm:mt-2 sm:block sm:leading-6">
                                     Defina o pagamento, revise cada item em sequencia e importe a nota no final.
@@ -435,15 +442,15 @@ export default function ImportPreviewSection({
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div>
                                             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Etapa 1</p>
-                                            <p className="mt-2 text-lg font-semibold text-slate-900">Definicao de pagamento</p>
+                                            <p className="mt-2 text-lg font-semibold text-slate-900">Definição de pagamento</p>
                                             <p className="mt-1 text-sm text-slate-500">Distribua o valor pago entre as contas da casa.</p>
                                         </div>
 
                                         <div className="flex flex-wrap gap-2">
-                                            <SecondaryButton type="button" onClick={openAccountModal}>
+                                            <SecondaryButton type="button" onClick={openAccountModal} className={compactButtonClassName}>
                                                 Nova conta
                                             </SecondaryButton>
-                                            <SecondaryButton type="button" onClick={addPayment}>
+                                            <SecondaryButton type="button" onClick={addPayment} className={compactButtonClassName}>
                                                 Adicionar conta
                                             </SecondaryButton>
                                         </div>
@@ -463,7 +470,7 @@ export default function ImportPreviewSection({
                                                             value={payment.account_id || undefined}
                                                             onChange={(value) => updatePayment(paymentIndex, 'account_id', value ?? '')}
                                                             className="mt-2 w-full"
-                                                            size="large"
+                                                            size={controlSize}
                                                             options={accountsCatalog.map((account) => ({
                                                                 value: String(account.id),
                                                                 label: `${account.code} - ${account.name}`,
@@ -479,7 +486,7 @@ export default function ImportPreviewSection({
                                                             value={payment.type}
                                                             onChange={(value) => updatePayment(paymentIndex, 'type', value)}
                                                             className="mt-2 w-full"
-                                                            size="large"
+                                                            size={controlSize}
                                                             options={[
                                                                 { value: 'cash', label: 'A vista' },
                                                                 { value: 'installment', label: 'Parcelado' },
@@ -496,7 +503,7 @@ export default function ImportPreviewSection({
                                                             step="0.01"
                                                             value={payment.principal_amount}
                                                             onChange={(event) => updatePayment(paymentIndex, 'principal_amount', event.target.value)}
-                                                            className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                            className={inputClassName}
                                                         />
                                                         <InputError message={errors[`payments.${paymentIndex}.principal_amount`]} className="mt-2" />
                                                     </div>
@@ -507,7 +514,7 @@ export default function ImportPreviewSection({
                                                             id={`payments.${paymentIndex}.first_due_date`}
                                                             value={payment.first_due_date ? dayjs(payment.first_due_date) : null}
                                                             format="DD/MM/YYYY"
-                                                            size="large"
+                                                            size={controlSize}
                                                             onChange={(date) => updatePayment(paymentIndex, 'first_due_date', date ? date.format('YYYY-MM-DD') : '')}
                                                             className="mt-2 w-full"
                                                         />
@@ -526,7 +533,7 @@ export default function ImportPreviewSection({
                                                                 step="1"
                                                                 value={payment.installments}
                                                                 onChange={(event) => updatePayment(paymentIndex, 'installments', event.target.value)}
-                                                                className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                                className={inputClassName}
                                                             />
                                                             <InputError message={errors[`payments.${paymentIndex}.installments`]} className="mt-2" />
                                                         </div>
@@ -538,7 +545,7 @@ export default function ImportPreviewSection({
                                                                 value={payment.interest_type}
                                                                 onChange={(value) => updatePayment(paymentIndex, 'interest_type', value)}
                                                                 className="mt-2 w-full"
-                                                                size="large"
+                                                                size={controlSize}
                                                                 options={[
                                                                     { value: 'rate', label: 'Percentual' },
                                                                     { value: 'fixed_installment', label: 'Valor da parcela' },
@@ -558,7 +565,7 @@ export default function ImportPreviewSection({
                                                                         step="0.01"
                                                                         value={payment.installment_amount}
                                                                         onChange={(event) => updatePayment(paymentIndex, 'installment_amount', event.target.value)}
-                                                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                                        className={inputClassName}
                                                                     />
                                                                     <InputError message={errors[`payments.${paymentIndex}.installment_amount`]} className="mt-2" />
                                                                 </>
@@ -572,7 +579,7 @@ export default function ImportPreviewSection({
                                                                         step="0.01"
                                                                         value={payment.interest_rate}
                                                                         onChange={(event) => updatePayment(paymentIndex, 'interest_rate', event.target.value)}
-                                                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                                        className={inputClassName}
                                                                     />
                                                                     <InputError message={errors[`payments.${paymentIndex}.interest_rate`]} className="mt-2" />
                                                                 </>
@@ -583,7 +590,7 @@ export default function ImportPreviewSection({
 
                                                 <div className="mt-4 flex justify-end">
                                                     {data.payments.length > 1 ? (
-                                                        <SecondaryButton type="button" onClick={() => removePayment(paymentIndex)}>
+                                                        <SecondaryButton type="button" onClick={() => removePayment(paymentIndex)} className={compactButtonClassName}>
                                                             Remover conta
                                                         </SecondaryButton>
                                                     ) : null}
@@ -617,7 +624,7 @@ export default function ImportPreviewSection({
                                         <div>
                                             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Etapa {currentStep + 1} de {totalSteps}</p>
                                             <p className="mt-2 text-lg font-semibold text-slate-900">Revisar item da nota</p>
-                                            <p className="mt-1 text-sm text-slate-500">Confirme os dados do item antes de avancar para o proximo.</p>
+                                            <p className="mt-1 text-sm text-slate-500">Confirme os dados do item antes de avançar para o próximo.</p>
                                         </div>
 
                                         <div className={`rounded-full px-4 py-2 text-sm font-semibold ${currentPreviewItem.is_discount ? 'bg-[#fff1ec] text-[#be3d2a]' : 'bg-[#eef7f7] text-slate-700'}`}>
@@ -643,11 +650,11 @@ export default function ImportPreviewSection({
                                                 </div>
                                                 <p className="mt-2 text-sm text-slate-500">
                                                     Nota: {formatQuantity(currentPreviewItem.quantity)} {currentPreviewItem.unit} • {formatCurrency(currentPreviewItem.unit_price)} cada
-                                                    {currentPreviewItem.code ? ` • codigo ${currentPreviewItem.code}` : ''}
+                                                    {currentPreviewItem.code ? ` • código ${currentPreviewItem.code}` : ''}
                                                 </p>
                                                 {currentPreviewItem.suggested_product_id ? (
                                                     <p className="mt-2 text-sm text-slate-600">
-                                                        Produto mais proximo encontrado:{' '}
+                                                        Produto mais próximo encontrado:{' '}
                                                         <span className="font-semibold text-slate-900">{currentPreviewItem.suggested_product_name}</span>
                                                     </p>
                                                 ) : null}
@@ -662,11 +669,11 @@ export default function ImportPreviewSection({
                                                     checked={currentItemState.include}
                                                     onChange={(event) => updateItem(currentItemIndex, 'include', event.target.checked)}
                                                 />
-                                                Incluir este item na importacao
+                                                Incluir este item na importação
                                             </label>
 
                                             <SecondaryButton type="button" onClick={() => updateItem(currentItemIndex, 'include', !currentItemState.include)}>
-                                                {currentItemState.include ? 'Remover da importacao' : 'Reincluir na importacao'}
+                                                {currentItemState.include ? 'Remover da importação' : 'Reincluir na importação'}
                                             </SecondaryButton>
                                         </div>
                                     </div>
@@ -680,11 +687,11 @@ export default function ImportPreviewSection({
                                                     value={currentItemState.product_id || undefined}
                                                     onChange={(value) => updateItem(currentItemIndex, 'product_id', value ?? '')}
                                                     className="mt-2 w-full"
-                                                    size="large"
+                                                    size={controlSize}
                                                     showSearch
                                                     allowClear
                                                     optionFilterProp="label"
-                                                    placeholder="Selecione para reaproveitar um produto ja cadastrado"
+                                                    placeholder="Selecione para reaproveitar um produto já cadastrado"
                                                     options={productsCatalog.map((product) => ({
                                                         value: String(product.id),
                                                         label: product.name,
@@ -703,7 +710,7 @@ export default function ImportPreviewSection({
                                                         step="0.001"
                                                         value={currentItemState.quantity}
                                                         onChange={(event) => updateItem(currentItemIndex, 'quantity', event.target.value)}
-                                                        className="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                                        className={inputClassName}
                                                     />
                                                     <InputError message={errors[`items.${currentItemIndex}.quantity`]} className="mt-2" />
                                                 </div>
@@ -715,7 +722,7 @@ export default function ImportPreviewSection({
                                                         value={currentItemState.unit}
                                                         onChange={(value) => updateItem(currentItemIndex, 'unit', value)}
                                                         className="mt-2 w-full"
-                                                        size="large"
+                                                        size={controlSize}
                                                         options={productUnitOptions.length > 0 ? productUnitOptions : importUnits}
                                                     />
                                                     <InputError message={errors[`items.${currentItemIndex}.unit`]} className="mt-2" />
@@ -730,7 +737,7 @@ export default function ImportPreviewSection({
                                                             <p className="mt-2 text-lg font-semibold text-slate-900">Cadastre com todos os dados do item</p>
                                                         </div>
 
-                                                        <SecondaryButton type="button" onClick={openCategoryModal}>
+                                                        <SecondaryButton type="button" onClick={openCategoryModal} className={compactButtonClassName}>
                                                             Nova categoria
                                                         </SecondaryButton>
                                                     </div>
@@ -769,7 +776,7 @@ export default function ImportPreviewSection({
                                         </>
                                     ) : (
                                         <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
-                                            Este item sera ignorado na importacao da nota fiscal.
+                                            Este item será ignorado na importação da nota fiscal.
                                         </div>
                                     )}
                                 </div>
@@ -777,7 +784,7 @@ export default function ImportPreviewSection({
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-200 px-3 py-2.5 sm:px-6 sm:py-4">
+                    <div className="border-t border-slate-200 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-2.5">
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="text-sm text-slate-500">
                                 {isPaymentStep ? (
@@ -789,20 +796,29 @@ export default function ImportPreviewSection({
                                 )}
                             </div>
 
-                            <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
+                            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
                                 {!isPaymentStep ? (
-                                    <SecondaryButton type="button" onClick={handleBack} className="h-9 w-full px-3 text-[11px] sm:h-12 sm:w-auto sm:px-5 sm:text-sm">
-                                        Voltar
+                                    <SecondaryButton type="button" onClick={handleBack} className={`w-full sm:w-auto ${compactButtonClassName}`}>
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <ChevronLeft className="h-3 w-3" />
+                                            <span>Voltar</span>
+                                        </span>
                                     </SecondaryButton>
                                 ) : null}
 
                                 {!isLastStep ? (
-                                    <PrimaryButton type="button" onClick={handleAdvance} className="h-9 w-full px-3 text-[11px] sm:h-12 sm:w-auto sm:px-5 sm:text-sm">
-                                        Avancar
+                                    <PrimaryButton type="button" onClick={handleAdvance} className={`${isPaymentStep ? 'col-start-2' : ''} w-full sm:w-auto ${compactButtonClassName}`}>
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <ChevronRight className="h-3 w-3" />
+                                            <span>{isMobile ? 'Avançar' : 'Avançar'}</span>
+                                        </span>
                                     </PrimaryButton>
                                 ) : (
-                                    <PrimaryButton disabled={processing} className="h-9 w-full px-3 text-[11px] sm:h-12 sm:w-auto sm:px-5 sm:text-sm">
-                                        Importar nota fiscal
+                                    <PrimaryButton disabled={processing} className={`col-span-2 w-full sm:w-auto ${compactButtonClassName}`}>
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <Check className="h-3 w-3" />
+                                            <span>{isMobile ? 'Importar nota' : 'Importar nota fiscal'}</span>
+                                        </span>
                                     </PrimaryButton>
                                 )}
                             </div>
@@ -820,7 +836,7 @@ export default function ImportPreviewSection({
                 errors={accountModalErrors}
                 onFieldChange={(field, value) => setAccountModalData((current) => ({ ...current, [field]: value }))}
                 title="Nova conta"
-                description="Crie uma conta sem sair da importacao da NFC-e."
+                description="Crie uma conta sem sair da importação da NFC-e."
                 saveLabel="Criar conta"
                 idPrefix="import_account"
             />

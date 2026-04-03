@@ -2,8 +2,6 @@ import FormEntityModal from '@/Components/FormEntityModal';
 import InputError from '@/Components/InputError';
 import LabeledInputField from '@/Components/form-fields/LabeledInputField';
 import LabeledSelectField from '@/Components/form-fields/LabeledSelectField';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
 import type { CategoryOption } from '@/Pages/Purchases/components/purchaseForm/types';
 import { FormEvent } from 'react';
 
@@ -46,17 +44,9 @@ export default function QuickProductModal({
             processing={processing}
             sectionLabel="Produtos"
             title="Cadastro rapido de produto"
-            description="Crie o produto sem sair da compra. Ao salvar, ele sera selecionado automaticamente."
+            description="Crie o produto sem sair da compra. Ao salvar, ele será selecionado automaticamente."
             saveLabel="Criar produto"
             maxWidth="xl"
-            actions={
-                <div className="flex flex-wrap justify-end gap-3">
-                    <SecondaryButton type="button" onClick={onClose}>
-                        Cancelar
-                    </SecondaryButton>
-                    <PrimaryButton disabled={processing}>Criar produto</PrimaryButton>
-                </div>
-            }
         >
             <LabeledInputField
                 id="quick_product_name"

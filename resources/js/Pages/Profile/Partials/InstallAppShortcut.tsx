@@ -58,7 +58,7 @@ export default function InstallAppShortcut({ className = '' }: { className?: str
 
     const handleInstall = async () => {
         if (isInstalled) {
-            message.info('O app ja esta instalado neste dispositivo.');
+            message.info('O app já esta instalado neste dispositivo.');
             return;
         }
 

@@ -305,7 +305,7 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
 
                                     <ResponsiveCardFields>
                                         <ResponsiveCardField
-                                            label="Descricao:"
+                                            label="Descrição:"
                                             value={record.description || 'Sem descrição.'}
                                         />
                                         <ResponsiveCardField

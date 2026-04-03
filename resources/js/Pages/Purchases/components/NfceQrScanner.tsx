@@ -39,7 +39,7 @@ export default function NfceQrScanner({
 
     const [status, setStatus] = useState<ScanStatus>('idle');
     const [scannerMessage, setScannerMessage] = useState(
-        'Aponte a camera para o QR Code da NFC-e.',
+        'Aponte a câmera para o QR Code da NFC-e.',
     );
     const [lastDetectedUrl, setLastDetectedUrl] = useState('');
 
@@ -72,7 +72,7 @@ export default function NfceQrScanner({
             if (!extractedUrl) {
                 setStatus('error');
                 setScannerMessage(
-                    'O QR Code lido nao contem um link HTTP/HTTPS valido da NFC-e.',
+                    'O QR Code lido não contem um link HTTP/HTTPS valido da NFC-e.',
                 );
                 stopScanning();
 
@@ -114,7 +114,7 @@ export default function NfceQrScanner({
 
         if (!context) {
             setStatus('error');
-            setScannerMessage('Nao foi possivel processar a imagem da camera.');
+            setScannerMessage('Não foi possível processar a imagem da câmera.');
             stopScanning();
 
             return;
@@ -141,7 +141,7 @@ export default function NfceQrScanner({
 
         stopScanning();
         setStatus('starting');
-        setScannerMessage('Solicitando acesso a camera...');
+        setScannerMessage('Solicitando acesso a câmera...');
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -163,12 +163,12 @@ export default function NfceQrScanner({
             await video.play();
 
             setStatus('scanning');
-            setScannerMessage('Camera ativa. Posicione o QR Code dentro da area visivel.');
+            setScannerMessage('Câmera ativa. Posicione o QR Code dentro da área visível.');
             animationFrameRef.current = window.requestAnimationFrame(scanCurrentFrame);
         } catch (error) {
             setStatus('error');
             setScannerMessage(
-                'Nao foi possivel acessar a camera. Verifique a permissao do navegador ou envie uma imagem do QR Code.',
+                'Não foi possível acessar a câmera. Verifique a permissão do navegador ou envie uma imagem do QR Code.',
             );
             stopScanning();
         }
@@ -209,7 +209,7 @@ export default function NfceQrScanner({
                 if (!decoded?.data) {
                     setStatus('error');
                     setScannerMessage(
-                        'Nao encontramos um QR Code valido nessa imagem. Tente outra foto ou use a camera.',
+                        'Não encontramos um QR Code valido nessa imagem. Tente outra foto ou use a câmera.',
                     );
                     event.target.value = '';
 
@@ -220,7 +220,7 @@ export default function NfceQrScanner({
             } catch (error) {
                 setStatus('error');
                 setScannerMessage(
-                    'Nao foi possivel ler a imagem enviada. Tente outra imagem ou cole o link manualmente.',
+                    'Não foi possível ler a imagem enviada. Tente outra imagem ou cole o link manualmente.',
                 );
             } finally {
                 event.target.value = '';
@@ -233,7 +233,7 @@ export default function NfceQrScanner({
         if (!isActive) {
             stopScanning();
             setStatus('idle');
-            setScannerMessage('Aponte a camera para o QR Code da NFC-e.');
+            setScannerMessage('Aponte a câmera para o QR Code da NFC-e.');
 
             return;
         }
@@ -262,9 +262,9 @@ export default function NfceQrScanner({
 
                     <div className="absolute left-4 top-4 rounded-full bg-white/12 px-3 py-1 text-xs font-medium text-white backdrop-blur">
                         {status === 'scanning'
-                            ? 'Camera ativa'
+                            ? 'Câmera ativa'
                             : status === 'starting'
-                              ? 'Iniciando camera'
+                              ? 'Iniciando câmera'
                               : status === 'success'
                                 ? 'QR lido'
                                 : status === 'error'
@@ -296,7 +296,7 @@ export default function NfceQrScanner({
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
                 >
                     <Camera className="h-4 w-4" />
-                    Reativar camera
+                    Reativar câmera
                 </button>
 
                 <button
@@ -332,7 +332,7 @@ export default function NfceQrScanner({
 
             {!cameraSupported ? (
                 <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                    Seu navegador nao expoe acesso a camera nesta tela. Use a opcao de imagem ou cole
+                    Seu navegador não expoe acesso a câmera nesta tela. Use a opção de imagem ou cole
                     o link da NFC-e manualmente.
                 </div>
             ) : null}

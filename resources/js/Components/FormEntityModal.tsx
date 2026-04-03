@@ -46,14 +46,16 @@ export default function FormEntityModal({
                 <form noValidate onSubmit={onSubmit} className="mt-4 space-y-4 sm:mt-6 sm:space-y-5">
                     {children}
 
-                    {actions ?? (
-                        <FormModalActions
-                            onCancel={onClose}
-                            onDelete={onDelete}
-                            saveLabel={saveLabel}
-                            saveDisabled={processing}
-                        />
-                    )}
+                    <div className="border-t border-slate-200 pt-4 sm:pt-5">
+                        {actions ?? (
+                            <FormModalActions
+                                onCancel={onClose}
+                                onDelete={onDelete}
+                                saveLabel={saveLabel}
+                                saveDisabled={processing}
+                            />
+                        )}
+                    </div>
                 </form>
             </div>
         </Modal>

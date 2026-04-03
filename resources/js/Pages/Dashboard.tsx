@@ -1,7 +1,9 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
 import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
+import SecondaryButton from '@/Components/SecondaryButton';
 import {
     ResponsiveCard,
     ResponsiveCardField,
@@ -168,7 +170,7 @@ const sourceLabel = (source: 'manual' | 'invoice') =>
     source === 'invoice' ? 'Nota fiscal' : 'Manual';
 
 const typeLabel = (type: 'stockable' | 'non_stockable') =>
-    type === 'non_stockable' ? 'Servico' : 'Produto';
+    type === 'non_stockable' ? 'Serviço' : 'Produto';
 
 const stockMovementOriginLabel = (origin: StockMovementRow['origin']) => {
     if (origin === 'manual_purchase') return 'Compra manual';
@@ -182,7 +184,7 @@ const stockMovementDirectionLabel = (direction: StockMovementRow['direction']) =
     direction === 'inflow' ? 'Entrada' : 'Saida';
 
 const accountMovementOriginLabel = (origin: string) => {
-    if (origin === 'manual') return 'Lancamento manual';
+    if (origin === 'manual') return 'Lançamento manual';
     if (origin === 'manual_purchase') return 'Compra manual';
     if (origin === 'invoice_purchase') return 'Compra importada';
 
@@ -267,7 +269,7 @@ export default function Dashboard({
                 products.map((product) => [
                     product.id,
                     product.type === 'non_stockable'
-                        ? `${product.name} (servico)`
+                        ? `${product.name} (serviço)`
                         : product.name,
                 ]),
             ),
@@ -633,7 +635,7 @@ export default function Dashboard({
             ),
             filters: [
                 { text: 'Produto', value: 'stockable' },
-                { text: 'Servico', value: 'non_stockable' },
+                { text: 'Serviço', value: 'non_stockable' },
             ],
             onFilter: (value: Key | boolean, record: DashboardTableRecord) =>
                 record.product_type === String(value),
@@ -780,7 +782,7 @@ export default function Dashboard({
                 record.category ? <Tag color="cyan">{record.category.name}</Tag> : '--',
         },
         {
-            title: 'Saida no periodo',
+            title: 'Saida no período',
             dataIndex: 'total_output',
             key: 'total_output',
             align: 'right',
@@ -795,7 +797,7 @@ export default function Dashboard({
             sorter: (a, b) => a.withdrawals_count - b.withdrawals_count,
         },
         {
-            title: 'Ultima saida',
+            title: 'Última saida',
             dataIndex: 'last_output_at',
             key: 'last_output_at',
             sorter: (a, b) => dayjs(a.last_output_at).valueOf() - dayjs(b.last_output_at).valueOf(),
@@ -821,7 +823,7 @@ export default function Dashboard({
                     <p className="font-semibold text-slate-900">
                         {record.account_code} - {record.account_name}
                     </p>
-                    <p className="text-slate-500">{record.movements_count} movimentacoes no periodo</p>
+                    <p className="text-slate-500">{record.movements_count} movimentacoes no período</p>
                 </div>
             ),
         },
@@ -850,7 +852,7 @@ export default function Dashboard({
             render: (value) => <span className="font-semibold text-slate-900">{formatCurrency(value)}</span>,
         },
         {
-            title: 'Ultima movimentacao',
+            title: 'Última movimentação',
             dataIndex: 'last_moved_at',
             key: 'last_moved_at',
             sorter: (a, b) => dayjs(a.last_moved_at).valueOf() - dayjs(b.last_moved_at).valueOf(),
@@ -871,7 +873,7 @@ export default function Dashboard({
                         <p className="text-sm uppercase tracking-[0.28em] text-slate-400">Dashboard</p>
                         <h1 className="mt-2 text-4xl font-semibold text-slate-900">Visao geral da casa.</h1>
                         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                            Monitore gastos e consumos da casa por periodo, categoria, cartao/conta e produto ou servico.
+                            Monitore gastos e consumos da casa por período, categoria, cartao/conta e produto ou serviço.
                         </p>
                     </div>
 
@@ -904,7 +906,7 @@ export default function Dashboard({
             <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                     <StatCard
-                        label="Gasto no periodo"
+                        label="Gasto no período"
                         value={formatCurrency(stats.period_spent)}
                         hint={filters.range_label}
                         tone="bg-[#fff1ec]"
@@ -926,8 +928,8 @@ export default function Dashboard({
                         value={topCategory ? formatCurrency(topCategory.spent) : '--'}
                         hint={
                             topCategory
-                                ? `${topCategory.name} • ${topCategory.entries_count} lancamentos`
-                                : 'Sem dados no periodo'
+                                ? `${topCategory.name} • ${topCategory.entries_count} lançamentos`
+                                : 'Sem dados no período'
                         }
                         tone="bg-[#eaf1fb]"
                     />
@@ -940,15 +942,15 @@ export default function Dashboard({
                         }
                         hint={
                             mostConsumedProduct
-                                ? `${truncateText(mostConsumedProduct.name)} • consumo no periodo`
-                                : 'Sem consumo de produtos no periodo'
+                                ? `${truncateText(mostConsumedProduct.name)} • consumo no período`
+                                : 'Sem consumo de produtos no período'
                         }
                         tone="bg-[#f3efe6]"
                     />
                     <StatCard
-                        label="Movimentacoes no periodo"
+                        label="Movimentacoes no período"
                         value={String(stats.entries_count)}
-                        hint={`${stats.products_count} produtos e ${stats.services_count} servicos diferentes`}
+                        hint={`${stats.products_count} produtos e ${stats.services_count} serviços diferentes`}
                         tone="bg-[#f6efff]"
                     />
                 </div>
@@ -957,10 +959,10 @@ export default function Dashboard({
                     title="Painel analitico"
                     description={
                         activeTab === 'expenses'
-                            ? `${filteredEntries.length} gastos encontrados no periodo.`
+                            ? `${filteredEntries.length} gastos encontrados no período.`
                             : activeTab === 'consumption'
-                              ? `${consumptionSummary.length} produtos com consumo no periodo.`
-                              : `${accountSummary.length} contas com movimentacoes no periodo.`
+                              ? `${consumptionSummary.length} produtos com consumo no período.`
+                              : `${accountSummary.length} contas com movimentacoes no período.`
                     }
                     actions={
                         <Input
@@ -970,8 +972,8 @@ export default function Dashboard({
                                 activeTab === 'expenses'
                                     ? 'Pesquisar item, categoria, cartao/conta ou referencia'
                                     : activeTab === 'consumption'
-                                      ? 'Pesquisar produto, marca, SKU, categoria ou observacao'
-                                      : 'Pesquisar conta, categoria, descricao, referencia ou item'
+                                      ? 'Pesquisar produto, marca, SKU, categoria ou observação'
+                                      : 'Pesquisar conta, categoria, descrição, referencia ou item'
                             }
                             allowClear
                             size="large"
@@ -980,7 +982,7 @@ export default function Dashboard({
                     }
                 >
                     <div className="mb-4 flex flex-wrap items-center gap-2">
-                        <Tag color="geekblue">Periodo: {filters.range_label}</Tag>
+                        <Tag color="geekblue">Período: {filters.range_label}</Tag>
                         {hasAdvancedFilters ? (
                             activeFilters.map((label) => (
                                 <Tag key={label} color="cyan">
@@ -1076,7 +1078,7 @@ export default function Dashboard({
                                                 setSelectedConsumptionProduct(record);
                                             },
                                         })}
-                                        mobileHint="Toque em um produto para ver o relatorio detalhado de entradas e saidas dentro do periodo filtrado."
+                                        mobileHint="Toque em um produto para ver o relatorio detalhado de entradas e saidas dentro do período filtrado."
                                         mobileRenderCard={(record) => (
                                             <button
                                                 key={record.key}
@@ -1106,7 +1108,7 @@ export default function Dashboard({
 
                                                     <ResponsiveCardFields columns={2}>
                                                         <ResponsiveCardField
-                                                            label="Consumo no periodo:"
+                                                            label="Consumo no período:"
                                                             value={`${formatQuantity(record.total_output)} ${record.unit}`}
                                                         />
                                                         <ResponsiveCardField
@@ -1118,7 +1120,7 @@ export default function Dashboard({
                                                             value={formatDate(record.first_output_at)}
                                                         />
                                                         <ResponsiveCardField
-                                                            label="Ultima saida:"
+                                                            label="Última saida:"
                                                             value={formatDate(record.last_output_at)}
                                                         />
                                                     </ResponsiveCardFields>
@@ -1151,7 +1153,7 @@ export default function Dashboard({
                                                 setSelectedAccountSummary(record);
                                             },
                                         })}
-                                        mobileHint="Toque em uma conta para ver entradas e saidas de saldo dentro do periodo filtrado."
+                                        mobileHint="Toque em uma conta para ver entradas e saidas de saldo dentro do período filtrado."
                                         mobileRenderCard={(record) => (
                                             <button
                                                 key={record.key}
@@ -1162,7 +1164,7 @@ export default function Dashboard({
                                                 <ResponsiveCard>
                                                     <ResponsiveCardHeader
                                                         title={`${record.account_code} - ${record.account_name}`}
-                                                        subtitle={`${record.movements_count} movimentacoes no periodo`}
+                                                        subtitle={`${record.movements_count} movimentacoes no período`}
                                                         trailing={
                                                             <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-semibold text-white">
                                                                 {formatCurrency(record.current_balance)}
@@ -1177,11 +1179,11 @@ export default function Dashboard({
 
                                                     <ResponsiveCardFields columns={2}>
                                                         <ResponsiveCardField
-                                                            label="Primeira movimentacao:"
+                                                            label="Primeira movimentação:"
                                                             value={formatDate(record.first_moved_at)}
                                                         />
                                                         <ResponsiveCardField
-                                                            label="Ultima movimentacao:"
+                                                            label="Última movimentação:"
                                                             value={formatDate(record.last_moved_at)}
                                                         />
                                                     </ResponsiveCardFields>
@@ -1229,21 +1231,21 @@ export default function Dashboard({
                                             />
                                         </div>
                                         <p className="mt-2 text-sm text-slate-500">
-                                            {category.entries_count} lancamentos • {formatQuantity(category.quantity)} itens
+                                            {category.entries_count} lançamentos • {formatQuantity(category.quantity)} itens
                                         </p>
                                     </div>
                                 ))
                             ) : (
                                 <div className="rounded-[24px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                    Sem dados no periodo selecionado.
+                                    Sem dados no período selecionado.
                                 </div>
                             )}
                         </div>
                     </SectionCard>
 
                     <SectionCard
-                        title="Ultimos lancamentos"
-                        description="Visao rapida dos registros mais recentes dentro do periodo filtrado."
+                        title="Últimos lançamentos"
+                        description="Visao rapida dos registros mais recentes dentro do período filtrado."
                     >
                         <div className="space-y-3">
                             {recentEntries.length > 0 ? (
@@ -1270,7 +1272,7 @@ export default function Dashboard({
                                 ))
                             ) : (
                                 <div className="rounded-[24px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                    Ainda nao ha lancamentos no periodo.
+                                    Ainda não ha lançamentos no período.
                                 </div>
                             )}
                         </div>
@@ -1291,7 +1293,7 @@ export default function Dashboard({
                                 {selectedConsumptionProduct?.product_name ?? '--'}
                             </h2>
                             <p className="mt-2 text-sm leading-6 text-slate-500">
-                                Entradas e saidas do produto dentro do periodo filtrado da dashboard.
+                                Entradas e saidas do produto dentro do período filtrado da dashboard.
                             </p>
                         </div>
 
@@ -1342,7 +1344,7 @@ export default function Dashboard({
                             ))
                         ) : (
                             <div className="rounded-[24px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                Nenhuma movimentacao encontrada para este produto no periodo filtrado.
+                                Nenhuma movimentação encontrada para este produto no período filtrado.
                             </div>
                         )}
                     </div>
@@ -1364,7 +1366,7 @@ export default function Dashboard({
                                     : '--'}
                             </h2>
                             <p className="mt-2 text-sm leading-6 text-slate-500">
-                                Entradas e saidas de saldo registradas no periodo filtrado.
+                                Entradas e saidas de saldo registradas no período filtrado.
                             </p>
                         </div>
 
@@ -1386,7 +1388,7 @@ export default function Dashboard({
                                         title={
                                             movement.description ||
                                             movement.related_items[0] ||
-                                            'Movimentacao sem descricao'
+                                            'Movimentação sem descrição'
                                         }
                                         subtitle={`${accountMovementOriginLabel(movement.origin)}${movement.reference ? ` • ${movement.reference}` : ''}`}
                                         trailing={
@@ -1432,7 +1434,7 @@ export default function Dashboard({
                             ))
                         ) : (
                             <div className="rounded-[24px] bg-[#f8f4ec] p-5 text-sm text-slate-600">
-                                Nenhuma movimentacao encontrada para esta conta no periodo filtrado.
+                                Nenhuma movimentação encontrada para esta conta no período filtrado.
                             </div>
                         )}
                     </div>
@@ -1446,33 +1448,33 @@ export default function Dashboard({
                 processing={isApplyingFilters}
                 sectionLabel="Dashboard"
                 title="Filtros"
-                description="Filtre por periodo, categorias, cartoes/contas e produtos ou servicos para analisar gastos e consumos da casa."
+                description="Filtre por período, categorias, cartões/contas e produtos ou serviços para analisar gastos e consumos da casa."
                 saveLabel="Aplicar filtros"
                 maxWidth="2xl"
                 actions={
-                    <div className="flex flex-wrap justify-end gap-3 pt-2">
-                        <button
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
+                        <SecondaryButton
                             type="button"
                             onClick={resetFilters}
                             disabled={isApplyingFilters}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                            className="w-full sm:w-auto"
                         >
                             Limpar tudo
-                        </button>
-                        <button
+                        </SecondaryButton>
+                        <SecondaryButton
                             type="button"
                             onClick={() => setIsFilterModalOpen(false)}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                            className="w-full sm:w-auto"
                         >
                             Cancelar
-                        </button>
-                        <button
+                        </SecondaryButton>
+                        <PrimaryButton
                             type="submit"
                             disabled={isApplyingFilters}
-                            className="inline-flex items-center rounded-full bg-[#0f172a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                            className="col-span-2 w-full sm:w-auto"
                         >
                             Aplicar filtros
-                        </button>
+                        </PrimaryButton>
                     </div>
                 }
             >
@@ -1540,7 +1542,7 @@ export default function Dashboard({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="filter-accounts" value="Cartoes / Contas" />
+                    <InputLabel htmlFor="filter-accounts" value="Cartões / Contas" />
                     <Select
                         id="filter-accounts"
                         mode="multiple"
@@ -1554,7 +1556,7 @@ export default function Dashboard({
                         className="mt-2 w-full"
                         size="large"
                         allowClear
-                        placeholder="Selecione um ou mais cartoes/contas"
+                        placeholder="Selecione um ou mais cartões/contas"
                         options={accounts.map((account) => ({
                             value: String(account.id),
                             label: `${account.code} - ${account.name}`,
@@ -1563,7 +1565,7 @@ export default function Dashboard({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="filter-products" value="Produtos e servicos" />
+                    <InputLabel htmlFor="filter-products" value="Produtos e serviços" />
                     <Select
                         id="filter-products"
                         mode="multiple"
@@ -1584,7 +1586,7 @@ export default function Dashboard({
                             value: String(product.id),
                             label:
                                 product.type === 'non_stockable'
-                                    ? `${product.name} (servico)`
+                                    ? `${product.name} (serviço)`
                                     : product.name,
                         }))}
                     />

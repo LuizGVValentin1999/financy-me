@@ -291,7 +291,7 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
             render: (value: number) => formatCurrency(value),
         },
         {
-            title: 'Ultima compra',
+            title: 'Última compra',
             dataIndex: 'last_purchase_at',
             key: 'last_purchase_at',
             sorter: (a, b) => String(a.last_purchase_at ?? '').localeCompare(String(b.last_purchase_at ?? '')),
@@ -419,7 +419,7 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
                                                 value={`${formatQuantity(record.minimum_stock)} ${record.unit}`}
                                             />
                                             <ResponsiveCardField
-                                                label="Ultima compra:"
+                                                label="Última compra:"
                                                 value={formatDate(record.last_purchase_at)}
                                             />
                                             <ResponsiveCardField

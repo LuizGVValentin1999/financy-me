@@ -1,7 +1,5 @@
 import FormModalActions from '@/Components/FormModalActions';
 import FormEntityModal from '@/Components/FormEntityModal';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
 import PurchaseMainFields from '@/Pages/Purchases/components/purchaseForm/PurchaseMainFields';
 import QuickProductModal from '@/Pages/Purchases/components/purchaseForm/QuickProductModal';
 import type {
@@ -101,7 +99,7 @@ export default function PurchaseFormModal({
                 );
             } else {
                 setQuickProductErrors({
-                    general: 'Nao foi possivel criar o produto agora. Tente novamente.',
+                    general: 'Não foi possível criar o produto agora. Tente novamente.',
                 });
             }
         } finally {
@@ -120,27 +118,18 @@ export default function PurchaseFormModal({
                 title={isEditing ? 'Editar registro' : 'Nova compra manual'}
                 description={
                     isEditing
-                        ? 'Ajuste o produto, a quantidade e os valores. O estoque sera recalculado automaticamente.'
-                        : 'Pesquise o produto para agilizar o lancamento ou crie um novo sem sair desta tela.'
+                        ? 'Ajuste o produto, a quantidade e os valores. O estoque será recalculado automaticamente.'
+                        : 'Pesquise o produto para agilizar o lançamento ou crie um novo sem sair desta tela.'
                 }
-                saveLabel="Salvar alteracoes"
+                saveLabel={isEditing ? 'Salvar alteracoes' : 'Registrar compra'}
                 onDelete={onDelete}
                 actions={
-                    isEditing ? (
-                        <FormModalActions
-                            onCancel={onClose}
-                            onDelete={onDelete}
-                            saveLabel="Salvar alteracoes"
-                            saveDisabled={processing}
-                        />
-                    ) : (
-                        <div className="flex flex-wrap justify-end gap-3">
-                            <SecondaryButton type="button" onClick={onClose}>
-                                Cancelar
-                            </SecondaryButton>
-                            <PrimaryButton disabled={processing}>Registrar compra</PrimaryButton>
-                        </div>
-                    )
+                    <FormModalActions
+                        onCancel={onClose}
+                        onDelete={isEditing ? onDelete : undefined}
+                        saveLabel={isEditing ? 'Salvar alteracoes' : 'Registrar compra'}
+                        saveDisabled={processing}
+                    />
                 }
             >
                 <PurchaseMainFields

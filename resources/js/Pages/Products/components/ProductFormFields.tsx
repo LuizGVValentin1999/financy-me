@@ -63,7 +63,7 @@ export default function ProductFormFields({
 
                 <LabeledInputField
                     id={id('sku')}
-                    label="SKU ou codigo"
+                    label="SKU ou código"
                     value={data.sku}
                     onChange={(value) => onFieldChange('sku', value)}
                 />

@@ -1,7 +1,5 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import LabeledInputField from '@/Components/form-fields/LabeledInputField';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
 import { FormEventHandler } from 'react';
 
 interface CreateHouseModalProps {
@@ -41,16 +39,9 @@ export default function CreateHouseModal({
             processing={isLoading}
             sectionLabel="Casas"
             title="Criar Nova Casa"
-            description="Defina um nome, um codigo unico e uma senha para a nova casa."
+            description="Defina um nome, um código único e uma senha para a nova casa."
+            saveLabel="Criar Casa"
             maxWidth="xl"
-            actions={
-                <div className="flex justify-end gap-3">
-                    <SecondaryButton type="button" onClick={onClose} disabled={isLoading}>
-                        Cancelar
-                    </SecondaryButton>
-                    <PrimaryButton disabled={isLoading}>Criar Casa</PrimaryButton>
-                </div>
-            }
         >
             <LabeledInputField
                 id="name"
@@ -69,7 +60,7 @@ export default function CreateHouseModal({
             <div>
                 <LabeledInputField
                     id="code"
-                    label="Codigo da Casa"
+                    label="Código da Casa"
                     value={data.code}
                     onChange={(value) =>
                         setData({
@@ -81,7 +72,7 @@ export default function CreateHouseModal({
                     error={errors.code}
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                    Codigo unico para entrar nesta casa. Apenas letras, numeros, hifen e underscore.
+                    Código único para entrar nesta casa. Apenas letras, numeros, hífen e underscore.
                 </p>
             </div>
 

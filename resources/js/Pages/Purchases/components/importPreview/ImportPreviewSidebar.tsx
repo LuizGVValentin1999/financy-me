@@ -96,7 +96,7 @@ export default function ImportPreviewSidebar({
                         </div>
                     ) : (
                         <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                            O cupom nao trouxe formas de pagamento claras. Use a secao "Pagamento da nota" ao lado para registrar corretamente.
+                            O cupom não trouxe formas de pagamento claras. Use a seção "Pagamento da nota" ao lado para registrar corretamente.
                         </div>
                     )}
                 </div>

@@ -165,7 +165,7 @@ export default function Register() {
                 )}
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="house_code" value="Codigo da casa (sem espacos)" />
+                    <InputLabel htmlFor="house_code" value="Código da casa (sem espaços)" />
                     <TextInput
                         id="house_code"
                         name="house_code"
@@ -196,7 +196,7 @@ export default function Register() {
                         href={route('login')}
                         className="text-sm font-semibold text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-900"
                     >
-                        Ja tem conta?
+                        Já tem conta?
                     </Link>
 
                     <PrimaryButton className="min-w-[160px]" disabled={processing}>

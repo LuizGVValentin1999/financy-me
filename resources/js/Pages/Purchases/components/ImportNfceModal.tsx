@@ -1,8 +1,6 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import LabeledInputField from '@/Components/form-fields/LabeledInputField';
 import NfceQrScanner from '@/Pages/Purchases/components/NfceQrScanner';
-import PrimaryButton from '@/Components/PrimaryButton';
-import SecondaryButton from '@/Components/SecondaryButton';
 import { FormEvent, useEffect, useState } from 'react';
 
 interface ImportNfceModalProps {
@@ -43,15 +41,8 @@ export default function ImportNfceModal({
             sectionLabel="Compras"
             title="Importar compra da NFC-e"
             description="Cole o link publico da SEFAZ do Parana ou leia o QR Code da nota. O sistema busca os itens, monta um rascunho e voce classifica cada produto antes de confirmar."
+            saveLabel="Buscar nota"
             maxWidth="xl"
-            actions={
-                <div className="flex flex-wrap justify-end gap-3">
-                    <SecondaryButton type="button" onClick={onClose}>
-                        Cancelar
-                    </SecondaryButton>
-                    <PrimaryButton disabled={processing}>Buscar nota</PrimaryButton>
-                </div>
-            }
         >
             <div className="grid gap-3 sm:grid-cols-2">
                 <button
@@ -88,7 +79,7 @@ export default function ImportNfceModal({
                             mode === 'scan' ? 'text-slate-200' : 'text-slate-500'
                         }`}
                     >
-                        Leia a nota com a camera ou por imagem.
+                        Leia a nota com a câmera ou por imagem.
                     </p>
                 </button>
             </div>

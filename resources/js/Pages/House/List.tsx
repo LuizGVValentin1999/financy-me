@@ -31,7 +31,7 @@ export default function ListHouses({ houses }: Props) {
                             <div className="flex items-center justify-between gap-3">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">{house.name}</h2>
-                                    <p className="text-sm text-slate-600">Codigo: {house.code}</p>
+                                    <p className="text-sm text-slate-600">Código: {house.code}</p>
                                     <p className="text-sm text-slate-600">Papel: {house.role}</p>
                                 </div>
 
