@@ -11,10 +11,22 @@ import 'dayjs/locale/pt-br';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Finency-me';
 const ptBR = ('default' in ptBRModule ? ptBRModule.default : ptBRModule) as Locale;
 
 dayjs.locale('pt-br');
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+
+        if (isSecureContext) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {
+                // Keep app startup resilient even if SW registration fails.
+            });
+        }
+    });
+}
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

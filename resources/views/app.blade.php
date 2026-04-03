@@ -3,8 +3,19 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="application-name" content="Finency-me">
+        <meta name="theme-color" content="#6f8ea8">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="Finency-me">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="shortcut icon" href="/icons/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+
+        <title inertia>{{ config('app.name', 'Finency-me') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
