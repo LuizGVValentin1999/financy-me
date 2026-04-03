@@ -1,5 +1,6 @@
 import FormEntityModal from '@/Components/FormEntityModal';
 import InputLabel from '@/Components/InputLabel';
+import ResponsiveDateRangePicker from '@/Components/ResponsiveDateRangePicker';
 import LabeledInputField from '@/Components/form-fields/LabeledInputField';
 import LabeledTextAreaField from '@/Components/form-fields/LabeledTextAreaField';
 import Modal from '@/Components/Modal';
@@ -18,7 +19,7 @@ import TableTextFilterDropdown from '@/Components/TableTextFilterDropdown';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatDate, formatQuantity } from '@/lib/format';
 import { Head, useForm } from '@inertiajs/react';
-import { Button, DatePicker, Input, Select, Space, Tabs, Tag } from 'antd';
+import { Button, Input, Select, Space, Tabs, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { FormEvent, Key, useMemo, useState } from 'react';
@@ -117,7 +118,6 @@ const isWithinRange = (value: string | null, startDate: string, endDate: string)
 };
 
 export default function StockIndex({ products, movements }: StockPageProps) {
-    const { RangePicker } = DatePicker;
     const [activeTab, setActiveTab] = useState<'stock' | 'outputs'>('stock');
     const [search, setSearch] = useState('');
     const [selectedProduct, setSelectedProduct] = useState<ProductRow | null>(null);
@@ -452,17 +452,14 @@ export default function StockIndex({ products, movements }: StockPageProps) {
                         {activeTab === 'outputs' ? (
                             <div className="w-full lg:w-auto">
                                 <InputLabel value="Período de saída" />
-                                <RangePicker
+                                <ResponsiveDateRangePicker
                                     value={[
                                         outputStartDate ? dayjs(outputStartDate) : null,
                                         outputEndDate ? dayjs(outputEndDate) : null,
                                     ]}
-                                    format="DD/MM/YYYY"
-                                    size="large"
-                                    allowEmpty={[true, true]}
-                                    onChange={(dates) => {
-                                        setOutputStartDate(dates?.[0] ? dates[0].format('YYYY-MM-DD') : '');
-                                        setOutputEndDate(dates?.[1] ? dates[1].format('YYYY-MM-DD') : '');
+                                    onChange={([startDate, endDate]) => {
+                                        setOutputStartDate(startDate ? startDate.format('YYYY-MM-DD') : '');
+                                        setOutputEndDate(endDate ? endDate.format('YYYY-MM-DD') : '');
                                     }}
                                     className="mt-2 w-full min-w-0 lg:min-w-[336px]"
                                     placeholder={['De', 'Até']}

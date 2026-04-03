@@ -1,6 +1,7 @@
 import DangerButton from '@/Components/DangerButton';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
+import ResponsiveDateRangePicker from '@/Components/ResponsiveDateRangePicker';
 import ResponsiveDataTable from '@/Components/ResponsiveDataTable';
 import {
     ResponsiveCard,
@@ -19,7 +20,7 @@ import type { EntryRow, EntryTableRecord, FinancialPageProps } from '@/Pages/Fin
 import { todayDateInputValue } from '@/lib/date';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Button, Checkbox, DatePicker, Select, Space, Tag } from 'antd';
+import { Button, Checkbox, Select, Space, Tag } from 'antd';
 import type { ColumnsType, FilterDropdownProps } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 import { FormEvent, Key, useMemo, useState } from 'react';
@@ -31,7 +32,6 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
     const [periodStartDate, setPeriodStartDate] = useState('');
     const [periodEndDate, setPeriodEndDate] = useState('');
     const { message, modal } = useAntdApp();
-    const { RangePicker } = DatePicker;
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         account_id: '',
@@ -372,17 +372,14 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                     <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:flex-wrap lg:items-end lg:justify-end">
                         <div className="w-full lg:w-auto">
                             <InputLabel value="Período" />
-                            <RangePicker
+                            <ResponsiveDateRangePicker
                                 value={[
                                     periodStartDate ? dayjs(periodStartDate) : null,
                                     periodEndDate ? dayjs(periodEndDate) : null,
                                 ]}
-                                format="DD/MM/YYYY"
-                                size="large"
-                                allowEmpty={[true, true]}
-                                onChange={(dates) => {
-                                    setPeriodStartDate(dates?.[0] ? dates[0].format('YYYY-MM-DD') : '');
-                                    setPeriodEndDate(dates?.[1] ? dates[1].format('YYYY-MM-DD') : '');
+                                onChange={([startDate, endDate]) => {
+                                    setPeriodStartDate(startDate ? startDate.format('YYYY-MM-DD') : '');
+                                    setPeriodEndDate(endDate ? endDate.format('YYYY-MM-DD') : '');
                                 }}
                                 className="mt-2 w-full min-w-0 lg:min-w-[336px]"
                                 placeholder={['De', 'Até']}
