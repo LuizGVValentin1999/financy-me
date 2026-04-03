@@ -239,7 +239,7 @@ Cypress.Commands.add(
 		const generatedAccountCode = `CP-${Date.now()}`;
 
 		cy.contains('button', 'Nova compra manual').click();
-		cy.contains('button', 'Avancar para produtos').click();
+		cy.contains('button', /Avançar para produtos|Produtos/).click();
 		cy.selectAntdOption('manual_item_0_product_id', productName, true);
 		cy.get('input#manual_item_0_quantity').clear().type(quantity);
 		cy.get('input#manual_item_0_unit_price').clear().type(unitPrice);

@@ -13,12 +13,12 @@ describe('Full app journey', () => {
                 return;
             }
 
-            cy.contains('button', 'Avancar').click();
+            cy.contains('button', 'Avançar').click();
             advanceImportWizardToEnd();
         });
     };
 
-    const assertStatCard = (label: string, expectedText: string) => {
+    const assertStatCard = (label: string | RegExp, expectedText: string) => {
         cy.contains('p', label)
             .parent()
             .should('contain.text', expectedText);
@@ -118,11 +118,11 @@ describe('Full app journey', () => {
         cy.contains('Revisar nota fiscal', { timeout: 10000 }).should(
             'be.visible',
         );
-        cy.contains('Definicao de pagamento').should('be.visible');
+        cy.contains('Definição de pagamento').should('be.visible');
         cy.selectAntdOption('payments.0.account_id', `${accountACode} - ${accountAName}`);
-        cy.contains('button', 'Avancar').click();
+        cy.contains('button', 'Avançar').click();
         cy.selectAntdOption('import_item_0_category_id', marketCategory);
-        cy.contains('button', 'Avancar').click();
+        cy.contains('button', 'Avançar').click();
         cy.selectAntdOption('import_item_1_category_id', marketCategory);
         advanceImportWizardToEnd();
 
@@ -160,7 +160,7 @@ describe('Full app journey', () => {
         cy.visit('/purchases');
 
         cy.contains('button', 'Nova compra manual').click();
-        cy.contains('button', 'Avancar para produtos').click();
+        cy.contains('button', /Avançar para produtos|Produtos/).click();
         cy.get('input#manual_item_0_name').type(quickServiceName, { force: true });
         cy.selectAntdOption('manual_item_0_category_id', servicesCategory);
         cy.selectAntdOption('manual_item_0_type', /N[aã]o estoc[aá]vel/);
@@ -197,10 +197,10 @@ describe('Full app journey', () => {
 
         cy.visit('/dashboard');
 
-        assertStatCard('Gasto no periodo', '67,99');
+        assertStatCard(/Gasto no per[ií]odo/, '67,99');
         assertStatCard('Saldo das contas', '1.432,01');
-        assertStatCard('Movimentacoes no periodo', '4');
-        cy.contains('Periodo:').should('be.visible');
+        assertStatCard(/Movimenta[cç][oõ]es no per[ií]odo/, '4');
+        cy.contains(/Per[ií]odo:/).should('be.visible');
         cy.contains('ARROZ TIPO 1').should('be.visible');
         cy.contains('FEIJAO PRETO').should('be.visible');
         cy.contains(serviceName).should('be.visible');
@@ -209,20 +209,20 @@ describe('Full app journey', () => {
         cy.contains('button', 'Filtros').click();
         cy.selectAntdOption('filter-categories', servicesCategory);
         cy.selectAntdOption('filter-accounts', `${accountBCode} - ${accountBName}`);
-        cy.selectAntdOption('filter-products', `${quickServiceName} (servico)`, true);
+        cy.selectAntdOption('filter-products', `${quickServiceName} (serviço)`, true);
         cy.contains('button', 'Aplicar filtros').click();
         cy.assertNoVisibleModal();
 
         cy.contains(`Categoria: ${servicesCategory}`, {
             timeout: 10000,
         }).should('be.visible');
-        cy.contains(`Cartao/Conta: ${accountBCode} - ${accountBName}`).should(
+        cy.contains(new RegExp(`Cart[aã]o/Conta: ${accountBCode} - ${accountBName}`)).should(
             'be.visible',
         );
-        cy.contains(`Item: ${quickServiceName} (servico)`).should('be.visible');
-        assertStatCard('Gasto no periodo', '18,00');
+        cy.contains(`Item: ${quickServiceName} (serviço)`).should('be.visible');
+        assertStatCard(/Gasto no per[ií]odo/, '18,00');
         assertStatCard('Saldo das contas', '1.432,01');
-        assertStatCard('Movimentacoes no periodo', '1');
+        assertStatCard(/Movimenta[cç][oõ]es no per[ií]odo/, '1');
         cy.contains(quickServiceName).should('be.visible');
         cy.contains('ARROZ TIPO 1').should('not.exist');
         cy.contains('FEIJAO PRETO').should('not.exist');

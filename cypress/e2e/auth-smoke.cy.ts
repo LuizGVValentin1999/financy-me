@@ -17,7 +17,7 @@ describe('Auth smoke', () => {
         cy.get('input#name').should('be.visible');
         cy.get('input#house_code').should('be.visible');
 
-        cy.contains('Ja tem conta?').click();
+        cy.contains('Já tem conta?').click();
         cy.url().should('include', '/login');
     });
 
@@ -29,7 +29,7 @@ describe('Auth smoke', () => {
             cy.loginByUi(credentials);
 
             cy.visit('/dashboard');
-            cy.contains('Visao geral da casa.').should('be.visible');
+            cy.contains(/Vis[aã]o geral da casa\./).should('be.visible');
         });
     });
 });
