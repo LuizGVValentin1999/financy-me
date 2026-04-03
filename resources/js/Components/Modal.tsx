@@ -9,7 +9,7 @@ export default function Modal({
     onClose = () => {},
 }: PropsWithChildren<{
     show: boolean;
-    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '6xl' | '7xl' | 'screen';
     closeable?: boolean;
     onClose: CallableFunction;
 }>) {
@@ -28,6 +28,10 @@ export default function Modal({
         lg: 512,
         xl: 576,
         '2xl': 672,
+        '4xl': 960,
+        '6xl': 1180,
+        '7xl': 1320,
+        screen: 'calc(100vw - 48px)',
     }[maxWidth];
 
     if (isMobile) {

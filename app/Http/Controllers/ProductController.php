@@ -59,15 +59,29 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(StoreProductRequest $request): RedirectResponse
+    public function store(StoreProductRequest $request): RedirectResponse|JsonResponse
     {
         $house = $request->user()->getCurrentHouse();
-        
-        $house->products()->create([
+        $product = $house->products()->create([
             ...$request->validated(),
             'current_stock' => 0,
             'is_active' => true,
         ]);
+
+        if ($request->expectsJson()) {
+            $product->load('category:id,name');
+
+            return response()->json([
+                'product' => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'unit' => $product->unit,
+                    'current_stock' => (float) $product->current_stock,
+                    'category' => $product->category?->name,
+                    'category_id' => $product->category_id,
+                ],
+            ], 201);
+        }
 
         return back()->with('success', 'Produto criado com sucesso.');
     }

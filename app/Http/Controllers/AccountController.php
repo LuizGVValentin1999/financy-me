@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAccountRequest;
 use App\Http\Requests\UpdateAccountRequest;
 use App\Models\Account;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,11 +31,20 @@ class AccountController extends Controller
         ]);
     }
 
-    public function store(StoreAccountRequest $request): RedirectResponse
+    public function store(StoreAccountRequest $request): RedirectResponse|JsonResponse
     {
         $house = $request->user()->getCurrentHouse();
-        
-        $house->accounts()->create($request->validated());
+        $account = $house->accounts()->create($request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'account' => [
+                    'id' => $account->id,
+                    'code' => $account->code,
+                    'name' => $account->name,
+                ],
+            ], 201);
+        }
 
         return back()->with('success', 'Conta criada com sucesso.');
     }

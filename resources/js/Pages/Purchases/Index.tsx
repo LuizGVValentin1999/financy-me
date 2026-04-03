@@ -4,11 +4,11 @@ import { useAntdApp } from '@/hooks/useAntdApp';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ImportNfceModal from '@/Pages/Purchases/components/ImportNfceModal';
 import ImportPreviewSection from '@/Pages/Purchases/components/ImportPreviewSection';
-import PurchaseFormModal from '@/Pages/Purchases/components/PurchaseFormModal';
+import ManualPurchaseWizardModal from '@/Pages/Purchases/components/ManualPurchaseWizardModal';
 import PurchaseHistoryTable from '@/Pages/Purchases/components/PurchaseHistoryTable';
 import type { PurchasesPageProps } from '@/Pages/Purchases/types';
 import { Head, useForm } from '@inertiajs/react';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 
 export default function PurchasesIndex({
     products,
@@ -21,23 +21,7 @@ export default function PurchasesIndex({
 }: PurchasesPageProps) {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-    const [productsCatalog, setProductsCatalog] = useState(products);
     const { message } = useAntdApp();
-
-    useEffect(() => {
-        setProductsCatalog(products);
-    }, [products]);
-
-    const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
-        product_id: products[0] ? String(products[0].id) : '',
-        account_id: '',
-        quantity: '1',
-        unit_price: '0',
-        purchased_at: new Date().toISOString().slice(0, 10),
-        source: sources[0]?.value ?? 'manual',
-        invoice_reference: '',
-        notes: '',
-    });
 
     const importForm = useForm({
         receipt_url: importPreview?.receipt_url ?? '',
@@ -49,11 +33,7 @@ export default function PurchasesIndex({
         importForm.clearErrors();
     };
 
-    const closePurchaseModal = () => {
-        setIsPurchaseModalOpen(false);
-        reset();
-        clearErrors();
-    };
+    const closePurchaseModal = () => setIsPurchaseModalOpen(false);
 
     const submitImport = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -67,32 +47,6 @@ export default function PurchasesIndex({
             },
             onError: () => message.error('Erro ao importar link de NFC-e'),
         });
-    };
-
-    const onSubmitPurchase = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-
-        post(route('purchases.store'), {
-            preserveScroll: true,
-            onSuccess: () => {
-                message.info('Compra criada com sucesso!');
-                reset();
-                setIsPurchaseModalOpen(false);
-            },
-            onError: () => message.error('Erro ao criar compra'),
-        });
-    };
-
-    const handleProductCreated = (product: PurchasesPageProps['products'][number]) => {
-        setProductsCatalog((current) => {
-            if (current.some((item) => item.id === product.id)) {
-                return current;
-            }
-
-            return [...current, product].sort((a, b) => a.name.localeCompare(b.name));
-        });
-
-        setData('product_id', String(product.id));
     };
 
     return (
@@ -131,7 +85,7 @@ export default function PurchasesIndex({
                 {importPreview && (
                     <ImportPreviewSection
                         preview={importPreview}
-                        products={productsCatalog}
+                        products={products}
                         categories={categories}
                         importUnits={importUnits}
                         accounts={accounts}
@@ -141,7 +95,7 @@ export default function PurchasesIndex({
                 <PurchaseHistoryTable
                     entries={entries}
                     sources={sources}
-                    products={productsCatalog}
+                    products={products}
                     accounts={accounts}
                 />
             </div>
@@ -157,20 +111,12 @@ export default function PurchasesIndex({
                 onSubmit={submitImport}
             />
 
-            <PurchaseFormModal
+            <ManualPurchaseWizardModal
                 isOpen={isPurchaseModalOpen}
                 onClose={closePurchaseModal}
-                isEditing={false}
-                products={productsCatalog}
+                products={products}
                 categories={categories}
-                sources={sources}
                 accounts={accounts}
-                formData={data}
-                setFormData={setData}
-                onSubmit={onSubmitPurchase}
-                processing={processing}
-                errors={errors}
-                onProductCreated={handleProductCreated}
             />
         </AuthenticatedLayout>
     );

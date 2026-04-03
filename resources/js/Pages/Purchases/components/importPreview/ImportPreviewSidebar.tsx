@@ -15,7 +15,7 @@ export default function ImportPreviewSidebar({
     meaningfulPaymentMethods,
 }: ImportPreviewSidebarProps) {
     return (
-        <div className="space-y-4 rounded-[28px] bg-[#f8f4ec] p-5">
+        <div className="space-y-4 rounded-[28px] border border-slate-200 bg-white p-5">
             <div>
                 <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
                     Estabelecimento
@@ -30,7 +30,7 @@ export default function ImportPreviewSidebar({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-3xl bg-white p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
                         Emissao
                     </p>
@@ -38,7 +38,7 @@ export default function ImportPreviewSidebar({
                         {preview.issued_at_label ?? formatDate(preview.issued_at)}
                     </p>
                 </div>
-                <div className="rounded-3xl bg-white p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
                         Nota
                     </p>
@@ -46,7 +46,7 @@ export default function ImportPreviewSidebar({
                         {preview.invoice_number ?? '--'} / serie {preview.series ?? '--'}
                     </p>
                 </div>
-                <div className="rounded-3xl bg-white p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
                         Valor pago
                     </p>
@@ -54,7 +54,7 @@ export default function ImportPreviewSidebar({
                         {formatCurrency(preview.amount_paid)}
                     </p>
                 </div>
-                <div className="rounded-3xl bg-white p-4">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
                         Desconto
                     </p>
@@ -83,7 +83,7 @@ export default function ImportPreviewSidebar({
                             {meaningfulPaymentMethods.map((payment) => (
                                 <div
                                     key={`${payment.method}-${payment.amount}`}
-                                    className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 text-sm"
+                                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm"
                                 >
                                     <span className="text-slate-600">
                                         {payment.method}
@@ -95,7 +95,7 @@ export default function ImportPreviewSidebar({
                             ))}
                         </div>
                     ) : (
-                        <div className="mt-3 rounded-2xl bg-white px-4 py-3 text-sm text-slate-500">
+                        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
                             O cupom nao trouxe formas de pagamento claras. Use a secao "Pagamento da nota" ao lado para registrar corretamente.
                         </div>
                     )}

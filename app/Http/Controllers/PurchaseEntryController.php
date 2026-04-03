@@ -88,19 +88,20 @@ class PurchaseEntryController extends Controller
         ]);
     }
 
-    public function store(StorePurchaseEntryRequest $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validated();
         $house = $request->user()->getCurrentHouse();
 
-        DB::transaction(function () use ($house, $validated) {
-            $product = $house->products()
-                ->findOrFail($validated['product_id']);
+        if (is_array($request->input('items'))) {
+            return $this->storeWizard($request, $house);
+        }
 
-            $totalAmount = round(
-                (float) $validated['quantity'] * (float) $validated['unit_price'],
-                2,
-            );
+        $validated = Validator::make($request->all(), $this->simpleStoreRules($house->id))->validate();
+
+        DB::transaction(function () use ($house, $validated) {
+            $product = $house->products()->findOrFail($validated['product_id']);
+
+            $totalAmount = round((float) $validated['quantity'] * (float) $validated['unit_price'], 2);
 
             $purchaseEntry = $house->purchaseEntries()->create([
                 ...$validated,
@@ -164,6 +165,220 @@ class PurchaseEntryController extends Controller
         return back()->with('success', 'Compra atualizada com sucesso.');
     }
 
+    private function storeWizard(Request $request, $house): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'invoice' => ['required', 'array'],
+            'invoice.has_invoice' => ['required', 'boolean'],
+            'invoice.issued_at' => ['required', 'date'],
+            'invoice.store_name' => ['nullable', 'string', 'max:255'],
+            'invoice.cnpj' => ['nullable', 'string', 'max:255'],
+            'invoice.invoice_number' => ['nullable', 'string', 'max:255'],
+            'invoice.series' => ['nullable', 'string', 'max:255'],
+            'invoice.access_key' => ['nullable', 'string', 'max:255'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('products', 'id')->where('house_id', $house->id),
+            ],
+            'items.*.product_name' => ['nullable', 'string', 'max:255'],
+            'items.*.brand' => ['nullable', 'string', 'max:255'],
+            'items.*.sku' => ['nullable', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'items.*.category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('categories', 'id')->where('house_id', $house->id),
+            ],
+            'items.*.unit' => ['nullable', Rule::in(['un', 'kg', 'g', 'l', 'ml', 'cx'])],
+            'items.*.type' => ['nullable', Rule::in(['stockable', 'non_stockable'])],
+            'items.*.minimum_stock' => ['nullable', 'numeric', 'min:0'],
+            'items.*.notes' => ['nullable', 'string', 'max:1000'],
+            'payments' => ['required', 'array', 'min:1'],
+            'payments.*.account_id' => [
+                'required',
+                'integer',
+                Rule::exists('accounts', 'id')->where('house_id', $house->id),
+            ],
+            'payments.*.type' => ['required', Rule::in(['cash', 'installment'])],
+            'payments.*.principal_amount' => ['required', 'numeric', 'gt:0'],
+            'payments.*.first_due_date' => ['nullable', 'date'],
+            'payments.*.installments' => ['nullable', 'integer', 'min:2', 'max:120'],
+            'payments.*.interest_type' => ['nullable', Rule::in(['rate', 'fixed_installment'])],
+            'payments.*.interest_rate' => ['nullable', 'numeric', 'min:0'],
+            'payments.*.installment_amount' => ['nullable', 'numeric', 'gt:0'],
+        ])->after(function ($validator) use ($request) {
+            foreach ((array) $request->input('items', []) as $index => $item) {
+                if (blank($item['product_id'] ?? null) && blank($item['product_name'] ?? null)) {
+                    $validator->errors()->add(
+                        "items.$index.product_name",
+                        'Escolha um produto existente ou informe um nome.',
+                    );
+                }
+
+                if (blank($item['product_id'] ?? null) && blank($item['type'] ?? null)) {
+                    $validator->errors()->add(
+                        "items.$index.type",
+                        'Escolha o tipo para o novo produto.',
+                    );
+                }
+
+                if (blank($item['product_id'] ?? null) && blank($item['unit'] ?? null)) {
+                    $validator->errors()->add(
+                        "items.$index.unit",
+                        'Escolha a unidade para o novo produto.',
+                    );
+                }
+            }
+
+            foreach ((array) $request->input('payments', []) as $paymentIndex => $payment) {
+                if (($payment['type'] ?? null) !== 'installment') {
+                    continue;
+                }
+
+                if (
+                    blank($payment['installments'] ?? null)
+                    || ! is_numeric($payment['installments'])
+                    || (int) $payment['installments'] < 2
+                ) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.installments",
+                        'Informe no minimo 2 parcelas.',
+                    );
+                }
+
+                if (blank($payment['interest_type'] ?? null)) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.interest_type",
+                        'Escolha como informar os juros do parcelamento.',
+                    );
+                    continue;
+                }
+
+                if (($payment['interest_type'] ?? null) === 'rate' && blank($payment['interest_rate'] ?? null)) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.interest_rate",
+                        'Informe o percentual de juros.',
+                    );
+                }
+
+                if (($payment['interest_type'] ?? null) === 'fixed_installment' && blank($payment['installment_amount'] ?? null)) {
+                    $validator->errors()->add(
+                        "payments.$paymentIndex.installment_amount",
+                        'Informe o valor da parcela.',
+                    );
+                }
+            }
+
+            $principalTotal = collect((array) $request->input('payments', []))
+                ->sum(fn ($payment) => (float) ($payment['principal_amount'] ?? 0));
+            $itemsTotal = collect((array) $request->input('items', []))
+                ->sum(fn ($item) => ((float) ($item['quantity'] ?? 0)) * ((float) ($item['unit_price'] ?? 0)));
+
+            if (abs(round($principalTotal, 2) - round($itemsTotal, 2)) > 0.01) {
+                $validator->errors()->add(
+                    'payments',
+                    sprintf(
+                        'A soma dos valores por conta (%s) deve ser igual ao total da compra (%s).',
+                        number_format($principalTotal, 2, ',', '.'),
+                        number_format($itemsTotal, 2, ',', '.'),
+                    ),
+                );
+            }
+        });
+
+        $validated = $validator->validate();
+
+        DB::transaction(function () use ($house, $validated) {
+            $items = array_values($validated['items']);
+            $payments = array_values($validated['payments']);
+            $invoiceData = $validated['invoice'];
+            $itemsTotal = round(collect($items)->sum(
+                fn ($item) => ((float) $item['quantity']) * ((float) $item['unit_price'])
+            ), 2);
+            $hasInvoiceMetadata = (bool) ($invoiceData['has_invoice'] ?? false)
+                || filled($invoiceData['store_name'] ?? null)
+                || filled($invoiceData['invoice_number'] ?? null)
+                || filled($invoiceData['series'] ?? null)
+                || filled($invoiceData['access_key'] ?? null)
+                || filled($invoiceData['cnpj'] ?? null);
+            $requiresBatchInvoice = $hasInvoiceMetadata
+                || count($items) > 1
+                || count($payments) > 1
+                || collect($payments)->contains(fn ($payment) => ($payment['type'] ?? 'cash') === 'installment');
+
+            $invoice = $requiresBatchInvoice
+                ? $this->createManualInvoice($house, $invoiceData, $items, $itemsTotal, $payments)
+                : null;
+
+            $createdEntries = [];
+
+            foreach ($items as $item) {
+                $product = ! empty($item['product_id'])
+                    ? $house->products()->findOrFail($item['product_id'])
+                    : $this->firstOrCreateManualProduct(
+                        $house,
+                        trim($item['product_name']),
+                        $item['category_id'] ?? null,
+                        $item['brand'] ?? null,
+                        $item['sku'] ?? null,
+                        $item['unit'] ?? 'un',
+                        $item['type'] ?? 'stockable',
+                        (float) ($item['minimum_stock'] ?? 0),
+                        $item['notes'] ?? null,
+                    );
+
+                $quantity = round((float) $item['quantity'], 3);
+                $unitPrice = round((float) $item['unit_price'], 2);
+                $totalAmount = round($quantity * $unitPrice, 2);
+
+                $purchaseEntry = $house->purchaseEntries()->create([
+                    'product_id' => $product->id,
+                    'purchase_invoice_id' => $invoice?->id,
+                    'account_id' => $invoice ? null : (int) $payments[0]['account_id'],
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_amount' => $totalAmount,
+                    'purchased_at' => $invoiceData['issued_at'],
+                    'source' => $hasInvoiceMetadata ? 'invoice' : 'manual',
+                    'invoice_reference' => $this->buildInvoiceReference($invoiceData),
+                    'notes' => null,
+                ]);
+
+                $createdEntries[] = $purchaseEntry;
+
+                if ($product->type === 'stockable') {
+                    $product->update([
+                        'current_stock' => (float) $product->current_stock + $quantity,
+                    ]);
+                }
+            }
+
+            if ($invoice) {
+                $this->syncManualInvoiceFinancialEntries(
+                    $house->id,
+                    $invoice,
+                    $payments,
+                    $hasInvoiceMetadata ? 'invoice_purchase' : 'manual_purchase',
+                );
+
+                return;
+            }
+
+            if ($createdEntries !== []) {
+                $this->syncPurchaseFinancialEntry(
+                    $house->id,
+                    $createdEntries[0],
+                    $hasInvoiceMetadata ? 'invoice_purchase' : 'manual_purchase',
+                );
+            }
+        });
+
+        return back()->with('success', 'Compra registrada com sucesso.');
+    }
+
     public function importFromLink(
         Request $request,
         ParanaNfceImporter $importer,
@@ -220,14 +435,18 @@ class PurchaseEntryController extends Controller
                 Rule::exists('products', 'id')->where('house_id', $house->id),
             ],
             'items.*.product_name' => ['nullable', 'string', 'max:255'],
+            'items.*.brand' => ['nullable', 'string', 'max:255'],
+            'items.*.sku' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['nullable'],
             'items.*.category_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('categories', 'id')->where('house_id', $house->id),
             ],
-            'items.*.unit' => ['nullable', Rule::in(['un', 'kg'])],
+            'items.*.unit' => ['nullable', Rule::in(['un', 'kg', 'g', 'l', 'ml', 'cx'])],
             'items.*.type' => ['nullable', Rule::in(['stockable', 'non_stockable'])],
+            'items.*.minimum_stock' => ['nullable', 'numeric', 'min:0'],
+            'items.*.notes' => ['nullable', 'string', 'max:1000'],
             'payments' => ['required', 'array', 'min:1'],
             'payments.*.account_id' => [
                 'required',
@@ -391,9 +610,12 @@ class PurchaseEntryController extends Controller
                         $house,
                         trim($payload['product_name']),
                         $payload['category_id'] ?? null,
-                        $previewItem['code'] ?? null,
+                        $payload['brand'] ?? null,
+                        $payload['sku'] ?? ($previewItem['code'] ?? null),
                         $unit,
                         $selectedType,
+                        (float) ($payload['minimum_stock'] ?? 0),
+                        $payload['notes'] ?? null,
                     );
 
                 if (
@@ -408,6 +630,34 @@ class PurchaseEntryController extends Controller
                 if ($product->unit !== $unit) {
                     $product->update([
                         'unit' => $unit,
+                    ]);
+                }
+
+                if (! empty($payload['brand']) && $product->brand !== $payload['brand']) {
+                    $product->update([
+                        'brand' => $payload['brand'],
+                    ]);
+                }
+
+                if (! empty($payload['sku']) && $product->sku !== $payload['sku']) {
+                    $product->update([
+                        'sku' => $payload['sku'],
+                    ]);
+                }
+
+                if (
+                    isset($payload['minimum_stock'])
+                    && $product->type === 'stockable'
+                    && (float) $product->minimum_stock !== (float) $payload['minimum_stock']
+                ) {
+                    $product->update([
+                        'minimum_stock' => round((float) $payload['minimum_stock'], 3),
+                    ]);
+                }
+
+                if (! empty($payload['notes']) && $product->notes !== $payload['notes']) {
+                    $product->update([
+                        'notes' => $payload['notes'],
                     ]);
                 }
 
@@ -595,6 +845,31 @@ class PurchaseEntryController extends Controller
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function simpleStoreRules(int $houseId): array
+    {
+        return [
+            'product_id' => [
+                'required',
+                'integer',
+                Rule::exists('products', 'id')->where('house_id', $houseId),
+            ],
+            'account_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('accounts', 'id')->where('house_id', $houseId),
+            ],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit_price' => ['required', 'numeric', 'min:0'],
+            'purchased_at' => ['required', 'date'],
+            'source' => ['required', Rule::in(['manual', 'invoice'])],
+            'invoice_reference' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ];
+    }
+
     private function normalizeImportUnit(?string $unit): string
     {
         return match (Str::lower(trim((string) $unit))) {
@@ -607,9 +882,12 @@ class PurchaseEntryController extends Controller
         $house,
         string $name,
         ?int $categoryId,
+        ?string $brand,
         ?string $sku,
         string $unit,
         string $type = 'stockable',
+        float $minimumStock = 0,
+        ?string $notes = null,
     ): Product {
         $existingProduct = $house->products()
             ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
@@ -622,15 +900,105 @@ class PurchaseEntryController extends Controller
         return $house->products()->create([
             'name' => $name,
             'category_id' => $categoryId,
-            'brand' => null,
+            'brand' => $brand,
             'sku' => $sku,
             'unit' => $unit,
             'type' => $type,
-            'minimum_stock' => 0,
+            'minimum_stock' => $type === 'stockable' ? round($minimumStock, 3) : 0,
             'current_stock' => 0,
             'is_active' => true,
-            'notes' => 'Criado automaticamente pela importacao da NFC-e.',
+            'notes' => $notes ?: 'Criado automaticamente pela importacao da NFC-e.',
         ]);
+    }
+
+    private function firstOrCreateManualProduct(
+        $house,
+        string $name,
+        ?int $categoryId,
+        ?string $brand,
+        ?string $sku,
+        string $unit,
+        string $type = 'stockable',
+        float $minimumStock = 0,
+        ?string $notes = null,
+    ): Product {
+        $existingProduct = $house->products()
+            ->whereRaw('LOWER(name) = ?', [Str::lower($name)])
+            ->first();
+
+        if ($existingProduct) {
+            return $existingProduct;
+        }
+
+        return $house->products()->create([
+            'name' => $name,
+            'category_id' => $categoryId,
+            'brand' => $brand,
+            'sku' => $sku,
+            'unit' => $unit,
+            'type' => $type,
+            'minimum_stock' => $type === 'stockable' ? round($minimumStock, 3) : 0,
+            'current_stock' => 0,
+            'is_active' => true,
+            'notes' => $notes ?: 'Criado durante um lancamento manual.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $invoiceData
+     * @param  array<int, array<string, mixed>>  $items
+     * @param  array<int, array<string, mixed>>  $payments
+     */
+    private function createManualInvoice(
+        $house,
+        array $invoiceData,
+        array $items,
+        float $itemsTotal,
+        array $payments,
+    ): PurchaseInvoice {
+        return $house->purchaseInvoices()->create([
+            'store_name' => $invoiceData['has_invoice']
+                ? ($invoiceData['store_name'] ?: 'Nota fiscal manual')
+                : 'Compra manual',
+            'cnpj' => $invoiceData['cnpj'] ?? null,
+            'address' => null,
+            'invoice_number' => $invoiceData['invoice_number'] ?? null,
+            'series' => $invoiceData['series'] ?? null,
+            'access_key' => $invoiceData['access_key'] ?? null,
+            'receipt_url' => null,
+            'issued_at' => $invoiceData['issued_at'] ?? now()->toDateString(),
+            'items_count' => count($items),
+            'gross_amount' => $itemsTotal,
+            'discount_amount' => 0,
+            'paid_amount' => round(collect($payments)->sum(
+                fn ($payment) => (float) ($payment['principal_amount'] ?? 0)
+            ), 2),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $invoiceData
+     */
+    private function buildInvoiceReference(array $invoiceData): ?string
+    {
+        $accessKey = trim((string) ($invoiceData['access_key'] ?? ''));
+
+        if ($accessKey !== '') {
+            return $accessKey;
+        }
+
+        $number = trim((string) ($invoiceData['invoice_number'] ?? ''));
+        $series = trim((string) ($invoiceData['series'] ?? ''));
+
+        if ($number === '' && $series === '') {
+            return null;
+        }
+
+        if ($number !== '' && $series !== '') {
+            return $number.' / serie '.$series;
+        }
+
+        return $number !== '' ? $number : $series;
     }
 
     private function normalizeName(string $value): string
@@ -713,10 +1081,17 @@ class PurchaseEntryController extends Controller
         int $houseId,
         PurchaseInvoice $invoice,
         array $payments,
+        string $origin = 'invoice_purchase',
+        ?string $descriptionBase = null,
     ): void {
         $invoice->financialEntries()
-            ->where('origin', 'invoice_purchase')
+            ->where('origin', $origin)
             ->delete();
+
+        $label = $descriptionBase
+            ?: ($origin === 'manual_purchase'
+                ? 'Compra manual'
+                : 'Compra da nota fiscal');
 
         foreach ($payments as $payment) {
             $accountId = (int) $payment['account_id'];
@@ -731,11 +1106,12 @@ class PurchaseEntryController extends Controller
                     'account_id' => $accountId,
                     'purchase_invoice_id' => $invoice->id,
                     'direction' => 'outflow',
-                    'origin' => 'invoice_purchase',
+                    'origin' => $origin,
                     'amount' => $principalAmount,
                     'moved_at' => $firstDueDate,
                     'description' => sprintf(
-                        'Compra da nota fiscal%s - pagamento a vista',
+                        '%s%s - pagamento a vista',
+                        $label,
                         $invoice->store_name ? ' - '.$invoice->store_name : '',
                     ),
                 ]);
@@ -760,13 +1136,14 @@ class PurchaseEntryController extends Controller
                     'account_id' => $accountId,
                     'purchase_invoice_id' => $invoice->id,
                     'direction' => 'outflow',
-                    'origin' => 'invoice_purchase',
+                    'origin' => $origin,
                     'amount' => $installmentAmount,
                     'moved_at' => Carbon::parse($firstDueDate)
                         ->addMonthsNoOverflow($installment - 1)
                         ->toDateString(),
                     'description' => sprintf(
-                        'Compra da nota fiscal%s - parcela %d/%d',
+                        '%s%s - parcela %d/%d',
+                        $label,
                         $invoice->store_name ? ' - '.$invoice->store_name : '',
                         $installment,
                         $installments,
@@ -774,6 +1151,24 @@ class PurchaseEntryController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $payments
+     */
+    private function syncManualInvoiceFinancialEntries(
+        int $houseId,
+        PurchaseInvoice $invoice,
+        array $payments,
+        string $origin = 'manual_purchase',
+    ): void {
+        $this->syncImportedInvoiceFinancialEntry(
+            $houseId,
+            $invoice,
+            $payments,
+            $origin,
+            $origin === 'invoice_purchase' ? 'Compra da nota fiscal' : 'Compra manual',
+        );
     }
 
     private function calculateInstallmentAmount(
