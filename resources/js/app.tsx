@@ -11,7 +11,7 @@ import 'dayjs/locale/pt-br';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Finency-me';
+const appName = import.meta.env.VITE_APP_NAME || 'Financy-me';
 const ptBR = ('default' in ptBRModule ? ptBRModule.default : ptBRModule) as Locale;
 
 dayjs.locale('pt-br');
