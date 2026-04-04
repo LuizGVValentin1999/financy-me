@@ -34,6 +34,7 @@ type CreateManualPurchaseOptions = {
 	accountLabel?: string;
 	quantity: string;
 	unitPrice: string;
+	purchaseItemNotes?: string;
 };
 
 type WithdrawStockOptions = {
@@ -234,7 +235,7 @@ Cypress.Commands.add('createAccountViaUi', (options: CreateAccountOptions) => {
 
 Cypress.Commands.add(
 	'createManualPurchaseViaUi',
-	({ productName, accountLabel, quantity, unitPrice }: CreateManualPurchaseOptions) => {
+	({ productName, accountLabel, quantity, unitPrice, purchaseItemNotes }: CreateManualPurchaseOptions) => {
 		const generatedAccountName = `Conta Compra E2E ${Date.now()}`;
 		const generatedAccountCode = `CP-${Date.now()}`;
 
@@ -243,6 +244,11 @@ Cypress.Commands.add(
 		cy.selectAntdOption('manual_item_0_product_id', productName, true);
 		cy.get('input#manual_item_0_quantity').clear().type(quantity);
 		cy.get('input#manual_item_0_unit_price').clear().type(unitPrice);
+
+		if (purchaseItemNotes) {
+			cy.get('textarea#manual_item_0_purchase_notes').clear().type(purchaseItemNotes);
+		}
+
 		cy.contains('button', 'Ir para pagamento').click();
 
 		if (accountLabel) {
@@ -259,7 +265,7 @@ Cypress.Commands.add(
 		}
 
 		cy.intercept('POST', '**/purchases').as('storePurchase');
-		cy.contains('button', 'Registrar compra').click();
+		cy.contains('button', 'Registrar compra').click({ force: true });
 		cy.wait('@storePurchase')
 			.its('response.statusCode')
 			.should('be.oneOf', [200, 302, 303]);

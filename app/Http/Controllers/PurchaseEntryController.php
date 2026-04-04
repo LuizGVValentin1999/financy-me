@@ -196,6 +196,7 @@ class PurchaseEntryController extends Controller
             'items.*.type' => ['nullable', Rule::in(['stockable', 'non_stockable'])],
             'items.*.minimum_stock' => ['nullable', 'numeric', 'min:0'],
             'items.*.notes' => ['nullable', 'string', 'max:1000'],
+            'items.*.purchase_notes' => ['nullable', 'string', 'max:1000'],
             'payments' => ['required', 'array', 'min:1'],
             'payments.*.account_id' => [
                 'required',
@@ -344,7 +345,9 @@ class PurchaseEntryController extends Controller
                     'purchased_at' => $invoiceData['issued_at'],
                     'source' => $hasInvoiceMetadata ? 'invoice' : 'manual',
                     'invoice_reference' => $this->buildInvoiceReference($invoiceData),
-                    'notes' => null,
+                    'notes' => filled($item['purchase_notes'] ?? null)
+                        ? trim((string) $item['purchase_notes'])
+                        : null,
                 ]);
 
                 $createdEntries[] = $purchaseEntry;

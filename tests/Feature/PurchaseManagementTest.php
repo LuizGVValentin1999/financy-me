@@ -57,6 +57,76 @@ test('manual purchase increases stock and creates synced financial entry when ac
     expect((float) $financialEntry->amount)->toBe(23.0);
 });
 
+test('manual purchase wizard stores purchase notes per item on created entry', function () {
+    $user = User::factory()->create();
+
+    $account = $user->accounts()->create([
+        'code' => 'ACC-WIZ',
+        'name' => 'Conta wizard',
+        'initial_balance' => 0,
+        'initial_balance_date' => now()->toDateString(),
+    ]);
+
+    $product = $user->products()->create([
+        'name' => 'Produto wizard',
+        'category_id' => null,
+        'brand' => null,
+        'sku' => null,
+        'unit' => 'un',
+        'type' => 'stockable',
+        'minimum_stock' => 0,
+        'current_stock' => 0,
+        'is_active' => true,
+        'notes' => null,
+    ]);
+
+    $purchaseNote = 'Observacao da compra manual para o item';
+
+    $this->actingAs($user)->post(route('purchases.store'), [
+        'invoice' => [
+            'has_invoice' => false,
+            'issued_at' => now()->toDateString(),
+            'store_name' => '',
+            'cnpj' => '',
+            'invoice_number' => '',
+            'series' => '',
+            'access_key' => '',
+        ],
+        'items' => [
+            [
+                'product_id' => $product->id,
+                'product_name' => '',
+                'brand' => '',
+                'sku' => '',
+                'quantity' => 2,
+                'unit_price' => 5.50,
+                'category_id' => null,
+                'unit' => 'un',
+                'type' => 'stockable',
+                'minimum_stock' => 0,
+                'notes' => '',
+                'purchase_notes' => $purchaseNote,
+            ],
+        ],
+        'payments' => [
+            [
+                'account_id' => $account->id,
+                'type' => 'cash',
+                'principal_amount' => 11,
+                'first_due_date' => now()->toDateString(),
+                'installments' => '',
+                'interest_type' => '',
+                'interest_rate' => '',
+                'installment_amount' => '',
+            ],
+        ],
+    ])->assertRedirect();
+
+    $entry = $user->purchaseEntries()->firstOrFail();
+
+    expect($entry->notes)->toBe($purchaseNote);
+});
+
 test('updating purchase moves stock between products and updates synced financial entry', function () {
     $user = User::factory()->create();
 

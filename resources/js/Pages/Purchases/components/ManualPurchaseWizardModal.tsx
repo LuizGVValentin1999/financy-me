@@ -45,6 +45,7 @@ type ItemState = {
     type: string;
     minimum_stock: string;
     notes: string;
+    purchase_notes: string;
 };
 
 type PaymentState = {
@@ -79,6 +80,7 @@ const buildEmptyItem = (): ItemState => ({
     type: 'stockable',
     minimum_stock: '0',
     notes: '',
+    purchase_notes: '',
 });
 
 const buildEmptyPayment = (firstAccountId: string, issuedAt: string, principalAmount = '0'): PaymentState => ({
@@ -336,6 +338,7 @@ export default function ManualPurchaseWizardModal({
                     type: 'stockable',
                     minimum_stock: '0',
                     notes: '',
+                    purchase_notes: '',
                 };
             }
         }
@@ -602,6 +605,7 @@ export default function ManualPurchaseWizardModal({
                             </div>
                         </div>
                     ) : null}
+
                 </div>
             </div>
         </div>
@@ -677,6 +681,18 @@ export default function ManualPurchaseWizardModal({
                             />
                             <InputError message={errors[`items.${currentItemIndex}.unit_price`]} className="mt-2" />
                         </div>
+                    </div>
+
+                    <div className="mt-4">
+                        <InputLabel htmlFor={`manual_item_${currentItemIndex}_purchase_notes`} value="Observacoes da compra" />
+                        <textarea
+                            id={`manual_item_${currentItemIndex}_purchase_notes`}
+                            rows={3}
+                            value={currentItem.purchase_notes}
+                            onChange={(event) => updateItem(currentItemIndex, 'purchase_notes', event.target.value)}
+                            className={inputClassName}
+                        />
+                        <InputError message={errors[`items.${currentItemIndex}.purchase_notes`]} className="mt-2" />
                     </div>
                 </div>
 

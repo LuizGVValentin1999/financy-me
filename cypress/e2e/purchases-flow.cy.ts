@@ -2,6 +2,7 @@ describe('Purchase flow', () => {
     it('cria produto e registra compra manual', () => {
         const productName = `Produto Compra E2E ${Date.now()}`;
         const productSku = `COMPRA-E2E-${Date.now()}`;
+        const purchaseItemNotes = `Observacao item compra E2E ${Date.now()}`;
 
         cy.registerAndLogin();
 
@@ -16,9 +17,11 @@ describe('Purchase flow', () => {
             productName,
             quantity: '2',
             unitPrice: '12.50',
+            purchaseItemNotes,
         });
 
         cy.contains(productName).should('be.visible');
+        cy.contains(purchaseItemNotes).should('exist');
         cy.contains('Erro ao criar compra').should('not.exist');
     });
 });
