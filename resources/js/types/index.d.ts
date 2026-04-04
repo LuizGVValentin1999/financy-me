@@ -18,6 +18,9 @@ export type PageProps<
     auth: {
         user: User | null;
     };
+    cache: {
+        houseDataVersion?: string | null;
+    };
     flash: {
         success?: string;
         error?: string;

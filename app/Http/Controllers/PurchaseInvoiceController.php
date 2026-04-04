@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FinancialEntry;
 use App\Models\PurchaseInvoice;
+use App\Services\HouseDataVersion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +123,7 @@ class PurchaseInvoiceController extends Controller
             $purchaseInvoice->financialEntries()->delete();
             $purchaseInvoice->delete();
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Nota fiscal excluida com sucesso.');
     }

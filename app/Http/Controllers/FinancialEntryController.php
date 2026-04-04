@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFinancialEntryRequest;
 use App\Http\Requests\UpdateFinancialEntryRequest;
 use App\Models\FinancialEntry;
+use App\Services\HouseDataVersion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,6 +62,7 @@ class FinancialEntryController extends Controller
             ...$request->validated(),
             'origin' => 'manual',
         ]);
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Lançamento financeiro criado com sucesso.');
     }
@@ -69,33 +71,39 @@ class FinancialEntryController extends Controller
         UpdateFinancialEntryRequest $request,
         FinancialEntry $financialEntry,
     ): RedirectResponse {
+        $house = $request->user()->getCurrentHouse();
         if ($financialEntry->origin !== 'manual') {
             return back()->with('error', 'Somente lançamentos manuais podem ser editados.');
         }
 
         $financialEntry->update($request->validated());
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Lançamento financeiro atualizado com sucesso.');
     }
 
     public function destroy(Request $request, FinancialEntry $financialEntry): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         if ($financialEntry->origin !== 'manual') {
             return back()->with('error', 'Somente lançamentos manuais podem ser removidos.');
         }
 
         $financialEntry->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Lançamento financeiro removido.');
     }
 
     public function destroyMany(Request $request): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $ids = $request->input('ids', []);
 
         FinancialEntry::where('origin', 'manual')
             ->whereIn('id', $ids)
             ->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Lançamentos financeiros removidos com sucesso.');
     }

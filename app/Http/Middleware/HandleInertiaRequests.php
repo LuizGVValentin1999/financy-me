@@ -2,8 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\HouseDataVersion;
+use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -19,7 +22,35 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): ?string
     {
-        return parent::version($request);
+        $assetVersion = parent::version($request) ?? 'app';
+        $house = $request->user()?->getCurrentHouse();
+
+        if (! $house) {
+            return $assetVersion;
+        }
+
+        return sprintf(
+            '%s|house:%s',
+            $assetVersion,
+            app(HouseDataVersion::class)->current((int) $house->id),
+        );
+    }
+
+    public function handle(Request $request, Closure $next): SymfonyResponse
+    {
+        $response = parent::handle($request, $next);
+        $house = $request->user()?->getCurrentHouse();
+
+        if (! $house) {
+            return $response;
+        }
+
+        $houseDataVersion = app(HouseDataVersion::class)->current((int) $house->id);
+
+        $response->headers->set('X-House-Id', (string) $house->id);
+        $response->headers->set('X-House-Data-Version', $houseDataVersion);
+
+        return $response;
     }
 
     /**
@@ -30,6 +61,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $houseDataVersion = null;
         
         // Create a custom user object with current house data
         if ($user) {
@@ -43,6 +75,7 @@ class HandleInertiaRequests extends Middleware
                     'code' => $currentHouse->code,
                     'description' => $currentHouse->description,
                 ];
+                $houseDataVersion = app(HouseDataVersion::class)->current((int) $currentHouse->id);
             } else {
                 $userData['currentHouse'] = null;
             }
@@ -58,6 +91,9 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+            ],
+            'cache' => [
+                'houseDataVersion' => $houseDataVersion,
             ],
         ];
     }

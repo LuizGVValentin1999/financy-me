@@ -6,6 +6,7 @@ use App\Http\Requests\StorePurchaseEntryRequest;
 use App\Models\Product;
 use App\Models\PurchaseEntry;
 use App\Models\PurchaseInvoice;
+use App\Services\HouseDataVersion;
 use App\Services\ParanaNfceImporter;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -116,6 +117,7 @@ class PurchaseEntryController extends Controller
                 ]);
             }
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Compra registrada com sucesso.');
     }
@@ -161,6 +163,7 @@ class PurchaseEntryController extends Controller
                 ]);
             }
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Compra atualizada com sucesso.');
     }
@@ -378,6 +381,7 @@ class PurchaseEntryController extends Controller
                 );
             }
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Compra registrada com sucesso.');
     }
@@ -698,6 +702,7 @@ class PurchaseEntryController extends Controller
                 $validated['payments'],
             );
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         $request->session()->forget(self::IMPORT_SESSION_KEY);
 
@@ -734,6 +739,7 @@ class PurchaseEntryController extends Controller
 
             $purchaseEntry->delete();
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Registro de compra removido.');
     }
@@ -777,6 +783,7 @@ class PurchaseEntryController extends Controller
                 $entry->delete();
             }
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         $count = $entries->count();
 

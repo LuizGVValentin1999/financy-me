@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAccountRequest;
 use App\Http\Requests\UpdateAccountRequest;
 use App\Models\Account;
+use App\Services\HouseDataVersion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,6 +36,7 @@ class AccountController extends Controller
     {
         $house = $request->user()->getCurrentHouse();
         $account = $house->accounts()->create($request->validated());
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -51,23 +53,29 @@ class AccountController extends Controller
 
     public function update(UpdateAccountRequest $request, Account $account): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $account->update($request->validated());
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Conta atualizada com sucesso.');
     }
 
     public function destroy(Request $request, Account $account): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $account->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Conta removida.');
     }
 
     public function destroyMany(Request $request): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $ids = $request->input('ids', []);
 
         Account::whereIn('id', $ids)->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Contas removidas com sucesso.');
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Models\Product;
+use App\Services\HouseDataVersion;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -70,6 +71,7 @@ class ProductController extends Controller
             'current_stock' => 0,
             'is_active' => true,
         ]);
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         if ($request->expectsJson()) {
             $product->load('category:id,name');
@@ -118,6 +120,7 @@ class ProductController extends Controller
             'is_active' => true,
             'notes' => 'Criado rapidamente na compra manual.',
         ]);
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         $product->load('category:id,name');
 
@@ -137,24 +140,29 @@ class ProductController extends Controller
         StoreProductRequest $request,
         Product $product,
     ): RedirectResponse {
+        $house = $request->user()->getCurrentHouse();
         $product->update($request->validated());
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Produto atualizado com sucesso.');
     }
 
     public function destroy(Request $request, Product $product): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         if ($product->purchaseEntries()->exists()) {
             return back()->with('error', 'Remova os registros de compra antes de excluir o produto.');
         }
 
         $product->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Produto removido.');
     }
 
     public function destroyMany(Request $request): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => [
@@ -184,6 +192,7 @@ class ProductController extends Controller
         $deleted = $products->count();
 
         Product::whereIn('id', $products->pluck('id'))->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with(
             'success',

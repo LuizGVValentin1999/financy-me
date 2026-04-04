@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\StockMovement;
+use App\Services\HouseDataVersion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -133,6 +134,7 @@ class StockController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
         });
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with(
             'success',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Services\HouseDataVersion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class CategoryController extends Controller
     {
         $house = $request->user()->getCurrentHouse();
         $category = $house->categories()->create($request->validated());
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -52,23 +54,29 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $category->update($request->validated());
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Categoria atualizada com sucesso.');
     }
 
     public function destroy(Request $request, Category $category): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $category->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Categoria removida.');
     }
 
     public function destroyMany(Request $request): RedirectResponse
     {
+        $house = $request->user()->getCurrentHouse();
         $ids = $request->input('ids', []);
 
         Category::whereIn('id', $ids)->delete();
+        app(HouseDataVersion::class)->bump((int) $house->id);
 
         return back()->with('success', 'Categorias removidas com sucesso.');
     }
