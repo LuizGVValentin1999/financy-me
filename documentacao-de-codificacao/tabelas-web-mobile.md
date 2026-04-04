@@ -34,7 +34,6 @@ Props principais:
 - `pagination`
 - `scroll`
 - `onRow`
-- `mobileHint`
 - `mobilePageSize`
 - `mobileRenderCard`
 
@@ -98,7 +97,6 @@ Exemplo:
     dataSource={dataSource}
     pagination={{ pageSize: 12, showSizeChanger: true }}
     scroll={{ x: 1200 }}
-    mobileHint="No celular esta lista vira cards."
     mobileRenderCard={(record) => (
         <ResponsiveCard key={record.key}>
             <ResponsiveCardHeader

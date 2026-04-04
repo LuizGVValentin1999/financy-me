@@ -38,7 +38,7 @@ Produção:
 O fluxo local usa:
 
 - banco SQLite isolado em `database/e2e.sqlite`
-- `php artisan serve` em `127.0.0.1:8010`
+- `php artisan serve` em `127.0.0.1:8000`
 - `vite` em `127.0.0.1:5180`
 
 Isso fica encapsulado nos scripts do `package.json`.

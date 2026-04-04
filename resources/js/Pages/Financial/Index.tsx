@@ -428,7 +428,6 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                             openEditModal(record);
                         },
                     })}
-                    mobileHint="No celular os lançamentos aparecem em cards. Toque para editar quando a origem for manual e use o checkbox para exclusao em lote."
                     mobileRenderCard={(record, mobileMeta) => {
                         const originLabel =
                             record.origin === 'manual'

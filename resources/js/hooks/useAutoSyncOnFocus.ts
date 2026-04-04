@@ -38,13 +38,19 @@ export function useAutoSyncOnFocus({
             }
         };
 
+        const handlePageShow = () => {
+            trySync();
+        };
+
         window.addEventListener('focus', trySync);
         window.addEventListener('online', trySync);
+        window.addEventListener('pageshow', handlePageShow);
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
             window.removeEventListener('focus', trySync);
             window.removeEventListener('online', trySync);
+            window.removeEventListener('pageshow', handlePageShow);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [enabled, cooldownMs]);

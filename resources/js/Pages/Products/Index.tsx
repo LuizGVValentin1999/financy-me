@@ -372,7 +372,6 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
                             openEditModal(record);
                         },
                     })}
-                    mobileHint="Os produtos aparecem em cards no celular. Toque para editar e use o checkbox para selecionar exclusao em lote."
                     mobileRenderCard={(record, mobileMeta) => {
                         const typeLabel =
                             record.type === 'stockable' ? 'Estocável' : 'Não estocável';

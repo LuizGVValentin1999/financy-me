@@ -26,7 +26,6 @@ interface ResponsiveDataTableProps<T extends object> {
     onRow?: TableProps<T>['onRow'];
     locale?: TableProps<T>['locale'];
     mobilePageSize?: number;
-    mobileHint?: ReactNode;
     searchEnabled?: boolean;
     searchPlaceholder?: string;
     searchFields?: string[];
@@ -59,7 +58,6 @@ export default function ResponsiveDataTable<T extends object>({
     onRow,
     locale,
     mobilePageSize,
-    mobileHint,
     searchEnabled = false,
     searchPlaceholder = 'Buscar na tabela',
     searchFields,
@@ -167,12 +165,6 @@ export default function ResponsiveDataTable<T extends object>({
     return (
         <div className="space-y-4">
             {searchInput}
-
-            {mobileHint ? (
-                <div className="rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95)_0%,rgba(241,245,249,0.75)_100%)] px-4 py-3 text-sm leading-6 text-slate-500">
-                    {mobileHint}
-                </div>
-            ) : null}
 
             {paginatedMobileRecords.length > 0 ? (
                 <div className="space-y-3">

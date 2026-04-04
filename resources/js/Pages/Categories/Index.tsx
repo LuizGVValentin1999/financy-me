@@ -279,7 +279,6 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
                             openEditModal(record);
                         },
                     })}
-                    mobileHint="As categorias aparecem em cards no celular. Toque para editar e use o checkbox para selecionar exclusao em lote."
                     mobileRenderCard={(record, mobileMeta) => (
                         <ResponsiveCard key={record.key}>
                             <div className="flex items-start gap-3">

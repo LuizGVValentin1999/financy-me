@@ -435,7 +435,6 @@ export default function PurchaseHistoryTable({
                     },
                 })}
                 mobilePageSize={6}
-                mobileHint="No celular a listagem vira cards. Toque em um item para editar e use o checkbox para selecionar exclusao em lote."
                 mobileRenderCard={(record, mobileMeta) => {
                     if (record.isGroup) {
                         const groupRecord = record as PurchaseGroupRecord;

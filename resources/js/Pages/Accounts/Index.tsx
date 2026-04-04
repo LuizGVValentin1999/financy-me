@@ -282,7 +282,6 @@ export default function AccountsIndex({ accounts }: AccountsPageProps) {
                             openEditModal(record);
                         },
                     })}
-                    mobileHint="As contas aparecem em cards no celular. Toque para editar e use o checkbox para selecionar exclusao em lote."
                     mobileRenderCard={(record, mobileMeta) => (
                         <ResponsiveCard key={record.key}>
                             <div className="flex items-start gap-3">

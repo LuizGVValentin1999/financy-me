@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financy-me-v1';
+const CACHE_NAME = 'financy-me-v2';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
@@ -7,6 +7,16 @@ const APP_SHELL = [
   '/icons/apple-touch-icon.png',
   '/favicon.ico',
 ];
+
+const STATIC_PATH_PREFIXES = ['/build/', '/icons/'];
+const STATIC_EXACT_PATHS = new Set([
+  '/',
+  '/manifest.webmanifest',
+  '/favicon.ico',
+]);
+
+const isStaticAssetRequest = (url) =>
+  STATIC_EXACT_PATHS.has(url.pathname) || STATIC_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -46,7 +56,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.origin === self.location.origin) {
+  if (url.origin === self.location.origin && isStaticAssetRequest(url)) {
     event.respondWith(
       caches.match(request).then((cached) => {
         const networkFetch = fetch(request)

@@ -92,6 +92,6 @@ jobs:
         with:
           install: false
           start: npm run e2e:serve
-          wait-on: http://127.0.0.1:8010
+          wait-on: http://127.0.0.1:8000
           wait-on-timeout: 180
           command: npm run cypress:run

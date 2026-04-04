@@ -168,7 +168,7 @@ composer test:coverage
 
 Os testes E2E usam:
 
-- Laravel na porta `8010`
+- Laravel na porta `8000`
 - Vite na porta `5180`
 - banco dedicado `database/e2e.sqlite`
 

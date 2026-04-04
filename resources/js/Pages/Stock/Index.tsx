@@ -524,7 +524,6 @@ export default function StockIndex({ products, movements }: StockPageProps) {
                                             openWithdrawModal(record);
                                         },
                                     })}
-                                    mobileHint="No celular o estoque aparece em cards. Toque em um item estocável para retirar quantidade."
                                     mobileRenderCard={(record) => {
                                         const canWithdraw =
                                             record.type === 'stockable' && record.current_stock > 0;
@@ -614,7 +613,6 @@ export default function StockIndex({ products, movements }: StockPageProps) {
                                         onRow={(record) => ({
                                             onClick: () => setSelectedHistoryProduct(record),
                                         })}
-                                        mobileHint="As saídas ficam agrupadas por produto. Toque em um item para abrir o histórico completo de entradas e saídas."
                                         mobileRenderCard={(record) => (
                                             <ResponsiveCard
                                                 key={record.key}

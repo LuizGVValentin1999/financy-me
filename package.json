@@ -14,9 +14,9 @@
         "prod:e2e": "npm run cypress:run -- --config baseUrl=${PROD_BASE_URL:-https://financy-me.yasmingustavo.com.br} --env cleanupAfterTest=true",
         "e2e:db:file": "mkdir -p database && touch database/e2e.sqlite",
         "e2e:reset-db": "npm run e2e:db:file && APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=database/e2e.sqlite php artisan migrate:fresh --force",
-        "e2e:serve": "concurrently -k -s first \"APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=database/e2e.sqlite php artisan serve --host=127.0.0.1 --port=8010\" \"npm run dev -- --host 127.0.0.1 --port 5180\"",
-        "e2e:open": "npm run e2e:reset-db && start-server-and-test e2e:serve http://127.0.0.1:8010 cypress:open",
-        "e2e:run": "npm run e2e:reset-db && start-server-and-test e2e:serve http://127.0.0.1:8010 cypress:run"
+        "e2e:serve": "concurrently -k -s first \"APP_ENV=testing DB_CONNECTION=sqlite DB_DATABASE=database/e2e.sqlite php artisan serve --host=127.0.0.1 --port=8000\" \"npm run dev -- --host 127.0.0.1 --port 5180\"",
+        "e2e:open": "npm run e2e:reset-db && start-server-and-test e2e:serve http://127.0.0.1:8000 cypress:open",
+        "e2e:run": "npm run e2e:reset-db && start-server-and-test e2e:serve http://127.0.0.1:8000 cypress:run"
     },
     "devDependencies": {
         "@inertiajs/react": "^2.0.0",

@@ -1009,7 +1009,6 @@ export default function Dashboard({
                                         pagination={{ pageSize: 12, showSizeChanger: true }}
                                         size="middle"
                                         scroll={{ x: 1200 }}
-                                        mobileHint="Use a busca e os filtros para refinar a leitura."
                                         mobileRenderCard={(record) => (
                                             <ResponsiveCard key={record.key}>
                                                 <ResponsiveCardHeader
@@ -1078,7 +1077,6 @@ export default function Dashboard({
                                                 setSelectedConsumptionProduct(record);
                                             },
                                         })}
-                                        mobileHint="Toque em um produto para ver o relatorio detalhado de entradas e saidas dentro do período filtrado."
                                         mobileRenderCard={(record) => (
                                             <button
                                                 key={record.key}
@@ -1153,7 +1151,6 @@ export default function Dashboard({
                                                 setSelectedAccountSummary(record);
                                             },
                                         })}
-                                        mobileHint="Toque em uma conta para ver entradas e saidas de saldo dentro do período filtrado."
                                         mobileRenderCard={(record) => (
                                             <button
                                                 key={record.key}
