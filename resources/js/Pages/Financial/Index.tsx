@@ -398,6 +398,9 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                     rowKey="key"
                     columns={columns}
                     dataSource={dataSource}
+                    searchEnabled
+                    searchPlaceholder="Buscar por descrição, conta, categoria ou data"
+                    searchFields={['description', 'account.name', 'account.code', 'category.name', 'moved_at']}
                     rowSelection={{
                         selectedRowKeys,
                         onChange: (keys) =>

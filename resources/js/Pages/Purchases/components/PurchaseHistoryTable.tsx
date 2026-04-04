@@ -374,6 +374,29 @@ export default function PurchaseHistoryTable({
                 rowKey="key"
                 columns={columns}
                 dataSource={dataSource}
+                searchEnabled
+                searchPlaceholder="Buscar por produto, conta, referência, observações ou grupo"
+                searchMatcher={(record, searchTerm) => {
+                    if (record.isGroup) {
+                        const groupRecord = record as PurchaseGroupRecord;
+                        return groupRecord.groupLabel.toLowerCase().includes(searchTerm);
+                    }
+
+                    const entryRecord = record as PurchaseEntryRow;
+                    const searchable = [
+                        entryRecord.product ?? '',
+                        entryRecord.account?.code ?? '',
+                        entryRecord.account?.name ?? '',
+                        entryRecord.invoice_reference ?? '',
+                        entryRecord.notes ?? '',
+                        entryRecord.source ?? '',
+                        entryRecord.purchased_at ?? '',
+                    ]
+                        .join(' ')
+                        .toLowerCase();
+
+                    return searchable.includes(searchTerm);
+                }}
                 rowSelection={{
                     selectedRowKeys,
                     onChange: (keys) => setSelectedRowKeys(keys),

@@ -20,16 +20,27 @@ export default function FormModalActions({
     deleteLabel = 'Excluir',
 }: FormModalActionsProps) {
     return (
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end sm:gap-3">
-            <SecondaryButton type="button" onClick={onCancel} className="w-full sm:w-auto">
+        <div className="flex w-full items-center gap-2 sm:flex-wrap sm:justify-end sm:gap-3">
+            <SecondaryButton
+                type="button"
+                onClick={onCancel}
+                className="min-w-0 flex-1 px-2 text-xs sm:flex-none sm:px-5 sm:text-sm"
+            >
                 {cancelLabel}
             </SecondaryButton>
             {onDelete ? (
-                <DangerButton type="button" onClick={onDelete} className="col-span-2 w-full sm:w-auto">
+                <DangerButton
+                    type="button"
+                    onClick={onDelete}
+                    className="min-w-0 flex-1 px-2 text-xs sm:flex-none sm:px-5 sm:text-sm"
+                >
                     {deleteLabel}
                 </DangerButton>
             ) : null}
-            <PrimaryButton disabled={saveDisabled} className="w-full sm:w-auto">
+            <PrimaryButton
+                disabled={saveDisabled}
+                className="min-w-0 flex-1 px-2 text-xs sm:flex-none sm:px-5 sm:text-sm"
+            >
                 {saveLabel}
             </PrimaryButton>
         </div>

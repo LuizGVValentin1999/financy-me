@@ -342,6 +342,9 @@ export default function ProductsIndex({ categories, units, products }: ProductsP
                     rowKey="key"
                     columns={columns}
                     dataSource={dataSource}
+                    searchEnabled
+                    searchPlaceholder="Buscar por produto, marca, SKU, categoria ou observações"
+                    searchFields={['name', 'brand', 'sku', 'category.name', 'notes']}
                     rowSelection={{
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys),

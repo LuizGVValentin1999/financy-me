@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { useAntdApp } from '@/hooks/useAntdApp';
+import { useAutoSyncOnFocus } from '@/hooks/useAutoSyncOnFocus';
 import { PageProps } from '@/types';
 import { Button, Drawer, Menu, type MenuProps } from 'antd';
 import { Link, router, usePage } from '@inertiajs/react';
@@ -183,6 +184,7 @@ export default function AuthenticatedLayout({
     const selectedKey = navigation.find((item) => item.active)?.key;
     const lastErrorFlashRef = useRef<string | null>(null);
     const { message } = useAntdApp();
+    useAutoSyncOnFocus();
 
     useEffect(() => {
         const nextError = flash.error ?? null;

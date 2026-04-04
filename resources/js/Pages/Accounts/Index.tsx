@@ -252,6 +252,9 @@ export default function AccountsIndex({ accounts }: AccountsPageProps) {
                     rowKey="key"
                     columns={columns}
                     dataSource={dataSource}
+                    searchEnabled
+                    searchPlaceholder="Buscar por código, nome ou data de saldo"
+                    searchFields={['code', 'name', 'initial_balance_date']}
                     rowSelection={{
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys),

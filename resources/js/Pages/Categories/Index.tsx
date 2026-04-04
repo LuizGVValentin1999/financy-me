@@ -249,6 +249,9 @@ export default function CategoriesIndex({ categories }: CategoriesPageProps) {
                     rowKey="key"
                     columns={columns}
                     dataSource={dataSource}
+                    searchEnabled
+                    searchPlaceholder="Buscar por código, categoria ou descrição"
+                    searchFields={['code', 'name', 'description']}
                     rowSelection={{
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys),

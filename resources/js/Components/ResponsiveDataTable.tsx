@@ -1,4 +1,4 @@
-import { Grid, Pagination, Table } from 'antd';
+import { Grid, Input, Pagination, Table } from 'antd';
 import type { TableProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Key, ReactNode, useEffect, useMemo, useState } from 'react';
@@ -27,8 +27,24 @@ interface ResponsiveDataTableProps<T extends object> {
     locale?: TableProps<T>['locale'];
     mobilePageSize?: number;
     mobileHint?: ReactNode;
+    searchEnabled?: boolean;
+    searchPlaceholder?: string;
+    searchFields?: string[];
+    searchMatcher?: (record: T, searchTerm: string) => boolean;
     mobileRenderCard: (record: T, meta: MobileRenderMeta<T>) => ReactNode;
 }
+
+const getFieldValue = (record: unknown, fieldPath: string) => {
+    return fieldPath
+        .split('.')
+        .reduce<unknown>((current, segment) => {
+            if (current && typeof current === 'object' && segment in (current as Record<string, unknown>)) {
+                return (current as Record<string, unknown>)[segment];
+            }
+
+            return undefined;
+        }, record);
+};
 
 export default function ResponsiveDataTable<T extends object>({
     rowKey,
@@ -44,11 +60,16 @@ export default function ResponsiveDataTable<T extends object>({
     locale,
     mobilePageSize,
     mobileHint,
+    searchEnabled = false,
+    searchPlaceholder = 'Buscar na tabela',
+    searchFields,
+    searchMatcher,
     mobileRenderCard,
 }: ResponsiveDataTableProps<T>) {
     const screens = Grid.useBreakpoint();
     const isMobile = !screens.md;
     const [mobilePage, setMobilePage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const selectedKeys = rowSelection?.selectedRowKeys ?? [];
     const resolvedMobilePageSize =
@@ -57,9 +78,32 @@ export default function ResponsiveDataTable<T extends object>({
             ? Number(pagination.pageSize ?? 10)
             : 10);
 
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+
+    const filteredDataSource = useMemo(() => {
+        if (!searchEnabled || normalizedSearchTerm === '') {
+            return dataSource;
+        }
+
+        if (searchMatcher) {
+            return dataSource.filter((record) => searchMatcher(record, normalizedSearchTerm));
+        }
+
+        return dataSource.filter((record) => {
+            if (searchFields && searchFields.length > 0) {
+                return searchFields.some((fieldPath) => {
+                    const fieldValue = getFieldValue(record, fieldPath);
+                    return String(fieldValue ?? '').toLowerCase().includes(normalizedSearchTerm);
+                });
+            }
+
+            return JSON.stringify(record).toLowerCase().includes(normalizedSearchTerm);
+        });
+    }, [dataSource, normalizedSearchTerm, searchEnabled, searchFields, searchMatcher]);
+
     useEffect(() => {
         setMobilePage(1);
-    }, [dataSource.length]);
+    }, [filteredDataSource.length, searchTerm]);
 
     const getRecordKey = (record: T): Key => {
         if (typeof rowKey === 'function') {
@@ -81,16 +125,31 @@ export default function ResponsiveDataTable<T extends object>({
         }
 
         const startIndex = (mobilePage - 1) * resolvedMobilePageSize;
-        return dataSource.slice(startIndex, startIndex + resolvedMobilePageSize);
-    }, [dataSource, mobilePage, pagination, resolvedMobilePageSize]);
+        return filteredDataSource.slice(startIndex, startIndex + resolvedMobilePageSize);
+    }, [filteredDataSource, mobilePage, pagination, resolvedMobilePageSize]);
+
+    const searchInput = searchEnabled ? (
+        <div className="flex w-full justify-end">
+            <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={searchPlaceholder}
+                allowClear
+                size="large"
+                className={isMobile ? 'w-full' : 'w-full max-w-md'}
+            />
+        </div>
+    ) : null;
 
     if (!isMobile) {
         return (
-            <div className="purchase-ant-table">
+            <div className="space-y-3">
+                {searchInput}
+                <div className="purchase-ant-table">
                 <Table<T>
                     rowKey={rowKey}
                     columns={columns}
-                    dataSource={dataSource}
+                    dataSource={filteredDataSource}
                     rowSelection={rowSelection}
                     pagination={pagination}
                     expandable={expandable}
@@ -100,12 +159,15 @@ export default function ResponsiveDataTable<T extends object>({
                     onRow={onRow}
                     locale={locale}
                 />
+                </div>
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
+            {searchInput}
+
             {mobileHint ? (
                 <div className="rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95)_0%,rgba(241,245,249,0.75)_100%)] px-4 py-3 text-sm leading-6 text-slate-500">
                     {mobileHint}
@@ -164,12 +226,12 @@ export default function ResponsiveDataTable<T extends object>({
                 </div>
             )}
 
-            {pagination !== false && dataSource.length > resolvedMobilePageSize ? (
+            {pagination !== false && filteredDataSource.length > resolvedMobilePageSize ? (
                 <div className="flex justify-center pt-2">
                     <Pagination
                         current={mobilePage}
                         pageSize={resolvedMobilePageSize}
-                        total={dataSource.length}
+                        total={filteredDataSource.length}
                         onChange={setMobilePage}
                         showSizeChanger={false}
                         simple
