@@ -14,6 +14,29 @@ O projeto usa:
 - Vite
 - Antd
 
+## Cache da aplicacao instalada
+
+O app instalado usa:
+
+- `service worker` em `public/sw.js`
+- versao de dados por casa via cache do Laravel
+
+Requisito importante:
+
+- o `CACHE_STORE` de producao precisa ser persistente
+
+Valores adequados:
+
+- `file`
+- `redis`
+- `database`
+
+Evitar em producao:
+
+- `array`
+
+Se `CACHE_STORE=array`, a versao por casa nao persiste entre requests e a invalidacao do cache dinamico perde consistencia.
+
 ## Build frontend
 
 Comando:

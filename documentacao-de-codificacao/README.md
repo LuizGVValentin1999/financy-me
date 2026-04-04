@@ -10,7 +10,7 @@ Arquivos disponiveis:
 - `layout-e-navegacao.md`: regras de layout autenticado, header e navegacao.
 - `boas-praticas-de-desenvolvimento.md`: convencoes praticas para evoluir o projeto sem quebrar consistencia.
 - `testes-e2e.md`: padrao dos testes Cypress, helpers e execucao local/producao.
-- `backend-laravel.md`: organizacao do backend, multi-casa, controllers, requests e services.
+- `backend-laravel.md`: organizacao do backend, multi-casa, controllers, requests, services e regra de cache por casa com `data_version`.
 - `deploy-e-producao.md`: fluxo de build, publicacao, operacao e cuidados em producao.
 
 Regra pratica:
