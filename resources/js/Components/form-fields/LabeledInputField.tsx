@@ -14,6 +14,7 @@ interface LabeledInputFieldProps {
     step?: string;
     placeholder?: string;
     className?: string;
+    disabled?: boolean;
 }
 
 export default function LabeledInputField({
@@ -27,6 +28,7 @@ export default function LabeledInputField({
     step,
     placeholder,
     className,
+    disabled = false,
 }: LabeledInputFieldProps) {
     if (type === 'date') {
         const parsedDate = value ? dayjs(value) : null;
@@ -43,6 +45,7 @@ export default function LabeledInputField({
                     size="large"
                     className="mt-2 w-full"
                     style={{ width: '100%' }}
+                    disabled={disabled}
                 />
                 <InputError message={error} className="mt-2" />
             </div>
@@ -60,9 +63,10 @@ export default function LabeledInputField({
                 value={value}
                 placeholder={placeholder}
                 onChange={(event) => onChange(event.target.value)}
+                disabled={disabled}
                 className={
                     className ??
-                    'mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3'
+                    'mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
                 }
             />
             <InputError message={error} className="mt-2" />

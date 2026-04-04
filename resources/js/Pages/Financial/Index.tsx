@@ -28,6 +28,7 @@ import { FormEvent, Key, useMemo, useState } from 'react';
 export default function FinancialIndex({ accounts, categories, entries }: FinancialPageProps) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingEntry, setEditingEntry] = useState<EntryRow | null>(null);
+    const [isViewingReadonlyEntry, setIsViewingReadonlyEntry] = useState(false);
     const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
     const [periodStartDate, setPeriodStartDate] = useState('');
     const [periodEndDate, setPeriodEndDate] = useState('');
@@ -81,16 +82,14 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
 
     const closeEditModal = () => {
         setEditingEntry(null);
+        setIsViewingReadonlyEntry(false);
         resetEdit();
         clearEditErrors();
     };
 
     const openEditModal = (entry: EntryRow) => {
-        if (entry.origin !== 'manual') {
-            return;
-        }
-
         setEditingEntry(entry);
+        setIsViewingReadonlyEntry(entry.origin !== 'manual');
         setEditData({
             account_id: entry.account_id ? String(entry.account_id) : '',
             category_id: entry.category_id ? String(entry.category_id) : '',
@@ -106,6 +105,11 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
         event.preventDefault();
 
         if (!editingEntry) {
+            return;
+        }
+
+        if (isViewingReadonlyEntry) {
+            closeEditModal();
             return;
         }
 
@@ -413,7 +417,9 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                     size="middle"
                     scroll={{ x: 1200 }}
                     rowClassName={(record) =>
-                        record.origin === 'manual' ? 'cursor-pointer' : 'opacity-90'
+                        record.origin === 'manual'
+                            ? 'cursor-pointer'
+                            : 'cursor-pointer opacity-90'
                     }
                     onRow={(record) => ({
                         onClick: (event) => {
@@ -512,13 +518,19 @@ export default function FinancialIndex({ accounts, categories, entries }: Financ
                 data={editData}
                 errors={editErrors}
                 setData={(field, value) => setEditData(field as keyof typeof editData, value as never)}
-                title="Editar lançamento"
+                title={isViewingReadonlyEntry ? 'Detalhes do lançamento' : 'Editar lançamento'}
                 sectionLabel="Financeiro"
                 saveLabel="Salvar alterações"
+                description={
+                    isViewingReadonlyEntry
+                        ? 'Este lançamento foi gerado automaticamente. Os campos ficam bloqueados para consulta.'
+                        : 'Ajuste os dados do lançamento manual.'
+                }
                 accountOptions={accountOptions}
                 categoryOptions={categoryOptions}
                 directionOptions={directionOptions}
-                onDelete={deleteEditingEntry}
+                onDelete={isViewingReadonlyEntry ? undefined : deleteEditingEntry}
+                readOnly={isViewingReadonlyEntry}
             />
 
             <FinancialEntryModal

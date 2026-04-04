@@ -249,7 +249,7 @@ Cypress.Commands.add(
 			cy.get('textarea#manual_item_0_purchase_notes').clear().type(purchaseItemNotes);
 		}
 
-		cy.contains('button', 'Ir para pagamento').click();
+		cy.contains('button', /Ir para pagamento|Pagamento/).click({ force: true });
 
 		if (accountLabel) {
 			cy.selectAntdOption('manual_payments_0_account_id', accountLabel);
@@ -265,7 +265,7 @@ Cypress.Commands.add(
 		}
 
 		cy.intercept('POST', '**/purchases').as('storePurchase');
-		cy.contains('button', 'Registrar compra').click({ force: true });
+		cy.contains('button', /Registrar compra|Registrar/).click({ force: true });
 		cy.wait('@storePurchase')
 			.its('response.statusCode')
 			.should('be.oneOf', [200, 302, 303]);

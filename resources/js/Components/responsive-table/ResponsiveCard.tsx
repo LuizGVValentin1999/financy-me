@@ -49,20 +49,20 @@ export function ResponsiveCardHeader({
         <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
                 {eyebrow ? (
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-slate-400">
                         {eyebrow}
                     </p>
                 ) : null}
                 <p
                     className={joinClasses(
-                        'truncate font-semibold leading-tight text-slate-900',
-                        eyebrow ? 'mt-2 text-[1.05rem]' : 'text-[1.05rem]',
+                        'line-clamp-2 font-semibold leading-tight text-slate-900 [overflow-wrap:anywhere]',
+                        eyebrow ? 'mt-2 text-[1rem]' : 'text-[1rem]',
                     )}
                 >
                     {title}
                 </p>
                 {subtitle ? (
-                    <p className="mt-1 text-sm leading-5 text-slate-500 [overflow-wrap:anywhere]">
+                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500 [overflow-wrap:anywhere]">
                         {subtitle}
                     </p>
                 ) : null}
@@ -127,7 +127,7 @@ export function ResponsiveCardField({
     return (
         <p
             className={joinClasses(
-                'rounded-2xl border border-slate-100 px-3 py-2 leading-5 [overflow-wrap:anywhere] sm:py-2.5',
+                'line-clamp-2 rounded-2xl border border-slate-100 px-3 py-2 leading-5 [overflow-wrap:anywhere] sm:py-2.5',
                 colSpan === 2 && 'col-span-2',
                 tone === 'default' && 'bg-slate-50/85',
                 tone === 'danger' && 'bg-[#fff1ec] text-[#be3d2a]',

@@ -16,6 +16,7 @@ interface LabeledSelectFieldProps {
     error?: string;
     placeholder?: string;
     allowClear?: boolean;
+    disabled?: boolean;
 }
 
 export default function LabeledSelectField({
@@ -27,6 +28,7 @@ export default function LabeledSelectField({
     error,
     placeholder,
     allowClear = false,
+    disabled = false,
 }: LabeledSelectFieldProps) {
     return (
         <div>
@@ -40,6 +42,7 @@ export default function LabeledSelectField({
                 options={options}
                 placeholder={placeholder}
                 allowClear={allowClear}
+                disabled={disabled}
             />
             <InputError message={error} className="mt-2" />
         </div>

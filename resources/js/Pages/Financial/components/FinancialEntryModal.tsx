@@ -1,4 +1,5 @@
 import FormEntityModal from '@/Components/FormEntityModal';
+import SecondaryButton from '@/Components/SecondaryButton';
 import LabeledInputField from '@/Components/form-fields/LabeledInputField';
 import LabeledSelectField from '@/Components/form-fields/LabeledSelectField';
 import { FormEvent } from 'react';
@@ -25,6 +26,8 @@ interface FinancialEntryModalProps {
     categoryOptions: Array<{ value: string; label: string }>;
     directionOptions: Array<{ value: string; label: string }>;
     onDelete?: () => void;
+    readOnly?: boolean;
+    description?: string;
 }
 
 export default function FinancialEntryModal({
@@ -42,6 +45,8 @@ export default function FinancialEntryModal({
     categoryOptions,
     directionOptions,
     onDelete,
+    readOnly = false,
+    description,
 }: FinancialEntryModalProps) {
     return (
         <FormEntityModal
@@ -51,8 +56,18 @@ export default function FinancialEntryModal({
             processing={processing}
             sectionLabel={sectionLabel}
             title={title}
+            description={description}
             saveLabel={saveLabel}
-            onDelete={onDelete}
+            onDelete={readOnly ? undefined : onDelete}
+            actions={
+                readOnly ? (
+                    <div className="flex justify-end">
+                        <SecondaryButton type="button" onClick={onClose}>
+                            Fechar
+                        </SecondaryButton>
+                    </div>
+                ) : undefined
+            }
         >
             <div className="grid gap-4 sm:grid-cols-2">
                 <LabeledSelectField
@@ -62,6 +77,7 @@ export default function FinancialEntryModal({
                     onChange={(value) => setData('direction', value)}
                     options={directionOptions}
                     error={errors.direction}
+                    disabled={readOnly}
                 />
                 <LabeledInputField
                     id="amount"
@@ -72,6 +88,7 @@ export default function FinancialEntryModal({
                     value={data.amount}
                     onChange={(value) => setData('amount', value)}
                     error={errors.amount}
+                    disabled={readOnly}
                 />
             </div>
 
@@ -83,6 +100,7 @@ export default function FinancialEntryModal({
                     onChange={(value) => setData('account_id', value)}
                     options={accountOptions}
                     error={errors.account_id}
+                    disabled={readOnly}
                 />
                 <LabeledSelectField
                     id="category_id"
@@ -91,6 +109,7 @@ export default function FinancialEntryModal({
                     onChange={(value) => setData('category_id', value)}
                     options={categoryOptions}
                     error={errors.category_id}
+                    disabled={readOnly}
                 />
             </div>
 
@@ -102,6 +121,7 @@ export default function FinancialEntryModal({
                     value={data.moved_at}
                     onChange={(value) => setData('moved_at', value)}
                     error={errors.moved_at}
+                    disabled={readOnly}
                 />
                 <LabeledInputField
                     id="description"
@@ -109,6 +129,7 @@ export default function FinancialEntryModal({
                     value={data.description}
                     onChange={(value) => setData('description', value)}
                     error={errors.description}
+                    disabled={readOnly}
                 />
             </div>
         </FormEntityModal>
