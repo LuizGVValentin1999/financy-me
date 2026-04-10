@@ -1,5 +1,5 @@
 import { Drawer, Grid, Modal as AntModal } from 'antd';
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect, useId, useRef } from 'react';
 
 export default function Modal({
     children,
@@ -15,6 +15,76 @@ export default function Modal({
 }>) {
     const screens = Grid.useBreakpoint();
     const isMobile = !screens.md;
+    const modalHistoryId = useId();
+    const hasPushedHistoryRef = useRef(false);
+    const ignoreNextPopRef = useRef(false);
+    const openRef = useRef(show);
+
+    useEffect(() => {
+        openRef.current = show;
+    }, [show]);
+
+    useEffect(() => {
+        if (!isMobile || !closeable) {
+            return;
+        }
+
+        const handlePopState = (event: PopStateEvent) => {
+            if (ignoreNextPopRef.current) {
+                ignoreNextPopRef.current = false;
+                return;
+            }
+
+            if (!openRef.current || !hasPushedHistoryRef.current) {
+                return;
+            }
+
+            const nextModalId = (event.state as { __appModalId?: string } | null)?.__appModalId;
+
+            // If the next history entry is another modal, only the topmost one should close.
+            if (nextModalId === modalHistoryId) {
+                return;
+            }
+
+            hasPushedHistoryRef.current = false;
+            onClose();
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [closeable, isMobile, modalHistoryId, onClose]);
+
+    useEffect(() => {
+        if (!isMobile || !closeable) {
+            return;
+        }
+
+        if (show) {
+            if (!hasPushedHistoryRef.current) {
+                window.history.pushState(
+                    { ...(window.history.state ?? {}), __appModalId: modalHistoryId },
+                    '',
+                );
+                hasPushedHistoryRef.current = true;
+            }
+
+            return;
+        }
+
+        if (!hasPushedHistoryRef.current) {
+            return;
+        }
+
+        hasPushedHistoryRef.current = false;
+
+        if ((window.history.state as { __appModalId?: string } | null)?.__appModalId === modalHistoryId) {
+            ignoreNextPopRef.current = true;
+            window.history.back();
+        }
+    }, [closeable, isMobile, modalHistoryId, show]);
 
     const close = () => {
         if (closeable) {
